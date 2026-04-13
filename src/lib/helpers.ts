@@ -261,3 +261,40 @@ export function calculateRecipeRatings(
     eventCount: uniqueEvents.size
   }
 }
+
+export function revertRecipeToVersion(recipe: Recipe, targetVersion: number): Recipe {
+  const versionToRevert = recipe.versions.find(v => v.versionNumber === targetVersion)
+  
+  if (!versionToRevert) {
+    return recipe
+  }
+
+  const newVersionNumber = recipe.currentVersion + 1
+  
+  const currentSnapshot: RecipeVersion = {
+    versionNumber: recipe.currentVersion,
+    eventId: undefined,
+    eventName: undefined,
+    name: recipe.name,
+    description: recipe.description,
+    servings: recipe.servings,
+    ingredients: recipe.ingredients,
+    variations: recipe.variations,
+    tags: recipe.tags,
+    createdAt: recipe.updatedAt,
+    changeNote: `Before reverting to v${targetVersion}`,
+  }
+
+  return {
+    ...recipe,
+    name: versionToRevert.name,
+    description: versionToRevert.description,
+    servings: versionToRevert.servings,
+    ingredients: versionToRevert.ingredients.map(ing => ({ ...ing, id: crypto.randomUUID() })),
+    variations: versionToRevert.variations.map(v => ({ ...v, id: crypto.randomUUID() })),
+    tags: versionToRevert.tags,
+    currentVersion: newVersionNumber,
+    updatedAt: Date.now(),
+    versions: [currentSnapshot, ...recipe.versions],
+  }
+}

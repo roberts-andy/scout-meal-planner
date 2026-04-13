@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Card, CardContent } from '@/components/ui/card'
 import { Users, Flame, GitBranch, ClockCounterClockwise, Star } from '@phosphor-icons/react'
-import { formatQuantity, calculateRecipeRatings } from '@/lib/helpers'
+import { formatQuantity, calculateRecipeRatings, revertRecipeToVersion } from '@/lib/helpers'
 import { RecipeVersionHistory } from './RecipeVersionHistory'
 
 interface RecipeDetailDialogProps {
@@ -25,11 +25,16 @@ interface RecipeDetailDialogProps {
   onUpdateRecipe: (recipe: Recipe) => void
 }
 
-export function RecipeDetailDialog({ recipe, recipes, feedback, open, onOpenChange }: RecipeDetailDialogProps) {
+export function RecipeDetailDialog({ recipe, recipes, feedback, open, onOpenChange, onUpdateRecipe }: RecipeDetailDialogProps) {
   const [showVersionHistory, setShowVersionHistory] = useState(false)
   const originalRecipe = recipe.clonedFrom && recipes?.find(r => r.id === recipe.clonedFrom)
   const hasVersionHistory = recipe.versions && recipe.versions.length > 0
   const ratingSummary = feedback ? calculateRecipeRatings(recipe.id, recipe.name, feedback) : null
+  
+  const handleRevertVersion = (versionNumber: number) => {
+    const revertedRecipe = revertRecipeToVersion(recipe, versionNumber)
+    onUpdateRecipe(revertedRecipe)
+  }
   
   return (
     <>
@@ -229,6 +234,7 @@ export function RecipeDetailDialog({ recipe, recipes, feedback, open, onOpenChan
       recipe={recipe}
       open={showVersionHistory}
       onOpenChange={setShowVersionHistory}
+      onRevertVersion={handleRevertVersion}
     />
     </>
   )

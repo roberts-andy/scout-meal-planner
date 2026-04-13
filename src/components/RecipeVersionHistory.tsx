@@ -7,6 +7,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
@@ -14,13 +24,15 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ClockCounterClockwise, Users, Flame, Tent, ArrowsLeftRight, ListChecks, CalendarBlank, Plus, Minus, ArrowRight } from '@phosphor-icons/react'
+import { ClockCounterClockwise, Users, Flame, Tent, ArrowsLeftRight, ListChecks, CalendarBlank, Plus, Minus, ArrowRight, ArrowCounterClockwise } from '@phosphor-icons/react'
 import { formatQuantity } from '@/lib/helpers'
+import { toast } from 'sonner'
 
 interface RecipeVersionHistoryProps {
   recipe: Recipe
   open: boolean
   onOpenChange: (open: boolean) => void
+  onRevertVersion?: (versionNumber: number) => void
 }
 
 interface VersionChange {
@@ -30,8 +42,9 @@ interface VersionChange {
   type: 'added' | 'removed' | 'modified'
 }
 
-export function RecipeVersionHistory({ recipe, open, onOpenChange }: RecipeVersionHistoryProps) {
+export function RecipeVersionHistory({ recipe, open, onOpenChange, onRevertVersion }: RecipeVersionHistoryProps) {
   const [selectedVersions, setSelectedVersions] = useState<[number, number] | null>(null)
+  const [versionToRevert, setVersionToRevert] = useState<number | null>(null)
   
   const currentVersionData: RecipeVersion = {
     versionNumber: recipe.currentVersion,
@@ -162,7 +175,34 @@ export function RecipeVersionHistory({ recipe, open, onOpenChange }: RecipeVersi
     return getVersionChanges(v1Num < v2Num ? v1 : v2, v1Num < v2Num ? v2 : v1)
   }
 
+  const handleRevertConfirm = () => {
+    if (versionToRevert && onRevertVersion) {
+      onRevertVersion(versionToRevert)
+      setVersionToRevert(null)
+      toast.success(`Recipe reverted to version ${versionToRevert}`)
+      onOpenChange(false)
+    }
+  }
+
   return (
+    <>
+      <AlertDialog open={versionToRevert !== null} onOpenChange={(open) => !open && setVersionToRevert(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revert to Version {versionToRevert}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will restore the recipe to version {versionToRevert}. Your current recipe state will be saved as a new version before reverting. You can always revert back if needed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRevertConfirm}>
+              Revert to Version {versionToRevert}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[900px] max-h-[90vh]">
         <DialogHeader>
@@ -226,9 +266,22 @@ export function RecipeVersionHistory({ recipe, open, onOpenChange }: RecipeVersi
                                 )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Users size={14} />
-                              <span>{version.servings}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Users size={14} />
+                                <span>{version.servings}</span>
+                              </div>
+                              {!isCurrent && onRevertVersion && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs gap-1.5"
+                                  onClick={() => setVersionToRevert(version.versionNumber)}
+                                >
+                                  <ArrowCounterClockwise size={14} />
+                                  Revert
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </CardHeader>
@@ -469,5 +522,6 @@ export function RecipeVersionHistory({ recipe, open, onOpenChange }: RecipeVersi
         </Tabs>
       </DialogContent>
     </Dialog>
+    </>
   )
 }
