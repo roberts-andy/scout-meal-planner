@@ -1,19 +1,30 @@
 import { useState, useMemo } from 'react'
-import { Recipe, MealFeedback } from '@/lib/types'
+import { Recipe, MealFeedback, CookingMethod } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Slider } from '@/components/ui/slider'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Plus, CookingPot, Trash, Pencil, Users, Flame, Copy, GitBranch, Star, Funnel, X, ArrowsDownUp } from '@phosphor-icons/react'
 import { CreateRecipeDialog } from './CreateRecipeDialog'
 import { RecipeDetailDialog } from './RecipeDetailDialog'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { calculateRecipeRatings } from '@/lib/helpers'
 
 type SortOption = 'name-asc' | 'name-desc' | 'date-newest' | 'date-oldest' | 'rating-high' | 'rating-low'
+
+const COOKING_METHODS: { value: CookingMethod; label: string }[] = [
+  { value: 'open-fire', label: 'Open Fire' },
+  { value: 'camp-stove', label: 'Camp Stove' },
+  { value: 'dutch-oven', label: 'Dutch Oven' },
+  { value: 'skillet', label: 'Skillet' },
+  { value: 'grill', label: 'Grill' },
+  { value: 'no-cook', label: 'No Cook' },
+  { value: 'other', label: 'Other' },
+]
 
 interface RecipeLibraryProps {
   recipes: Recipe[]
@@ -29,7 +40,20 @@ export function RecipeLibrary({ recipes, feedback, onCreateRecipe, onUpdateRecip
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
   const [minRating, setMinRating] = useState<number>(0)
   const [showRatingFilter, setShowRatingFilter] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
   const [sortBy, setSortBy] = useState<SortOption>('date-newest')
+  const [selectedCookingMethods, setSelectedCookingMethods] = useState<CookingMethod[]>([])
+  const [selectedEquipment, setSelectedEquipment] = useState<string[]>([])
+
+  const allEquipment = useMemo(() => {
+    const equipmentSet = new Set<string>()
+    recipes.forEach(recipe => {
+      recipe.variations.forEach(variation => {
+        variation.equipment.forEach(eq => equipmentSet.add(eq))
+      })
+    })
+    return Array.from(equipmentSet).sort()
+  }, [recipes])
 
   const handleCloneRecipe = (recipe: Recipe, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -48,14 +72,34 @@ export function RecipeLibrary({ recipes, feedback, onCreateRecipe, onUpdateRecip
   }
 
   const filteredRecipes = useMemo(() => {
-    if (minRating === 0) return recipes
+    let filtered = recipes
 
-    return recipes.filter(recipe => {
-      const ratingSummary = calculateRecipeRatings(recipe.id, recipe.name, feedback)
-      if (!ratingSummary) return false
-      return ratingSummary.overallAverage >= minRating
-    })
-  }, [recipes, feedback, minRating])
+    if (minRating > 0) {
+      filtered = filtered.filter(recipe => {
+        const ratingSummary = calculateRecipeRatings(recipe.id, recipe.name, feedback)
+        if (!ratingSummary) return false
+        return ratingSummary.overallAverage >= minRating
+      })
+    }
+
+    if (selectedCookingMethods.length > 0) {
+      filtered = filtered.filter(recipe =>
+        recipe.variations.some(variation =>
+          selectedCookingMethods.includes(variation.cookingMethod)
+        )
+      )
+    }
+
+    if (selectedEquipment.length > 0) {
+      filtered = filtered.filter(recipe =>
+        recipe.variations.some(variation =>
+          selectedEquipment.some(eq => variation.equipment.includes(eq))
+        )
+      )
+    }
+
+    return filtered
+  }, [recipes, feedback, minRating, selectedCookingMethods, selectedEquipment])
 
   const sortedRecipes = useMemo(() => {
     const sorted = [...filteredRecipes]
@@ -90,6 +134,32 @@ export function RecipeLibrary({ recipes, feedback, onCreateRecipe, onUpdateRecip
     setMinRating(0)
     setShowRatingFilter(false)
   }
+
+  const handleResetAllFilters = () => {
+    setMinRating(0)
+    setShowRatingFilter(false)
+    setShowFilters(false)
+    setSelectedCookingMethods([])
+    setSelectedEquipment([])
+  }
+
+  const toggleCookingMethod = (method: CookingMethod) => {
+    setSelectedCookingMethods(current =>
+      current.includes(method)
+        ? current.filter(m => m !== method)
+        : [...current, method]
+    )
+  }
+
+  const toggleEquipment = (equipment: string) => {
+    setSelectedEquipment(current =>
+      current.includes(equipment)
+        ? current.filter(e => e !== equipment)
+        : [...current, equipment]
+    )
+  }
+
+  const hasActiveFilters = minRating > 0 || selectedCookingMethods.length > 0 || selectedEquipment.length > 0
 
   if (recipes.length === 0) {
     return (
@@ -137,12 +207,17 @@ export function RecipeLibrary({ recipes, feedback, onCreateRecipe, onUpdateRecip
             </SelectContent>
           </Select>
           <Button
-            variant={showRatingFilter ? "default" : "outline"}
-            onClick={() => setShowRatingFilter(!showRatingFilter)}
-            className="gap-2"
+            variant={showFilters ? "default" : "outline"}
+            onClick={() => setShowFilters(!showFilters)}
+            className="gap-2 relative"
           >
             <Funnel size={20} />
-            Filter by Rating
+            Filters
+            {hasActiveFilters && (
+              <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center">
+                {(minRating > 0 ? 1 : 0) + selectedCookingMethods.length + selectedEquipment.length}
+              </Badge>
+            )}
           </Button>
           <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
             <Plus size={20} />
@@ -151,59 +226,118 @@ export function RecipeLibrary({ recipes, feedback, onCreateRecipe, onUpdateRecip
         </div>
       </div>
 
-      {showRatingFilter && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-muted/50 p-4 rounded-lg border border-border"
-        >
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex-1 min-w-[240px] space-y-3">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="rating-filter" className="text-sm font-medium">
-                  Minimum Rating
-                </Label>
-                <div className="flex items-center gap-2">
-                  <Star size={16} weight="fill" className="text-accent" />
+      {showFilters && (
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="bg-muted/50 p-6 rounded-lg border border-border"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-lg">Filter Recipes</h3>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetAllFilters}
+                  className="gap-2"
+                >
+                  <X size={16} />
+                  Clear All Filters
+                </Button>
+              )}
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-3">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Star size={16} weight="fill" className="text-accent" />
+                    Minimum Rating
+                  </Label>
                   <span className="text-sm font-semibold">{minRating.toFixed(1)} / 5.0</span>
                 </div>
+                <Slider
+                  min={0}
+                  max={5}
+                  step={0.5}
+                  value={[minRating]}
+                  onValueChange={(value) => setMinRating(value[0])}
+                  className="w-full"
+                />
               </div>
-              <Slider
-                id="rating-filter"
-                min={0}
-                max={5}
-                step={0.5}
-                value={[minRating]}
-                onValueChange={(value) => setMinRating(value[0])}
-                className="w-full"
-              />
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Flame size={16} className="text-primary" />
+                  Cooking Methods
+                </Label>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                  {COOKING_METHODS.map((method) => (
+                    <div key={method.value} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`method-${method.value}`}
+                        checked={selectedCookingMethods.includes(method.value)}
+                        onCheckedChange={() => toggleCookingMethod(method.value)}
+                      />
+                      <label
+                        htmlFor={`method-${method.value}`}
+                        className="text-sm cursor-pointer flex-1"
+                      >
+                        {method.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <CookingPot size={16} className="text-primary" />
+                  Equipment
+                </Label>
+                {allEquipment.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No equipment available</p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                    {allEquipment.map((equipment) => (
+                      <div key={equipment} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`equipment-${equipment}`}
+                          checked={selectedEquipment.includes(equipment)}
+                          onCheckedChange={() => toggleEquipment(equipment)}
+                        />
+                        <label
+                          htmlFor={`equipment-${equipment}`}
+                          className="text-sm cursor-pointer flex-1"
+                        >
+                          {equipment}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleResetFilter}
-              className="gap-2"
-            >
-              <X size={16} />
-              Clear Filter
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground mt-3">
-            Showing {sortedRecipes.length} of {recipes.length} recipes
-          </p>
-        </motion.div>
+
+            <p className="text-xs text-muted-foreground mt-4">
+              Showing {sortedRecipes.length} of {recipes.length} recipes
+            </p>
+          </motion.div>
+        </AnimatePresence>
       )}
 
-      {sortedRecipes.length === 0 && minRating > 0 ? (
+      {sortedRecipes.length === 0 && hasActiveFilters ? (
         <div className="flex flex-col items-center justify-center py-16 px-6">
-          <Star size={64} weight="duotone" className="text-muted-foreground mb-4" />
-          <h2 className="text-2xl font-semibold mb-2">No recipes match this rating</h2>
+          <Funnel size={64} weight="duotone" className="text-muted-foreground mb-4" />
+          <h2 className="text-2xl font-semibold mb-2">No recipes match your filters</h2>
           <p className="text-muted-foreground text-center mb-6 max-w-md">
-            Try lowering the minimum rating threshold to see more recipes
+            Try adjusting your filter criteria to see more recipes
           </p>
-          <Button onClick={handleResetFilter} variant="outline" className="gap-2">
+          <Button onClick={handleResetAllFilters} variant="outline" className="gap-2">
             <X size={20} />
-            Clear Filter
+            Clear All Filters
           </Button>
         </div>
       ) : (
