@@ -32,3 +32,6 @@ pids
 .devcontainer/
 
 .spark-workbench-id
+api/local.settings.json
+api/dist/
+api/node_modules/
