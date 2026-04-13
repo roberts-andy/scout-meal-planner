@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Event, Recipe, Meal, MealType } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Trash, Users, Minus, PencilSimple, GitBranch } from '@phosphor-icons/react'
+import { Plus, Trash, Users, Minus, PencilSimple, GitBranch, Lock } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input'
 import { format } from 'date-fns'
 import { CreateRecipeDialog } from './CreateRecipeDialog'
+import { isEventActive } from '@/lib/helpers'
+import { toast } from 'sonner'
 
 interface EventScheduleProps {
   event: Event
@@ -32,6 +34,8 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
   const [recipeId, setRecipeId] = useState<string>('')
   const [scoutCount, setScoutCount] = useState(8)
   const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null)
+
+  const eventIsActive = isEventActive(event)
 
   const handleAddMeal = () => {
     if (selectedDayIndex === null) return
@@ -71,6 +75,12 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
   }
 
   const handleEditRecipe = (recipe: Recipe) => {
+    if (!eventIsActive) {
+      toast.error('Cannot edit recipe', {
+        description: 'This event has ended. Recipe changes are locked.'
+      })
+      return
+    }
     setRecipeToEdit(recipe)
   }
 
@@ -167,7 +177,9 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
                               variant="outline"
                               className="gap-1"
                               onClick={() => handleEditRecipe(recipe)}
+                              disabled={!eventIsActive}
                             >
+                              {!eventIsActive && <Lock size={16} />}
                               <PencilSimple size={16} />
                               Edit Recipe
                             </Button>
@@ -260,6 +272,9 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
           }}
           onCreateRecipe={handleSaveRecipe}
           initialRecipe={recipeToEdit}
+          eventId={event.id}
+          eventName={event.name}
+          isEventActive={eventIsActive}
         />
       )}
     </div>

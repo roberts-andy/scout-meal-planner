@@ -1,4 +1,4 @@
-import { Ingredient, Recipe, Event, Meal, ShoppingListItem, IngredientUnit } from './types'
+import { Ingredient, Recipe, Event, Meal, ShoppingListItem, IngredientUnit, RecipeVersion } from './types'
 
 export function scaleIngredient(ingredient: Ingredient, originalServings: number, targetServings: number): Ingredient {
   const scaleFactor = targetServings / originalServings
@@ -189,4 +189,26 @@ export function migrateRecipeToVersioning(recipe: Recipe): Recipe {
     currentVersion: 1,
     versions: [],
   }
+}
+
+export function isRecipeInEvent(recipeId: string, event: Event): boolean {
+  return event.days.some(day => 
+    day.meals.some(meal => meal.recipeId === recipeId)
+  )
+}
+
+export function isEventActive(event: Event): boolean {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const endDate = new Date(event.endDate)
+  endDate.setHours(23, 59, 59, 999)
+  return today <= endDate
+}
+
+export function getRecipeEventVersion(recipe: Recipe, eventId: string): RecipeVersion | undefined {
+  return recipe.versions.find(v => v.eventId === eventId)
+}
+
+export function shouldCreateNewVersion(recipe: Recipe, eventId: string): boolean {
+  return !getRecipeEventVersion(recipe, eventId)
 }

@@ -22,9 +22,12 @@ interface CreateRecipeDialogProps {
   onOpenChange: (open: boolean) => void
   onCreateRecipe: (recipe: Recipe) => void
   initialRecipe?: Recipe
+  eventId?: string
+  eventName?: string
+  isEventActive?: boolean
 }
 
-export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initialRecipe }: CreateRecipeDialogProps) {
+export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initialRecipe, eventId, eventName, isEventActive }: CreateRecipeDialogProps) {
   const [name, setName] = useState(initialRecipe?.name || '')
   const [description, setDescription] = useState(initialRecipe?.description || '')
   const [servings, setServings] = useState(initialRecipe?.servings || 4)
@@ -49,6 +52,7 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
   }, [initialRecipe])
 
   const isEditing = !!initialRecipe
+  const isEditingInTrip = isEditing && !!eventId
 
   const addIngredient = () => {
     setIngredients([...ingredients, {
@@ -109,7 +113,69 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
       equipment: v.equipment.filter(e => e.trim())
     })).filter(v => v.instructions.length > 0)
 
-    if (isEditing && initialRecipe) {
+    if (isEditingInTrip && initialRecipe && eventId) {
+      const existingEventVersion = initialRecipe.versions.find(v => v.eventId === eventId)
+      
+      if (existingEventVersion) {
+        const updatedVersions = initialRecipe.versions.map(v => 
+          v.eventId === eventId
+            ? {
+                ...v,
+                name,
+                description: description || undefined,
+                servings,
+                ingredients: filteredIngredients,
+                variations: filteredVariations,
+                createdAt: Date.now(),
+                changeNote: changeNote || v.changeNote,
+              }
+            : v
+        )
+
+        const recipe: Recipe = {
+          ...initialRecipe,
+          name,
+          description: description || undefined,
+          servings,
+          ingredients: filteredIngredients,
+          variations: filteredVariations,
+          updatedAt: Date.now(),
+          versions: updatedVersions,
+        }
+
+        onCreateRecipe(recipe)
+      } else {
+        const currentVersion = initialRecipe.currentVersion || 1
+        const newVersion = currentVersion + 1
+        
+        const eventVersion = {
+          versionNumber: newVersion,
+          eventId,
+          eventName,
+          name,
+          description: description || undefined,
+          servings,
+          ingredients: filteredIngredients,
+          variations: filteredVariations,
+          createdAt: Date.now(),
+          changeNote: changeNote || `Modified for ${eventName}`,
+        }
+
+        const recipe: Recipe = {
+          ...initialRecipe,
+          name,
+          description: description || undefined,
+          servings,
+          ingredients: filteredIngredients,
+          variations: filteredVariations,
+          updatedAt: Date.now(),
+          currentVersion: newVersion,
+          versions: [...(initialRecipe.versions || []), eventVersion],
+        }
+
+        onCreateRecipe(recipe)
+      }
+    } else if (isEditing && initialRecipe) {
       const currentVersion = initialRecipe.currentVersion || 1
       const newVersion = currentVersion + 1
       
@@ -122,6 +188,7 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
         variations: initialRecipe.variations,
         tags: initialRecipe.tags,
         createdAt: initialRecipe.updatedAt,
+        changeNote,
       }
 
       const recipe: Recipe = {
@@ -133,7 +200,7 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
         variations: filteredVariations,
         updatedAt: Date.now(),
         currentVersion: newVersion,
-        versions: [...(initialRecipe.versions || []), { ...previousVersion, changeNote }],
+        versions: [...(initialRecipe.versions || []), previousVersion],
       }
 
       onCreateRecipe(recipe)

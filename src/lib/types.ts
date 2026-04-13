@@ -25,6 +25,8 @@ export interface RecipeVariation {
 
 export interface RecipeVersion {
   versionNumber: number
+  eventId?: string
+  eventName?: string
   name: string
   description?: string
   servings: number

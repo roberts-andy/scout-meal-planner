@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { ClockCounterClockwise, Users, Flame } from '@phosphor-icons/react'
+import { ClockCounterClockwise, Users, Flame, Tent } from '@phosphor-icons/react'
 import { formatQuantity } from '@/lib/helpers'
 
 interface RecipeVersionHistoryProps {
@@ -65,9 +65,15 @@ export function RecipeVersionHistory({ recipe, open, onOpenChange }: RecipeVersi
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h3 className="font-semibold">Version {version.versionNumber}</h3>
                         {isCurrent && <Badge variant="default">Current</Badge>}
+                        {version.eventId && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Tent size={12} />
+                            {version.eventName || 'Trip'}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {formatDate(version.createdAt)}
