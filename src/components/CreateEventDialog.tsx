@@ -156,16 +156,6 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
               </PopoverContent>
             </Popover>
           </div>
-          <div className="grid gap-3">
-            <Label>Trip Type</Label>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="hike"
-                  checked={hike}
-                  onCheckedChange={(checked) => setHike(checked as boolean)}
-                />
-                <Label htmlFor="hike" className="cursor-pointer font-normal">Hike</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -213,6 +203,19 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
           </Button>
         </DialogFooter>
       </DialogContent>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={!name || !startDate || !endDate}>
+            Create Event
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
     </Dialog>
   )
 }
