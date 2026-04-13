@@ -182,12 +182,11 @@ export function EventSchedule({ event, recipes, onUpdateEvent }: EventSchedulePr
 
             <div className="grid gap-2">
               <Label>Recipe (Optional)</Label>
-              <Select value={recipeId} onValueChange={setRecipeId}>
+              <Select value={recipeId || undefined} onValueChange={setRecipeId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a recipe" />
+                  <SelectValue placeholder="No recipe selected" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No recipe</SelectItem>
                   {recipes.map((recipe) => (
                     <SelectItem key={recipe.id} value={recipe.id}>
                       {recipe.name}
