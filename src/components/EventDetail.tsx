@@ -14,7 +14,7 @@ interface EventDetailProps {
   onUpdateEvent: (event: Event) => void
   onBack: () => void
   onAddFeedback: (feedback: MealFeedback) => void
-  onCreateRecipe: (recipe: Recipe) => void
+  onUpdateRecipe: (recipe: Recipe) => void
 }
 
 export function EventDetail({
@@ -24,7 +24,7 @@ export function EventDetail({
   onUpdateEvent,
   onBack,
   onAddFeedback,
-  onCreateRecipe
+  onUpdateRecipe
 }: EventDetailProps) {
   return (
     <div className="min-h-screen bg-background">
@@ -59,7 +59,7 @@ export function EventDetail({
               event={event}
               recipes={recipes}
               onUpdateEvent={onUpdateEvent}
-              onCreateRecipe={onCreateRecipe}
+              onUpdateRecipe={onUpdateRecipe}
             />
           </TabsContent>
 

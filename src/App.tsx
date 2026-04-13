@@ -62,7 +62,7 @@ export default function App() {
         onUpdateEvent={handleUpdateEvent}
         onBack={() => setSelectedEventId(null)}
         onAddFeedback={handleAddFeedback}
-        onCreateRecipe={handleCreateRecipe}
+        onUpdateRecipe={handleUpdateRecipe}
       />
     )
   }

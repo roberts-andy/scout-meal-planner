@@ -107,18 +107,19 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
       equipment: v.equipment.filter(e => e.trim())
     })).filter(v => v.instructions.length > 0)
 
-    const newRecipe: Recipe = {
-      id: `recipe-${Date.now()}`,
+    const recipe: Recipe = {
+      id: initialRecipe?.id || `recipe-${Date.now()}`,
       name,
       description: description || undefined,
       servings,
       ingredients: filteredIngredients,
       variations: filteredVariations,
-      createdAt: Date.now(),
+      clonedFrom: initialRecipe?.clonedFrom,
+      createdAt: initialRecipe?.createdAt || Date.now(),
       updatedAt: Date.now()
     }
 
-    onCreateRecipe(newRecipe)
+    onCreateRecipe(recipe)
     resetForm()
     onOpenChange(false)
   }
