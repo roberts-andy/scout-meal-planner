@@ -1,34 +1,34 @@
 import { useState, useEffect } from 'react'
-import { Button } from '@/component
+import { Event } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-} from '@/compo
+  DialogFooter,
   DialogHeader,
-import { Texta
+  DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 
-  const [cabinCamping, setCabinC
-  useEffect(() 
-    setDescription(event.description ||
-    setHike(ev
-    setTentCamping(event.tentCamping ||
- 
+interface EditEventDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  event: Event
+  onUpdateEvent: (event: Event) => void
+}
 
-      ...event,
-      description: description || undefined,
-      hike,
-      tentCamping,
-    }
-    onOpenChange(false)
-
-    <Dialog open={open} onOpenChange={onOpenChange}>
+export function EditEventDialog({ open, onOpenChange, event, onUpdateEvent }: EditEventDialogProps) {
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [link, setLink] = useState('')
+  const [hike, setHike] = useState(false)
+  const [highAltitude, setHighAltitude] = useState(false)
+  const [tentCamping, setTentCamping] = useState(false)
+  const [cabinCamping, setCabinCamping] = useState(false)
 
   useEffect(() => {
     setName(event.name)
@@ -43,93 +43,95 @@ import { Checkbox } from '@/components/ui/checkbox'
   const handleSubmit = () => {
     const updatedEvent: Event = {
       ...event,
-          <
+      name,
       description: description || undefined,
-              id="edit-event-d
-      hike,
-      highAltitude,
-      tentCamping,
-      cabinCamping,
-     
-              id="edit-event-li
+      link: link || undefined,
+      hike: hike || undefined,
+      highAltitude: highAltitude || undefined,
+      tentCamping: tentCamping || undefined,
+      cabinCamping: cabinCamping || undefined,
+      updatedAt: Date.now()
+    }
+    onUpdateEvent(updatedEvent)
     onOpenChange(false)
-   
+  }
 
-          
+  return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <div cla
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Edit Event</DialogTitle>
+          <DialogDescription>
+            Update the event details.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-6 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="edit-event-name">Event Name</Label>
+            <Input
+              id="edit-event-name"
+              placeholder="e.g., Summer Camp 2024"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="edit-event-description">Description</Label>
+            <Textarea
+              id="edit-event-description"
+              placeholder="Brief description of the trip..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label>Event Characteristics</Label>
+            <div className="grid gap-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-hike"
+                  checked={hike}
+                  onCheckedChange={(checked) => setHike(checked as boolean)}
+                />
+                <Label htmlFor="edit-hike" className="cursor-pointer font-normal">Hike</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-high-altitude"
+                  checked={highAltitude}
+                  onCheckedChange={(checked) => setHighAltitude(checked as boolean)}
+                />
+                <Label htmlFor="edit-high-altitude" className="cursor-pointer font-normal">High Altitude</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-tent-camping"
+                  checked={tentCamping}
+                  onCheckedChange={(checked) => setTentCamping(checked as boolean)}
+                />
+                <Label htmlFor="edit-tent-camping" className="cursor-pointer font-normal">Tent Camping</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
                   id="edit-cabin-camping"
-                  onCheckedCh
-                <Label htmlFor="edit-cabin-camping" className="cursor-pointer font-normal">Cab
+                  checked={cabinCamping}
+                  onCheckedChange={(checked) => setCabinCamping(checked as boolean)}
+                />
+                <Label htmlFor="edit-cabin-camping" className="cursor-pointer font-normal">Cabin Camping</Label>
+              </div>
             </div>
-        </div>
-          <Button variant="outline" onCli
-          </Button>
-            Save Changes
-        </DialogFo
-    </Dialog>
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+          </div>
+          <div className="grid gap-2">
             <Label htmlFor="edit-event-link">Event Link</Label>
             <Input
               id="edit-event-link"
+              type="url"
               placeholder="https://..."
               value={link}
               onChange={(e) => setLink(e.target.value)}
             />
           </div>
-          <div className="grid gap-2">
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
