@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Recipe, MealFeedback } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Plus, CookingPot, Trash, Pencil, Users, Flame, Copy, GitBranch, Star } from '@phosphor-icons/react'
+import { Slider } from '@/components/ui/slider'
+import { Label } from '@/components/ui/label'
+import { Plus, CookingPot, Trash, Pencil, Users, Flame, Copy, GitBranch, Star, Funnel, X } from '@phosphor-icons/react'
 import { CreateRecipeDialog } from './CreateRecipeDialog'
 import { RecipeDetailDialog } from './RecipeDetailDialog'
 import { motion } from 'framer-motion'
@@ -22,6 +24,8 @@ export function RecipeLibrary({ recipes, feedback, onCreateRecipe, onUpdateRecip
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
+  const [minRating, setMinRating] = useState<number>(0)
+  const [showRatingFilter, setShowRatingFilter] = useState(false)
 
   const handleCloneRecipe = (recipe: Recipe, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -37,6 +41,21 @@ export function RecipeLibrary({ recipes, feedback, onCreateRecipe, onUpdateRecip
     }
     onCreateRecipe(clonedRecipe)
     toast.success(`Cloned "${recipe.name}"`)
+  }
+
+  const filteredRecipes = useMemo(() => {
+    if (minRating === 0) return recipes
+
+    return recipes.filter(recipe => {
+      const ratingSummary = calculateRecipeRatings(recipe.id, recipe.name, feedback)
+      if (!ratingSummary) return false
+      return ratingSummary.overallAverage >= minRating
+    })
+  }, [recipes, feedback, minRating])
+
+  const handleResetFilter = () => {
+    setMinRating(0)
+    setShowRatingFilter(false)
   }
 
   if (recipes.length === 0) {
@@ -62,19 +81,85 @@ export function RecipeLibrary({ recipes, feedback, onCreateRecipe, onUpdateRecip
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-2xl font-semibold">Recipe Library</h2>
           <p className="text-muted-foreground mt-1">Your collection of scout-tested recipes</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
-          <Plus size={20} />
-          New Recipe
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={showRatingFilter ? "default" : "outline"}
+            onClick={() => setShowRatingFilter(!showRatingFilter)}
+            className="gap-2"
+          >
+            <Funnel size={20} />
+            Filter by Rating
+          </Button>
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+            <Plus size={20} />
+            New Recipe
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {recipes.map((recipe, index) => {
+      {showRatingFilter && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-muted/50 p-4 rounded-lg border border-border"
+        >
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex-1 min-w-[240px] space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="rating-filter" className="text-sm font-medium">
+                  Minimum Rating
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Star size={16} weight="fill" className="text-accent" />
+                  <span className="text-sm font-semibold">{minRating.toFixed(1)} / 5.0</span>
+                </div>
+              </div>
+              <Slider
+                id="rating-filter"
+                min={0}
+                max={5}
+                step={0.5}
+                value={[minRating]}
+                onValueChange={(value) => setMinRating(value[0])}
+                className="w-full"
+              />
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleResetFilter}
+              className="gap-2"
+            >
+              <X size={16} />
+              Clear Filter
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            Showing {filteredRecipes.length} of {recipes.length} recipes
+          </p>
+        </motion.div>
+      )}
+
+      {filteredRecipes.length === 0 && minRating > 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 px-6">
+          <Star size={64} weight="duotone" className="text-muted-foreground mb-4" />
+          <h2 className="text-2xl font-semibold mb-2">No recipes match this rating</h2>
+          <p className="text-muted-foreground text-center mb-6 max-w-md">
+            Try lowering the minimum rating threshold to see more recipes
+          </p>
+          <Button onClick={handleResetFilter} variant="outline" className="gap-2">
+            <X size={20} />
+            Clear Filter
+          </Button>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredRecipes.map((recipe, index) => {
           const ratingSummary = calculateRecipeRatings(recipe.id, recipe.name, feedback)
           
           return (
@@ -189,7 +274,8 @@ export function RecipeLibrary({ recipes, feedback, onCreateRecipe, onUpdateRecip
             </motion.div>
           )
         })}
-      </div>
+        </div>
+      )}
 
       <CreateRecipeDialog
         open={isCreateDialogOpen}
