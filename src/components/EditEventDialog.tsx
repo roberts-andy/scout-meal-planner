@@ -2,17 +2,17 @@ import { useState, useEffect } from 'react'
 import { Event } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import {
-  DialogC
+  Dialog,
+  DialogContent,
+  DialogDescription,
   DialogFooter,
+  DialogHeader,
   DialogTitle,
-import { Input 
-import { Textar
-
-  open: boolean
-  event: Event
-}
-export function EditEventDialog({ open, onOpenChang
-  const [description, setDescription] = useState(ev
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
 
 interface EditEventDialogProps {
   open: boolean
@@ -30,38 +30,34 @@ export function EditEventDialog({ open, onOpenChange, event, onUpdateEvent }: Ed
   const [tentCamping, setTentCamping] = useState(event.tentCamping || false)
   const [cabinCamping, setCabinCamping] = useState(event.cabinCamping || false)
 
-    const updatedEv
+  useEffect(() => {
+    setName(event.name)
+    setDescription(event.description || '')
+    setLink(event.link || '')
+    setHike(event.hike || false)
+    setHighAltitude(event.highAltitude || false)
+    setTentCamping(event.tentCamping || false)
+    setCabinCamping(event.cabinCamping || false)
+  }, [event])
+
+  const handleSubmit = () => {
+    const updatedEvent: Event = {
+      ...event,
       name,
+      description: description || undefined,
       link: link || undefined,
-      highAltitude: highAltit
-      cabinCamping: cabinCamping
+      hike,
+      highAltitude,
+      tentCamping,
+      cabinCamping,
     }
     onUpdateEvent(updatedEvent)
+    onOpenChange(false)
   }
+
   return (
-
-          <DialogTitle>Edit Ev
-            Update ev
-
-          <div className="grid ga
-            <In
-           
-              onChange={(e) => setName(e.tar
-          </div>
-            <Label htmlFor="ed
-              id="edit-event-description"
-              value={description}
-              rows={3}
-          </div>
-     
-
-                  id="edit-hike
-                  onChe
-   
-
-          
-                  onCheckedChange={(checked) => setH
-                <Label htmlFor="edit-high-altitude
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Event Details</DialogTitle>
           <DialogDescription>
@@ -86,6 +82,15 @@ export function EditEventDialog({ open, onOpenChange, event, onUpdateEvent }: Ed
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="edit-event-link">Event Link</Label>
+            <Input
+              id="edit-event-link"
+              placeholder="https://..."
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
             />
           </div>
           <div className="grid gap-2">
@@ -125,26 +130,16 @@ export function EditEventDialog({ open, onOpenChange, event, onUpdateEvent }: Ed
               </div>
             </div>
           </div>
-          <div className="grid gap-2">
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit}>
+            Save Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
