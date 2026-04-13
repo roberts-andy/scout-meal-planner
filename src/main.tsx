@@ -19,6 +19,7 @@ const queryClient = new QueryClient({
   },
 })
 
+
 createRoot(document.getElementById('root')!).render(
   <ErrorBoundary FallbackComponent={ErrorFallback}>
     <QueryClientProvider client={queryClient}>
