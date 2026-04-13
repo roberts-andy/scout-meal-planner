@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { Event, Recipe, MealFeedback, FeedbackRating } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ChatCircle, Plus, Camera, X, Image as ImageIcon } from '@phosphor-icons/react'
+import { ChatCircle, Plus, Camera, X, Image as ImageIcon, User } from '@phosphor-icons/react'
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { StarRating } from '@/components/StarRating'
@@ -27,6 +28,7 @@ interface EventFeedbackProps {
 export function EventFeedback({ event, recipes, feedback, onAddFeedback }: EventFeedbackProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedMealId, setSelectedMealId] = useState('')
+  const [scoutName, setScoutName] = useState('')
   const [comments, setComments] = useState('')
   const [whatWorked, setWhatWorked] = useState('')
   const [whatToChange, setWhatToChange] = useState('')
@@ -79,6 +81,7 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
       eventId: event.id,
       mealId: selectedMealId,
       recipeId: meal.meal.recipeId,
+      scoutName: scoutName || undefined,
       rating: ratings,
       comments,
       whatWorked,
@@ -90,6 +93,7 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
     onAddFeedback(newFeedback)
     setIsDialogOpen(false)
     setSelectedMealId('')
+    setScoutName('')
     setComments('')
     setWhatWorked('')
     setWhatToChange('')
@@ -138,7 +142,14 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
               <Card key={fb.id}>
                 <CardHeader>
                   <CardTitle className="text-lg">{recipe?.name}</CardTitle>
-                  <CardDescription>
+                  <CardDescription className="flex items-center gap-2">
+                    {fb.scoutName && (
+                      <>
+                        <User size={14} />
+                        <span>{fb.scoutName}</span>
+                        <span className="text-muted-foreground">•</span>
+                      </>
+                    )}
                     {format(new Date(fb.createdAt), 'MMM d, yyyy')}
                   </CardDescription>
                 </CardHeader>
@@ -207,6 +218,16 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="scout-name">Scout Name (Optional)</Label>
+              <Input
+                id="scout-name"
+                placeholder="Who is providing this feedback?"
+                value={scoutName}
+                onChange={(e) => setScoutName(e.target.value)}
+              />
+            </div>
+
             <div className="grid gap-2">
               <Label>Select Meal</Label>
               <Select value={selectedMealId} onValueChange={setSelectedMealId}>
