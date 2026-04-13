@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Event, Recipe, Meal, MealType } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Trash, Users, Minus, Copy } from '@phosphor-icons/react'
+import { Plus, Trash, Users, Minus, Copy, GitBranch } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
@@ -76,6 +76,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onCreateRecipe }:
       ...recipe,
       id: `recipe-${Date.now()}`,
       name: `${recipe.name} (Copy)`,
+      clonedFrom: recipe.id,
       ingredients: recipe.ingredients.map(ing => ({
         ...ing,
         id: `ing-${Date.now()}-${Math.random()}`
@@ -150,17 +151,24 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onCreateRecipe }:
                 <div className="space-y-3">
                   {day.meals.map((meal) => {
                     const recipe = meal.recipeId ? recipes.find(r => r.id === meal.recipeId) : null
+                    const originalRecipe = recipe?.clonedFrom ? recipes.find(r => r.id === recipe.clonedFrom) : null
                     return (
                       <div
                         key={meal.id}
                         className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                       >
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Badge variant="secondary" className="capitalize">
                               {meal.type}
                             </Badge>
                             {recipe && <span className="font-medium">{recipe.name}</span>}
+                            {originalRecipe && (
+                              <Badge variant="outline" className="gap-1 text-xs">
+                                <GitBranch size={12} />
+                                from {originalRecipe.name}
+                              </Badge>
+                            )}
                           </div>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex items-center gap-2">
@@ -278,6 +286,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onCreateRecipe }:
       {recipeToEdit && (
         <RecipeDetailDialog
           recipe={recipeToEdit}
+          recipes={recipes}
           open={!!recipeToEdit}
           onOpenChange={(open) => {
             if (!open) {

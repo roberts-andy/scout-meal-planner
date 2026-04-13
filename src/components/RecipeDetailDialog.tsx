@@ -9,17 +9,20 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { Users, Flame } from '@phosphor-icons/react'
+import { Users, Flame, GitBranch } from '@phosphor-icons/react'
 import { formatQuantity } from '@/lib/helpers'
 
 interface RecipeDetailDialogProps {
   recipe: Recipe
+  recipes?: Recipe[]
   open: boolean
   onOpenChange: (open: boolean) => void
   onUpdateRecipe: (recipe: Recipe) => void
 }
 
-export function RecipeDetailDialog({ recipe, open, onOpenChange }: RecipeDetailDialogProps) {
+export function RecipeDetailDialog({ recipe, recipes, open, onOpenChange }: RecipeDetailDialogProps) {
+  const originalRecipe = recipe.clonedFrom && recipes?.find(r => r.id === recipe.clonedFrom)
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
@@ -27,6 +30,12 @@ export function RecipeDetailDialog({ recipe, open, onOpenChange }: RecipeDetailD
           <DialogTitle className="text-2xl">{recipe.name}</DialogTitle>
           {recipe.description && (
             <p className="text-muted-foreground">{recipe.description}</p>
+          )}
+          {originalRecipe && (
+            <Badge variant="outline" className="gap-1.5 w-fit mt-2">
+              <GitBranch size={14} />
+              Cloned from {originalRecipe.name}
+            </Badge>
           )}
         </DialogHeader>
         <ScrollArea className="max-h-[70vh] pr-4">

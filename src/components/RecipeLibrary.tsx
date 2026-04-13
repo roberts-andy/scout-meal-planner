@@ -3,7 +3,7 @@ import { Recipe } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Plus, CookingPot, Trash, Pencil, Users, Flame, Copy } from '@phosphor-icons/react'
+import { Plus, CookingPot, Trash, Pencil, Users, Flame, Copy, GitBranch } from '@phosphor-icons/react'
 import { CreateRecipeDialog } from './CreateRecipeDialog'
 import { RecipeDetailDialog } from './RecipeDetailDialog'
 import { motion } from 'framer-motion'
@@ -127,6 +127,15 @@ export function RecipeLibrary({ recipes, onCreateRecipe, onUpdateRecipe, onDelet
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2 mb-3">
+                  {recipe.clonedFrom && (() => {
+                    const originalRecipe = recipes.find(r => r.id === recipe.clonedFrom)
+                    return originalRecipe && (
+                      <Badge variant="outline" className="gap-1 text-xs">
+                        <GitBranch size={12} />
+                        Cloned from {originalRecipe.name}
+                      </Badge>
+                    )
+                  })()}
                   {recipe.variations.slice(0, 2).map((variation) => (
                     <Badge key={variation.id} variant="secondary" className="gap-1">
                       <Flame size={14} />
@@ -172,6 +181,7 @@ export function RecipeLibrary({ recipes, onCreateRecipe, onUpdateRecipe, onDelet
       {selectedRecipe && (
         <RecipeDetailDialog
           recipe={selectedRecipe}
+          recipes={recipes}
           open={!!selectedRecipe}
           onOpenChange={(open) => !open && setSelectedRecipe(null)}
           onUpdateRecipe={onUpdateRecipe}
