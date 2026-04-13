@@ -95,6 +95,7 @@ export interface MealFeedback {
   comments: string
   whatWorked: string
   whatToChange: string
+  photos?: string[]
   createdAt: number
 }
 

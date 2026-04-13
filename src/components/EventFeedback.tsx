@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Event, Recipe, MealFeedback } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ChatCircle, Plus } from '@phosphor-icons/react'
+import { ChatCircle, Plus, Camera, X, Image as ImageIcon } from '@phosphor-icons/react'
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,8 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
   const [comments, setComments] = useState('')
   const [whatWorked, setWhatWorked] = useState('')
   const [whatToChange, setWhatToChange] = useState('')
+  const [photos, setPhotos] = useState<string[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const eventFeedback = feedback.filter(f => f.eventId === event.id)
 
@@ -41,6 +43,26 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
         recipe: recipes.find(r => r.id === meal.recipeId)
       }))
   )
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+
+    Array.from(files).forEach(file => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          const result = reader.result as string
+          setPhotos(current => [...current, result])
+        }
+        reader.readAsDataURL(file)
+      }
+    })
+  }
+
+  const handleRemovePhoto = (index: number) => {
+    setPhotos(current => current.filter((_, i) => i !== index))
+  }
 
   const handleSubmit = () => {
     const meal = allMeals.find(m => m.meal.id === selectedMealId)
@@ -55,6 +77,7 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
       comments,
       whatWorked,
       whatToChange,
+      photos: photos.length > 0 ? photos : undefined,
       createdAt: Date.now()
     }
 
@@ -64,6 +87,7 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
     setComments('')
     setWhatWorked('')
     setWhatToChange('')
+    setPhotos([])
   }
 
   if (allMeals.length === 0) {
@@ -112,6 +136,22 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  {fb.photos && fb.photos.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Photos</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {fb.photos.map((photo, index) => (
+                          <div key={index} className="relative aspect-square rounded-md overflow-hidden bg-muted">
+                            <img 
+                              src={photo} 
+                              alt={`Meal photo ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {fb.whatWorked && (
                     <div>
                       <p className="text-sm font-medium mb-1">What Worked</p>
@@ -193,6 +233,58 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
                 onChange={(e) => setComments(e.target.value)}
                 rows={2}
               />
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Photos of Completed Meal</Label>
+              <div className="space-y-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="photo-upload"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full gap-2"
+                >
+                  <Camera size={20} />
+                  Add Photos
+                </Button>
+                
+                {photos.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {photos.map((photo, index) => (
+                      <div key={index} className="relative aspect-square rounded-md overflow-hidden bg-muted group">
+                        <img 
+                          src={photo} 
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(index)}
+                          className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {photos.length > 0 && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <ImageIcon size={14} />
+                    {photos.length} {photos.length === 1 ? 'photo' : 'photos'} added
+                  </p>
+                )}
+              </div>
             </div>
           </div>
           <DialogFooter>
