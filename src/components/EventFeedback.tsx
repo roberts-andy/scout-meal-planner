@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { Event, Recipe, MealFeedback, FeedbackRating } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ChatCircle, Plus, Camera, X, Image as ImageIcon, User, PencilSimple, Trash } from '@phosphor-icons/react'
+import { ChatCircle, Plus, Camera, X, Image as ImageIcon, User, PencilSimple, Trash, ClockCounterClockwise } from '@phosphor-icons/react'
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { StarRating } from '@/components/StarRating'
 import { format } from 'date-fns'
+import { Badge } from '@/components/ui/badge'
 
 interface EventFeedbackProps {
   event: Event
@@ -136,6 +137,7 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
         whatWorked,
         whatToChange,
         photos: photos.length > 0 ? photos : undefined,
+        updatedAt: Date.now()
       }
       onUpdateFeedback(updatedFeedback)
     } else {
@@ -206,15 +208,26 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
                       <CardTitle className="text-lg">{recipe?.name}</CardTitle>
-                      <CardDescription className="flex items-center gap-2">
+                      <CardDescription className="flex items-center gap-2 flex-wrap">
                         {fb.scoutName && (
                           <>
-                            <User size={14} />
-                            <span>{fb.scoutName}</span>
+                            <span className="flex items-center gap-1">
+                              <User size={14} />
+                              {fb.scoutName}
+                            </span>
                             <span className="text-muted-foreground">•</span>
                           </>
                         )}
-                        {format(new Date(fb.createdAt), 'MMM d, yyyy')}
+                        <span>{format(new Date(fb.createdAt), 'MMM d, yyyy')}</span>
+                        {fb.updatedAt && (
+                          <>
+                            <span className="text-muted-foreground">•</span>
+                            <Badge variant="outline" className="gap-1 font-normal">
+                              <ClockCounterClockwise size={12} />
+                              Edited {format(new Date(fb.updatedAt), 'MMM d, h:mm a')}
+                            </Badge>
+                          </>
+                        )}
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-1">

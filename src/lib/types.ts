@@ -97,6 +97,7 @@ export interface MealFeedback {
   whatToChange: string
   photos?: string[]
   createdAt: number
+  updatedAt?: number
 }
 
 export interface ShoppingListItem {
