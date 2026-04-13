@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Event, Recipe, MealFeedback } from '@/lib/types'
+import { Event, Recipe, MealFeedback, FeedbackRating } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChatCircle, Plus, Camera, X, Image as ImageIcon } from '@phosphor-icons/react'
@@ -14,6 +14,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { StarRating } from '@/components/StarRating'
 import { format } from 'date-fns'
 
 interface EventFeedbackProps {
@@ -30,6 +31,11 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
   const [whatWorked, setWhatWorked] = useState('')
   const [whatToChange, setWhatToChange] = useState('')
   const [photos, setPhotos] = useState<string[]>([])
+  const [ratings, setRatings] = useState<FeedbackRating>({
+    taste: 0,
+    difficulty: 0,
+    portionSize: 0
+  })
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const eventFeedback = feedback.filter(f => f.eventId === event.id)
@@ -73,7 +79,7 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
       eventId: event.id,
       mealId: selectedMealId,
       recipeId: meal.meal.recipeId,
-      rating: { taste: 5, difficulty: 5, portionSize: 5 },
+      rating: ratings,
       comments,
       whatWorked,
       whatToChange,
@@ -88,6 +94,7 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
     setWhatWorked('')
     setWhatToChange('')
     setPhotos([])
+    setRatings({ taste: 0, difficulty: 0, portionSize: 0 })
   }
 
   if (allMeals.length === 0) {
@@ -136,6 +143,20 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Taste</p>
+                      <StarRating value={fb.rating.taste} readonly size={16} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Difficulty</p>
+                      <StarRating value={fb.rating.difficulty} readonly size={16} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Portion Size</p>
+                      <StarRating value={fb.rating.portionSize} readonly size={16} />
+                    </div>
+                  </div>
                   {fb.photos && fb.photos.length > 0 && (
                     <div className="space-y-2">
                       <p className="text-sm font-medium">Photos</p>
@@ -200,6 +221,32 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="grid gap-4">
+              <div className="space-y-3">
+                <div>
+                  <Label className="mb-2 block">Taste</Label>
+                  <StarRating
+                    value={ratings.taste}
+                    onChange={(value) => setRatings(prev => ({ ...prev, taste: value }))}
+                  />
+                </div>
+                <div>
+                  <Label className="mb-2 block">Difficulty</Label>
+                  <StarRating
+                    value={ratings.difficulty}
+                    onChange={(value) => setRatings(prev => ({ ...prev, difficulty: value }))}
+                  />
+                </div>
+                <div>
+                  <Label className="mb-2 block">Portion Size</Label>
+                  <StarRating
+                    value={ratings.portionSize}
+                    onChange={(value) => setRatings(prev => ({ ...prev, portionSize: value }))}
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="grid gap-2">
@@ -291,7 +338,10 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={!selectedMealId}>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={!selectedMealId || (ratings.taste === 0 && ratings.difficulty === 0 && ratings.portionSize === 0)}
+            >
               Submit Feedback
             </Button>
           </DialogFooter>
