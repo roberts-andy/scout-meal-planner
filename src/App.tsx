@@ -5,16 +5,17 @@ import { migrateRecipeToVersioning } from '@/lib/helpers'
 import { EventList } from '@/components/EventList'
 import { RecipeLibrary } from '@/components/RecipeLibrary'
 import { EventDetail } from '@/components/EventDetail'
+import { VersioningTest } from '@/components/VersioningTest'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Calendar, CookingPot } from '@phosphor-icons/react'
+import { Calendar, CookingPot, Flask } from '@phosphor-icons/react'
 
 export default function App() {
   const [events, setEvents] = useKV<Event[]>('scout-events', [])
   const [recipes, setRecipes] = useKV<Recipe[]>('scout-recipes', [])
   const [feedback, setFeedback] = useKV<MealFeedback[]>('scout-feedback', [])
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'events' | 'recipes'>('events')
+  const [activeTab, setActiveTab] = useState<'events' | 'recipes' | 'test'>('events')
 
   useEffect(() => {
     if (recipes && recipes.length > 0) {
@@ -88,8 +89,8 @@ export default function App() {
       </header>
 
       <main className="container mx-auto px-6 py-8">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'events' | 'recipes')} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2 mb-8">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'events' | 'recipes' | 'test')} className="w-full">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3 mb-8">
             <TabsTrigger value="events" className="flex items-center gap-2">
               <Calendar size={18} />
               Events
@@ -97,6 +98,10 @@ export default function App() {
             <TabsTrigger value="recipes" className="flex items-center gap-2">
               <CookingPot size={18} />
               Recipes
+            </TabsTrigger>
+            <TabsTrigger value="test" className="flex items-center gap-2">
+              <Flask size={18} />
+              Test Versioning
             </TabsTrigger>
           </TabsList>
 
@@ -115,6 +120,14 @@ export default function App() {
               onCreateRecipe={handleCreateRecipe}
               onUpdateRecipe={handleUpdateRecipe}
               onDeleteRecipe={handleDeleteRecipe}
+            />
+          </TabsContent>
+
+          <TabsContent value="test" className="mt-0">
+            <VersioningTest
+              events={events || []}
+              recipes={recipes || []}
+              onUpdateRecipe={handleUpdateRecipe}
             />
           </TabsContent>
         </Tabs>
