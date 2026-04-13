@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Event, Recipe, Meal, MealType } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Trash, Users, Minus } from '@phosphor-icons/react'
+import { Plus, Trash, Users, Minus, Copy } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
@@ -16,19 +16,23 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { format } from 'date-fns'
+import { RecipeDetailDialog } from './RecipeDetailDialog'
 
 interface EventScheduleProps {
   event: Event
   recipes: Recipe[]
   onUpdateEvent: (event: Event) => void
+  onCreateRecipe?: (recipe: Recipe) => void
 }
 
-export function EventSchedule({ event, recipes, onUpdateEvent }: EventScheduleProps) {
+export function EventSchedule({ event, recipes, onUpdateEvent, onCreateRecipe }: EventScheduleProps) {
   const [isAddMealOpen, setIsAddMealOpen] = useState(false)
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null)
   const [mealType, setMealType] = useState<MealType>('breakfast')
   const [recipeId, setRecipeId] = useState<string>('')
   const [scoutCount, setScoutCount] = useState(8)
+  const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null)
+  const [editingMealId, setEditingMealId] = useState<string | null>(null)
 
   const handleAddMeal = () => {
     if (selectedDayIndex === null) return
@@ -65,6 +69,49 @@ export function EventSchedule({ event, recipes, onUpdateEvent }: EventSchedulePr
       updated.updatedAt = Date.now()
       onUpdateEvent(updated)
     }
+  }
+
+  const handleCloneRecipe = (recipe: Recipe, mealId: string) => {
+    const clonedRecipe: Recipe = {
+      ...recipe,
+      id: `recipe-${Date.now()}`,
+      name: `${recipe.name} (Copy)`,
+      ingredients: recipe.ingredients.map(ing => ({
+        ...ing,
+        id: `ing-${Date.now()}-${Math.random()}`
+      })),
+      variations: recipe.variations.map(v => ({
+        ...v,
+        id: `var-${Date.now()}-${Math.random()}`
+      })),
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    }
+    
+    setRecipeToEdit(clonedRecipe)
+    setEditingMealId(mealId)
+  }
+
+  const handleSaveClonedRecipe = (updatedRecipe: Recipe) => {
+    if (!onCreateRecipe) return
+    
+    onCreateRecipe(updatedRecipe)
+    
+    if (editingMealId) {
+      const updated = { ...event }
+      for (const day of updated.days) {
+        const meal = day.meals.find(m => m.id === editingMealId)
+        if (meal) {
+          meal.recipeId = updatedRecipe.id
+          break
+        }
+      }
+      updated.updatedAt = Date.now()
+      onUpdateEvent(updated)
+    }
+    
+    setRecipeToEdit(null)
+    setEditingMealId(null)
   }
 
   return (
@@ -138,13 +185,26 @@ export function EventSchedule({ event, recipes, onUpdateEvent }: EventSchedulePr
                             </div>
                           </div>
                         </div>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleDeleteMeal(dayIndex, meal.id)}
-                        >
-                          <Trash size={18} className="text-destructive" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          {recipe && onCreateRecipe && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1"
+                              onClick={() => handleCloneRecipe(recipe, meal.id)}
+                            >
+                              <Copy size={16} />
+                              Clone & Edit
+                            </Button>
+                          )}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleDeleteMeal(dayIndex, meal.id)}
+                          >
+                            <Trash size={18} className="text-destructive" />
+                          </Button>
+                        </div>
                       </div>
                     )
                   })}
@@ -214,6 +274,20 @@ export function EventSchedule({ event, recipes, onUpdateEvent }: EventSchedulePr
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {recipeToEdit && (
+        <RecipeDetailDialog
+          recipe={recipeToEdit}
+          open={!!recipeToEdit}
+          onOpenChange={(open) => {
+            if (!open) {
+              setRecipeToEdit(null)
+              setEditingMealId(null)
+            }
+          }}
+          onUpdateRecipe={handleSaveClonedRecipe}
+        />
+      )}
     </div>
   )
 }
