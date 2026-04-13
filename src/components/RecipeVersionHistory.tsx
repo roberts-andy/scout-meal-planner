@@ -20,20 +20,23 @@ interface RecipeVersionHistoryProps {
 }
 
 export function RecipeVersionHistory({ recipe, open, onOpenChange }: RecipeVersionHistoryProps) {
-  const allVersions = [
-    {
-      versionNumber: recipe.currentVersion,
-      name: recipe.name,
-      description: recipe.description,
-      servings: recipe.servings,
-      ingredients: recipe.ingredients,
-      variations: recipe.variations,
-      tags: recipe.tags,
-      createdAt: recipe.updatedAt,
-      changeNote: 'Current version',
-    },
-    ...recipe.versions,
-  ].sort((a, b) => b.versionNumber - a.versionNumber)
+  const currentVersionData: RecipeVersion = {
+    versionNumber: recipe.currentVersion,
+    eventId: undefined,
+    eventName: undefined,
+    name: recipe.name,
+    description: recipe.description,
+    servings: recipe.servings,
+    ingredients: recipe.ingredients,
+    variations: recipe.variations,
+    tags: recipe.tags,
+    createdAt: recipe.updatedAt,
+    changeNote: 'Current version',
+  }
+  
+  const allVersions = [currentVersionData, ...recipe.versions].sort(
+    (a, b) => b.versionNumber - a.versionNumber
+  )
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString('en-US', {
