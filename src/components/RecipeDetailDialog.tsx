@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Recipe } from '@/lib/types'
 import {
   Dialog,
@@ -6,11 +7,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { Users, Flame, GitBranch } from '@phosphor-icons/react'
+import { Users, Flame, GitBranch, ClockCounterClockwise } from '@phosphor-icons/react'
 import { formatQuantity } from '@/lib/helpers'
+import { RecipeVersionHistory } from './RecipeVersionHistory'
 
 interface RecipeDetailDialogProps {
   recipe: Recipe
@@ -21,23 +24,48 @@ interface RecipeDetailDialogProps {
 }
 
 export function RecipeDetailDialog({ recipe, recipes, open, onOpenChange }: RecipeDetailDialogProps) {
+  const [showVersionHistory, setShowVersionHistory] = useState(false)
   const originalRecipe = recipe.clonedFrom && recipes?.find(r => r.id === recipe.clonedFrom)
+  const hasVersionHistory = recipe.versions && recipe.versions.length > 0
   
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">{recipe.name}</DialogTitle>
-          {recipe.description && (
-            <p className="text-muted-foreground">{recipe.description}</p>
-          )}
-          {originalRecipe && (
-            <Badge variant="outline" className="gap-1.5 w-fit mt-2">
-              <GitBranch size={14} />
-              Cloned from {originalRecipe.name}
-            </Badge>
-          )}
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
+          <DialogHeader>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <DialogTitle className="text-2xl">{recipe.name}</DialogTitle>
+                {recipe.description && (
+                  <p className="text-muted-foreground mt-1">{recipe.description}</p>
+                )}
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  {originalRecipe && (
+                    <Badge variant="outline" className="gap-1.5">
+                      <GitBranch size={14} />
+                      Cloned from {originalRecipe.name}
+                    </Badge>
+                  )}
+                  {hasVersionHistory && (
+                    <Badge variant="secondary" className="gap-1">
+                      v{recipe.currentVersion}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              {hasVersionHistory && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 shrink-0"
+                  onClick={() => setShowVersionHistory(true)}
+                >
+                  <ClockCounterClockwise size={16} />
+                  History
+                </Button>
+              )}
+            </div>
+          </DialogHeader>
         <ScrollArea className="max-h-[70vh] pr-4">
           <div className="space-y-6 py-4">
             <div className="flex items-center gap-4 text-sm">
@@ -111,5 +139,12 @@ export function RecipeDetailDialog({ recipe, recipes, open, onOpenChange }: Reci
         </ScrollArea>
       </DialogContent>
     </Dialog>
+
+    <RecipeVersionHistory
+      recipe={recipe}
+      open={showVersionHistory}
+      onOpenChange={setShowVersionHistory}
+    />
+    </>
   )
 }

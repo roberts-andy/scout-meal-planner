@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { Event, Recipe, MealFeedback } from '@/lib/types'
+import { migrateRecipeToVersioning } from '@/lib/helpers'
 import { EventList } from '@/components/EventList'
 import { RecipeLibrary } from '@/components/RecipeLibrary'
 import { EventDetail } from '@/components/EventDetail'
@@ -14,6 +15,16 @@ export default function App() {
   const [feedback, setFeedback] = useKV<MealFeedback[]>('scout-feedback', [])
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'events' | 'recipes'>('events')
+
+  useEffect(() => {
+    if (recipes && recipes.length > 0) {
+      const needsMigration = recipes.some(r => r.currentVersion === undefined)
+      if (needsMigration) {
+        const migratedRecipes = recipes.map(migrateRecipeToVersioning)
+        setRecipes(migratedRecipes)
+      }
+    }
+  }, [])
 
   const selectedEvent = (events || []).find(e => e.id === selectedEventId)
 

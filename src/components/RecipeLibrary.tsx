@@ -30,6 +30,8 @@ export function RecipeLibrary({ recipes, onCreateRecipe, onUpdateRecipe, onDelet
       clonedFrom: recipe.id,
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      currentVersion: 1,
+      versions: [],
     }
     onCreateRecipe(clonedRecipe)
     toast.success(`Cloned "${recipe.name}"`)
@@ -136,6 +138,11 @@ export function RecipeLibrary({ recipes, onCreateRecipe, onUpdateRecipe, onDelet
                       </Badge>
                     )
                   })()}
+                  {recipe.versions && recipe.versions.length > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      v{recipe.currentVersion || 1}
+                    </Badge>
+                  )}
                   {recipe.variations.slice(0, 2).map((variation) => (
                     <Badge key={variation.id} variant="secondary" className="gap-1">
                       <Flame size={14} />

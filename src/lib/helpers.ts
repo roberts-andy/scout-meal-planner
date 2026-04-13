@@ -178,3 +178,15 @@ export function getEquipmentList(event: Event, recipes: Recipe[]): Map<string, n
   
   return equipmentMap
 }
+
+export function migrateRecipeToVersioning(recipe: Recipe): Recipe {
+  if (recipe.currentVersion !== undefined && recipe.versions !== undefined) {
+    return recipe
+  }
+  
+  return {
+    ...recipe,
+    currentVersion: 1,
+    versions: [],
+  }
+}

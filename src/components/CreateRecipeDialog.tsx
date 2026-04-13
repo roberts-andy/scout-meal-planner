@@ -35,6 +35,7 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
     instructions: [''],
     equipment: [''],
   }])
+  const [changeNote, setChangeNote] = useState('')
 
   useEffect(() => {
     if (initialRecipe) {
@@ -43,6 +44,7 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
       setServings(initialRecipe.servings)
       setIngredients(initialRecipe.ingredients)
       setVariations(initialRecipe.variations)
+      setChangeNote('')
     }
   }, [initialRecipe])
 
@@ -107,19 +109,51 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
       equipment: v.equipment.filter(e => e.trim())
     })).filter(v => v.instructions.length > 0)
 
-    const recipe: Recipe = {
-      id: initialRecipe?.id || `recipe-${Date.now()}`,
-      name,
-      description: description || undefined,
-      servings,
-      ingredients: filteredIngredients,
-      variations: filteredVariations,
-      clonedFrom: initialRecipe?.clonedFrom,
-      createdAt: initialRecipe?.createdAt || Date.now(),
-      updatedAt: Date.now()
-    }
+    if (isEditing && initialRecipe) {
+      const currentVersion = initialRecipe.currentVersion || 1
+      const newVersion = currentVersion + 1
+      
+      const previousVersion = {
+        versionNumber: currentVersion,
+        name: initialRecipe.name,
+        description: initialRecipe.description,
+        servings: initialRecipe.servings,
+        ingredients: initialRecipe.ingredients,
+        variations: initialRecipe.variations,
+        tags: initialRecipe.tags,
+        createdAt: initialRecipe.updatedAt,
+      }
 
-    onCreateRecipe(recipe)
+      const recipe: Recipe = {
+        ...initialRecipe,
+        name,
+        description: description || undefined,
+        servings,
+        ingredients: filteredIngredients,
+        variations: filteredVariations,
+        updatedAt: Date.now(),
+        currentVersion: newVersion,
+        versions: [...(initialRecipe.versions || []), { ...previousVersion, changeNote }],
+      }
+
+      onCreateRecipe(recipe)
+    } else {
+      const recipe: Recipe = {
+        id: `recipe-${Date.now()}`,
+        name,
+        description: description || undefined,
+        servings,
+        ingredients: filteredIngredients,
+        variations: filteredVariations,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        currentVersion: 1,
+        versions: [],
+      }
+
+      onCreateRecipe(recipe)
+    }
+    
     resetForm()
     onOpenChange(false)
   }
@@ -135,6 +169,7 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
       instructions: [''],
       equipment: [''],
     }])
+    setChangeNote('')
   }
 
   return (
@@ -181,6 +216,19 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
                 onChange={(e) => setServings(parseInt(e.target.value) || 1)}
               />
             </div>
+
+            {isEditing && (
+              <div className="grid gap-2">
+                <Label htmlFor="change-note">Change Note (Optional)</Label>
+                <Textarea
+                  id="change-note"
+                  placeholder="Describe what you changed in this version..."
+                  value={changeNote}
+                  onChange={(e) => setChangeNote(e.target.value)}
+                  rows={2}
+                />
+              </div>
+            )}
 
             <Separator />
 

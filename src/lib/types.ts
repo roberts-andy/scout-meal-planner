@@ -23,6 +23,18 @@ export interface RecipeVariation {
   notes?: string
 }
 
+export interface RecipeVersion {
+  versionNumber: number
+  name: string
+  description?: string
+  servings: number
+  ingredients: Ingredient[]
+  variations: RecipeVariation[]
+  tags?: string[]
+  createdAt: number
+  changeNote?: string
+}
+
 export interface Recipe {
   id: string
   name: string
@@ -34,6 +46,8 @@ export interface Recipe {
   clonedFrom?: string
   createdAt: number
   updatedAt: number
+  currentVersion: number
+  versions: RecipeVersion[]
 }
 
 export interface Meal {
