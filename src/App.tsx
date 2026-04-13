@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useKV } from '@github/spark/hooks'
 import { Event, Recipe, MealFeedback } from '@/lib/types'
 import { migrateRecipeToVersioning } from '@/lib/helpers'
 import { EventList } from '@/components/EventList'
@@ -9,11 +8,25 @@ import { VersioningTest } from '@/components/VersioningTest'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Calendar, CookingPot, Flask } from '@phosphor-icons/react'
+import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent } from '@/hooks/useEvents'
+import { useRecipes, useCreateRecipe, useUpdateRecipe, useDeleteRecipe } from '@/hooks/useRecipes'
+import { useFeedback, useCreateFeedback, useUpdateFeedback, useDeleteFeedback } from '@/hooks/useFeedback'
 
 export default function App() {
-  const [events, setEvents] = useKV<Event[]>('scout-events', [])
-  const [recipes, setRecipes] = useKV<Recipe[]>('scout-recipes', [])
-  const [feedback, setFeedback] = useKV<MealFeedback[]>('scout-feedback', [])
+  const { data: events = [], isLoading: eventsLoading } = useEvents()
+  const { data: recipes = [], isLoading: recipesLoading } = useRecipes()
+  const { data: feedback = [], isLoading: feedbackLoading } = useFeedback()
+
+  const createEvent = useCreateEvent()
+  const updateEvent = useUpdateEvent()
+  const deleteEvent = useDeleteEvent()
+  const createRecipe = useCreateRecipe()
+  const updateRecipeMutation = useUpdateRecipe()
+  const deleteRecipe = useDeleteRecipe()
+  const createFeedback = useCreateFeedback()
+  const updateFeedbackMutation = useUpdateFeedback()
+  const deleteFeedback = useDeleteFeedback()
+
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'events' | 'recipes' | 'test'>('events')
 
@@ -21,66 +34,70 @@ export default function App() {
     if (recipes && recipes.length > 0) {
       const needsMigration = recipes.some(r => r.currentVersion === undefined)
       if (needsMigration) {
-        const migratedRecipes = recipes.map(migrateRecipeToVersioning)
-        setRecipes(migratedRecipes)
+        recipes.map(migrateRecipeToVersioning).forEach(r => updateRecipeMutation.mutate(r))
       }
     }
-  }, [])
+  }, [recipes.length])
 
-  const selectedEvent = (events || []).find(e => e.id === selectedEventId)
+  const selectedEvent = events.find(e => e.id === selectedEventId)
 
   const handleCreateEvent = (event: Event) => {
-    setEvents(current => [...(current || []), event])
+    createEvent.mutate(event)
     setSelectedEventId(event.id)
   }
 
   const handleUpdateEvent = (updatedEvent: Event) => {
-    setEvents(current =>
-      (current || []).map(e => e.id === updatedEvent.id ? updatedEvent : e)
-    )
+    updateEvent.mutate(updatedEvent)
   }
 
   const handleDeleteEvent = (eventId: string) => {
-    setEvents(current => (current || []).filter(e => e.id !== eventId))
+    deleteEvent.mutate(eventId)
     if (selectedEventId === eventId) {
       setSelectedEventId(null)
     }
   }
 
   const handleCreateRecipe = (recipe: Recipe) => {
-    setRecipes(current => [...(current || []), recipe])
+    createRecipe.mutate(recipe)
   }
 
   const handleUpdateRecipe = (updatedRecipe: Recipe) => {
-    setRecipes(current =>
-      (current || []).map(r => r.id === updatedRecipe.id ? updatedRecipe : r)
-    )
+    updateRecipeMutation.mutate(updatedRecipe)
   }
 
   const handleDeleteRecipe = (recipeId: string) => {
-    setRecipes(current => (current || []).filter(r => r.id !== recipeId))
+    deleteRecipe.mutate(recipeId)
   }
 
   const handleAddFeedback = (newFeedback: MealFeedback) => {
-    setFeedback(current => [...(current || []), newFeedback])
+    createFeedback.mutate(newFeedback)
   }
 
   const handleUpdateFeedback = (updatedFeedback: MealFeedback) => {
-    setFeedback(current =>
-      (current || []).map(f => f.id === updatedFeedback.id ? updatedFeedback : f)
-    )
+    updateFeedbackMutation.mutate(updatedFeedback)
   }
 
   const handleDeleteFeedback = (feedbackId: string) => {
-    setFeedback(current => (current || []).filter(f => f.id !== feedbackId))
+    const fb = feedback.find(f => f.id === feedbackId)
+    if (fb) {
+      deleteFeedback.mutate({ id: feedbackId, eventId: fb.eventId })
+    }
+  }
+
+  if (eventsLoading || recipesLoading || feedbackLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    )
   }
 
   if (selectedEvent) {
     return (
       <EventDetail
         event={selectedEvent}
-        recipes={recipes || []}
-        feedback={feedback || []}
+        recipes={recipes}
+        feedback={feedback}
         onUpdateEvent={handleUpdateEvent}
         onBack={() => setSelectedEventId(null)}
         onAddFeedback={handleAddFeedback}
@@ -119,7 +136,7 @@ export default function App() {
 
           <TabsContent value="events" className="mt-0">
             <EventList
-              events={events || []}
+              events={events}
               onSelectEvent={setSelectedEventId}
               onCreateEvent={handleCreateEvent}
               onDeleteEvent={handleDeleteEvent}
@@ -128,8 +145,8 @@ export default function App() {
 
           <TabsContent value="recipes" className="mt-0">
             <RecipeLibrary
-              recipes={recipes || []}
-              feedback={feedback || []}
+              recipes={recipes}
+              feedback={feedback}
               onCreateRecipe={handleCreateRecipe}
               onUpdateRecipe={handleUpdateRecipe}
               onDeleteRecipe={handleDeleteRecipe}
@@ -138,8 +155,8 @@ export default function App() {
 
           <TabsContent value="test" className="mt-0">
             <VersioningTest
-              events={events || []}
-              recipes={recipes || []}
+              events={events}
+              recipes={recipes}
               onUpdateRecipe={handleUpdateRecipe}
             />
           </TabsContent>
