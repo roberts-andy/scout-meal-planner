@@ -5,12 +5,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Slider } from '@/components/ui/slider'
 import { Label } from '@/components/ui/label'
-import { Plus, CookingPot, Trash, Pencil, Users, Flame, Copy, GitBranch, Star, Funnel, X } from '@phosphor-icons/react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Plus, CookingPot, Trash, Pencil, Users, Flame, Copy, GitBranch, Star, Funnel, X, ArrowsDownUp } from '@phosphor-icons/react'
 import { CreateRecipeDialog } from './CreateRecipeDialog'
 import { RecipeDetailDialog } from './RecipeDetailDialog'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { calculateRecipeRatings } from '@/lib/helpers'
+
+type SortOption = 'name-asc' | 'name-desc' | 'date-newest' | 'date-oldest' | 'rating-high' | 'rating-low'
 
 interface RecipeLibraryProps {
   recipes: Recipe[]
@@ -26,6 +29,7 @@ export function RecipeLibrary({ recipes, feedback, onCreateRecipe, onUpdateRecip
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
   const [minRating, setMinRating] = useState<number>(0)
   const [showRatingFilter, setShowRatingFilter] = useState(false)
+  const [sortBy, setSortBy] = useState<SortOption>('date-newest')
 
   const handleCloneRecipe = (recipe: Recipe, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -52,6 +56,35 @@ export function RecipeLibrary({ recipes, feedback, onCreateRecipe, onUpdateRecip
       return ratingSummary.overallAverage >= minRating
     })
   }, [recipes, feedback, minRating])
+
+  const sortedRecipes = useMemo(() => {
+    const sorted = [...filteredRecipes]
+
+    switch (sortBy) {
+      case 'name-asc':
+        return sorted.sort((a, b) => a.name.localeCompare(b.name))
+      case 'name-desc':
+        return sorted.sort((a, b) => b.name.localeCompare(a.name))
+      case 'date-newest':
+        return sorted.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+      case 'date-oldest':
+        return sorted.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+      case 'rating-high':
+        return sorted.sort((a, b) => {
+          const ratingA = calculateRecipeRatings(a.id, a.name, feedback)?.overallAverage || 0
+          const ratingB = calculateRecipeRatings(b.id, b.name, feedback)?.overallAverage || 0
+          return ratingB - ratingA
+        })
+      case 'rating-low':
+        return sorted.sort((a, b) => {
+          const ratingA = calculateRecipeRatings(a.id, a.name, feedback)?.overallAverage || 0
+          const ratingB = calculateRecipeRatings(b.id, b.name, feedback)?.overallAverage || 0
+          return ratingA - ratingB
+        })
+      default:
+        return sorted
+    }
+  }, [filteredRecipes, sortBy, feedback])
 
   const handleResetFilter = () => {
     setMinRating(0)
@@ -86,7 +119,23 @@ export function RecipeLibrary({ recipes, feedback, onCreateRecipe, onUpdateRecip
           <h2 className="text-2xl font-semibold">Recipe Library</h2>
           <p className="text-muted-foreground mt-1">Your collection of scout-tested recipes</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+            <SelectTrigger className="w-[180px]">
+              <div className="flex items-center gap-2">
+                <ArrowsDownUp size={16} />
+                <SelectValue />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date-newest">Newest First</SelectItem>
+              <SelectItem value="date-oldest">Oldest First</SelectItem>
+              <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+              <SelectItem value="name-desc">Name (Z-A)</SelectItem>
+              <SelectItem value="rating-high">Highest Rated</SelectItem>
+              <SelectItem value="rating-low">Lowest Rated</SelectItem>
+            </SelectContent>
+          </Select>
           <Button
             variant={showRatingFilter ? "default" : "outline"}
             onClick={() => setShowRatingFilter(!showRatingFilter)}
@@ -140,12 +189,12 @@ export function RecipeLibrary({ recipes, feedback, onCreateRecipe, onUpdateRecip
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-3">
-            Showing {filteredRecipes.length} of {recipes.length} recipes
+            Showing {sortedRecipes.length} of {recipes.length} recipes
           </p>
         </motion.div>
       )}
 
-      {filteredRecipes.length === 0 && minRating > 0 ? (
+      {sortedRecipes.length === 0 && minRating > 0 ? (
         <div className="flex flex-col items-center justify-center py-16 px-6">
           <Star size={64} weight="duotone" className="text-muted-foreground mb-4" />
           <h2 className="text-2xl font-semibold mb-2">No recipes match this rating</h2>
@@ -159,7 +208,7 @@ export function RecipeLibrary({ recipes, feedback, onCreateRecipe, onUpdateRecip
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredRecipes.map((recipe, index) => {
+          {sortedRecipes.map((recipe, index) => {
           const ratingSummary = calculateRecipeRatings(recipe.id, recipe.name, feedback)
           
           return (
