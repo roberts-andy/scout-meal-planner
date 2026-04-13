@@ -14,6 +14,8 @@ interface EventDetailProps {
   onUpdateEvent: (event: Event) => void
   onBack: () => void
   onAddFeedback: (feedback: MealFeedback) => void
+  onUpdateFeedback: (feedback: MealFeedback) => void
+  onDeleteFeedback: (feedbackId: string) => void
   onUpdateRecipe: (recipe: Recipe) => void
 }
 
@@ -24,6 +26,8 @@ export function EventDetail({
   onUpdateEvent,
   onBack,
   onAddFeedback,
+  onUpdateFeedback,
+  onDeleteFeedback,
   onUpdateRecipe
 }: EventDetailProps) {
   return (
@@ -83,6 +87,8 @@ export function EventDetail({
               recipes={recipes}
               feedback={feedback}
               onAddFeedback={onAddFeedback}
+              onUpdateFeedback={onUpdateFeedback}
+              onDeleteFeedback={onDeleteFeedback}
             />
           </TabsContent>
         </Tabs>

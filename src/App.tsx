@@ -65,6 +65,16 @@ export default function App() {
     setFeedback(current => [...(current || []), newFeedback])
   }
 
+  const handleUpdateFeedback = (updatedFeedback: MealFeedback) => {
+    setFeedback(current =>
+      (current || []).map(f => f.id === updatedFeedback.id ? updatedFeedback : f)
+    )
+  }
+
+  const handleDeleteFeedback = (feedbackId: string) => {
+    setFeedback(current => (current || []).filter(f => f.id !== feedbackId))
+  }
+
   if (selectedEvent) {
     return (
       <EventDetail
@@ -74,6 +84,8 @@ export default function App() {
         onUpdateEvent={handleUpdateEvent}
         onBack={() => setSelectedEventId(null)}
         onAddFeedback={handleAddFeedback}
+        onUpdateFeedback={handleUpdateFeedback}
+        onDeleteFeedback={handleDeleteFeedback}
         onUpdateRecipe={handleUpdateRecipe}
       />
     )

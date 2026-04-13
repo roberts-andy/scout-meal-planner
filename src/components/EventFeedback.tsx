@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { Event, Recipe, MealFeedback, FeedbackRating } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ChatCircle, Plus, Camera, X, Image as ImageIcon, User } from '@phosphor-icons/react'
+import { ChatCircle, Plus, Camera, X, Image as ImageIcon, User, PencilSimple, Trash } from '@phosphor-icons/react'
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -23,10 +33,14 @@ interface EventFeedbackProps {
   recipes: Recipe[]
   feedback: MealFeedback[]
   onAddFeedback: (feedback: MealFeedback) => void
+  onUpdateFeedback: (feedback: MealFeedback) => void
+  onDeleteFeedback: (feedbackId: string) => void
 }
 
-export function EventFeedback({ event, recipes, feedback, onAddFeedback }: EventFeedbackProps) {
+export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdateFeedback, onDeleteFeedback }: EventFeedbackProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingFeedback, setEditingFeedback] = useState<MealFeedback | null>(null)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [selectedMealId, setSelectedMealId] = useState('')
   const [scoutName, setScoutName] = useState('')
   const [comments, setComments] = useState('')
@@ -72,26 +86,32 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
     setPhotos(current => current.filter((_, i) => i !== index))
   }
 
-  const handleSubmit = () => {
-    const meal = allMeals.find(m => m.meal.id === selectedMealId)
-    if (!meal || !meal.meal.recipeId) return
-
-    const newFeedback: MealFeedback = {
-      id: `feedback-${Date.now()}`,
-      eventId: event.id,
-      mealId: selectedMealId,
-      recipeId: meal.meal.recipeId,
-      scoutName: scoutName || undefined,
-      rating: ratings,
-      comments,
-      whatWorked,
-      whatToChange,
-      photos: photos.length > 0 ? photos : undefined,
-      createdAt: Date.now()
+  const handleOpenDialog = (feedbackToEdit?: MealFeedback) => {
+    if (feedbackToEdit) {
+      setEditingFeedback(feedbackToEdit)
+      setSelectedMealId(feedbackToEdit.mealId)
+      setScoutName(feedbackToEdit.scoutName || '')
+      setComments(feedbackToEdit.comments)
+      setWhatWorked(feedbackToEdit.whatWorked)
+      setWhatToChange(feedbackToEdit.whatToChange)
+      setPhotos(feedbackToEdit.photos || [])
+      setRatings(feedbackToEdit.rating)
+    } else {
+      setEditingFeedback(null)
+      setSelectedMealId('')
+      setScoutName('')
+      setComments('')
+      setWhatWorked('')
+      setWhatToChange('')
+      setPhotos([])
+      setRatings({ taste: 0, difficulty: 0, portionSize: 0 })
     }
+    setIsDialogOpen(true)
+  }
 
-    onAddFeedback(newFeedback)
+  const handleCloseDialog = () => {
     setIsDialogOpen(false)
+    setEditingFeedback(null)
     setSelectedMealId('')
     setScoutName('')
     setComments('')
@@ -99,6 +119,48 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
     setWhatToChange('')
     setPhotos([])
     setRatings({ taste: 0, difficulty: 0, portionSize: 0 })
+  }
+
+  const handleSubmit = () => {
+    const meal = allMeals.find(m => m.meal.id === selectedMealId)
+    if (!meal || !meal.meal.recipeId) return
+
+    if (editingFeedback) {
+      const updatedFeedback: MealFeedback = {
+        ...editingFeedback,
+        mealId: selectedMealId,
+        recipeId: meal.meal.recipeId,
+        scoutName: scoutName || undefined,
+        rating: ratings,
+        comments,
+        whatWorked,
+        whatToChange,
+        photos: photos.length > 0 ? photos : undefined,
+      }
+      onUpdateFeedback(updatedFeedback)
+    } else {
+      const newFeedback: MealFeedback = {
+        id: `feedback-${Date.now()}`,
+        eventId: event.id,
+        mealId: selectedMealId,
+        recipeId: meal.meal.recipeId,
+        scoutName: scoutName || undefined,
+        rating: ratings,
+        comments,
+        whatWorked,
+        whatToChange,
+        photos: photos.length > 0 ? photos : undefined,
+        createdAt: Date.now()
+      }
+      onAddFeedback(newFeedback)
+    }
+
+    handleCloseDialog()
+  }
+
+  const handleDelete = (feedbackId: string) => {
+    onDeleteFeedback(feedbackId)
+    setDeleteConfirmId(null)
   }
 
   if (allMeals.length === 0) {
@@ -120,7 +182,7 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
           <h2 className="text-2xl font-semibold mb-2">Meal Feedback</h2>
           <p className="text-muted-foreground">Collect feedback to improve future meals</p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
+        <Button onClick={() => handleOpenDialog()} className="gap-2">
           <Plus size={20} />
           Add Feedback
         </Button>
@@ -141,17 +203,39 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
             return (
               <Card key={fb.id}>
                 <CardHeader>
-                  <CardTitle className="text-lg">{recipe?.name}</CardTitle>
-                  <CardDescription className="flex items-center gap-2">
-                    {fb.scoutName && (
-                      <>
-                        <User size={14} />
-                        <span>{fb.scoutName}</span>
-                        <span className="text-muted-foreground">•</span>
-                      </>
-                    )}
-                    {format(new Date(fb.createdAt), 'MMM d, yyyy')}
-                  </CardDescription>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{recipe?.name}</CardTitle>
+                      <CardDescription className="flex items-center gap-2">
+                        {fb.scoutName && (
+                          <>
+                            <User size={14} />
+                            <span>{fb.scoutName}</span>
+                            <span className="text-muted-foreground">•</span>
+                          </>
+                        )}
+                        {format(new Date(fb.createdAt), 'MMM d, yyyy')}
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleOpenDialog(fb)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <PencilSimple size={16} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeleteConfirmId(fb.id)}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      >
+                        <Trash size={16} />
+                      </Button>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="space-y-2">
@@ -209,12 +293,12 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
         </div>
       )}
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Add Meal Feedback</DialogTitle>
+            <DialogTitle>{editingFeedback ? 'Edit Meal Feedback' : 'Add Meal Feedback'}</DialogTitle>
             <DialogDescription>
-              Share feedback about a meal to help improve future events
+              {editingFeedback ? 'Update your feedback about this meal' : 'Share feedback about a meal to help improve future events'}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -356,18 +440,38 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback }: Event
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <Button variant="outline" onClick={handleCloseDialog}>
               Cancel
             </Button>
             <Button 
               onClick={handleSubmit} 
               disabled={!selectedMealId || (ratings.taste === 0 && ratings.difficulty === 0 && ratings.portionSize === 0)}
             >
-              Submit Feedback
+              {editingFeedback ? 'Update Feedback' : 'Submit Feedback'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteConfirmId !== null} onOpenChange={() => setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Feedback</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this feedback? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
