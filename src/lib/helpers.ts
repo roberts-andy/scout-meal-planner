@@ -295,6 +295,22 @@ export function revertRecipeToVersion(recipe: Recipe, targetVersion: number): Re
     tags: versionToRevert.tags,
     currentVersion: newVersionNumber,
     updatedAt: Date.now(),
-    versions: [currentSnapshot, ...recipe.versions],
+    versions: [
+      currentSnapshot,
+      {
+        versionNumber: newVersionNumber,
+        eventId: undefined,
+        eventName: undefined,
+        name: versionToRevert.name,
+        description: versionToRevert.description,
+        servings: versionToRevert.servings,
+        ingredients: versionToRevert.ingredients,
+        variations: versionToRevert.variations,
+        tags: versionToRevert.tags,
+        createdAt: Date.now(),
+        changeNote: `Reverted to v${targetVersion}`,
+      },
+      ...recipe.versions
+    ],
   }
 }

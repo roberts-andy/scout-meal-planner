@@ -179,7 +179,8 @@ export function RecipeVersionHistory({ recipe, open, onOpenChange, onRevertVersi
     if (versionToRevert && onRevertVersion) {
       onRevertVersion(versionToRevert)
       setVersionToRevert(null)
-      toast.success(`Recipe reverted to version ${versionToRevert}`)
+      const newVersionNumber = recipe.currentVersion + 1
+      toast.success(`Created version ${newVersionNumber} as a copy of version ${versionToRevert}`)
       onOpenChange(false)
     }
   }
@@ -191,13 +192,13 @@ export function RecipeVersionHistory({ recipe, open, onOpenChange, onRevertVersi
           <AlertDialogHeader>
             <AlertDialogTitle>Revert to Version {versionToRevert}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will restore the recipe to version {versionToRevert}. Your current recipe state will be saved as a new version before reverting. You can always revert back if needed.
+              This will create a new version (v{recipe.currentVersion + 1}) as a copy of version {versionToRevert}. All existing versions will be preserved, so you can always switch between them.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleRevertConfirm}>
-              Revert to Version {versionToRevert}
+              Create New Version
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
