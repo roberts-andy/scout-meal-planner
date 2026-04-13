@@ -36,16 +36,7 @@ jobs:
         run: cd api && npm prune --omit=dev
 
       - name: Create API local.settings.json
-        run: |
-          cat > api/local.settings.json << 'EOF'
-          {
-            "IsEncrypted": false,
-            "Values": {
-              "FUNCTIONS_WORKER_RUNTIME": "node",
-              "AzureWebJobsStorage": ""
-            }
-          }
-          EOF
+        run: echo '{"IsEncrypted":false,"Values":{"FUNCTIONS_WORKER_RUNTIME":"node","AzureWebJobsStorage":""}}' > api/local.settings.json
 
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
