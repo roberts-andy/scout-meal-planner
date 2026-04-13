@@ -1,12 +1,14 @@
+import { useState } from 'react'
 import { Event, Recipe, MealFeedback } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Link as LinkIcon } from '@phosphor-icons/react'
+import { ArrowLeft, Link as LinkIcon, PencilSimple } from '@phosphor-icons/react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EventSchedule } from './EventSchedule'
 import { EventShoppingList } from './EventShoppingList'
 import { EventEquipment } from './EventEquipment'
 import { EventFeedback } from './EventFeedback'
+import { EditEventDialog } from './EditEventDialog'
 
 interface EventDetailProps {
   event: Event
@@ -31,18 +33,31 @@ export function EventDetail({
   onDeleteFeedback,
   onUpdateRecipe
 }: EventDetailProps) {
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card sticky top-0 z-10">
         <div className="container mx-auto px-6 py-4">
-          <Button
-            variant="ghost"
-            className="gap-2 mb-3"
-            onClick={onBack}
-          >
-            <ArrowLeft size={20} />
-            Back to Events
-          </Button>
+          <div className="flex items-start justify-between gap-4 mb-3">
+            <Button
+              variant="ghost"
+              className="gap-2"
+              onClick={onBack}
+            >
+              <ArrowLeft size={20} />
+              Back to Events
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => setEditDialogOpen(true)}
+            >
+              <PencilSimple size={16} />
+              Edit Details
+            </Button>
+          </div>
           <h1 className="text-3xl font-bold text-primary tracking-tight">{event.name}</h1>
           <div className="flex flex-wrap items-center gap-3 mt-2">
             <p className="text-muted-foreground">
@@ -121,6 +136,13 @@ export function EventDetail({
           </TabsContent>
         </Tabs>
       </main>
+
+      <EditEventDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        event={event}
+        onUpdateEvent={onUpdateEvent}
+      />
     </div>
   )
 }
