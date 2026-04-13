@@ -32,6 +32,9 @@ jobs:
       - name: Build API
         run: cd api && npm run build
 
+      - name: Prune API dev dependencies
+        run: cd api && npm prune --omit=dev
+
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
         with:
