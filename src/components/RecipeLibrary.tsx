@@ -3,10 +3,11 @@ import { Recipe } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Plus, CookingPot, Trash, Pencil, Users, Flame } from '@phosphor-icons/react'
+import { Plus, CookingPot, Trash, Pencil, Users, Flame, Copy } from '@phosphor-icons/react'
 import { CreateRecipeDialog } from './CreateRecipeDialog'
 import { RecipeDetailDialog } from './RecipeDetailDialog'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 
 interface RecipeLibraryProps {
   recipes: Recipe[]
@@ -18,6 +19,21 @@ interface RecipeLibraryProps {
 export function RecipeLibrary({ recipes, onCreateRecipe, onUpdateRecipe, onDeleteRecipe }: RecipeLibraryProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
+  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
+
+  const handleCloneRecipe = (recipe: Recipe, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const clonedRecipe: Recipe = {
+      ...recipe,
+      id: `recipe-${Date.now()}`,
+      name: `${recipe.name} (Copy)`,
+      clonedFrom: recipe.id,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
+    onCreateRecipe(clonedRecipe)
+    toast.success(`Cloned "${recipe.name}"`)
+  }
 
   if (recipes.length === 0) {
     return (
@@ -75,17 +91,38 @@ export function RecipeLibrary({ recipes, onCreateRecipe, onUpdateRecipe, onDelet
                       </CardDescription>
                     )}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDeleteRecipe(recipe.id)
-                    }}
-                  >
-                    <Trash size={18} className="text-destructive" />
-                  </Button>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditingRecipe(recipe)
+                      }}
+                    >
+                      <Pencil size={16} className="text-primary" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => handleCloneRecipe(recipe, e)}
+                    >
+                      <Copy size={16} className="text-accent" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDeleteRecipe(recipe.id)
+                      }}
+                    >
+                      <Trash size={16} className="text-destructive" />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -119,6 +156,18 @@ export function RecipeLibrary({ recipes, onCreateRecipe, onUpdateRecipe, onDelet
         onOpenChange={setIsCreateDialogOpen}
         onCreateRecipe={onCreateRecipe}
       />
+
+      {editingRecipe && (
+        <CreateRecipeDialog
+          open={!!editingRecipe}
+          onOpenChange={(open) => !open && setEditingRecipe(null)}
+          onCreateRecipe={(recipe) => {
+            onUpdateRecipe({ ...recipe, id: editingRecipe.id })
+            setEditingRecipe(null)
+          }}
+          initialRecipe={editingRecipe}
+        />
+      )}
 
       {selectedRecipe && (
         <RecipeDetailDialog

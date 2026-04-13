@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Recipe, Ingredient, RecipeVariation, IngredientUnit, CookingMethod } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,19 +21,32 @@ interface CreateRecipeDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreateRecipe: (recipe: Recipe) => void
+  initialRecipe?: Recipe
 }
 
-export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe }: CreateRecipeDialogProps) {
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [servings, setServings] = useState(4)
-  const [ingredients, setIngredients] = useState<Ingredient[]>([])
-  const [variations, setVariations] = useState<RecipeVariation[]>([{
+export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initialRecipe }: CreateRecipeDialogProps) {
+  const [name, setName] = useState(initialRecipe?.name || '')
+  const [description, setDescription] = useState(initialRecipe?.description || '')
+  const [servings, setServings] = useState(initialRecipe?.servings || 4)
+  const [ingredients, setIngredients] = useState<Ingredient[]>(initialRecipe?.ingredients || [])
+  const [variations, setVariations] = useState<RecipeVariation[]>(initialRecipe?.variations || [{
     id: `var-${Date.now()}`,
     cookingMethod: 'camp-stove',
     instructions: [''],
     equipment: [''],
   }])
+
+  useEffect(() => {
+    if (initialRecipe) {
+      setName(initialRecipe.name)
+      setDescription(initialRecipe.description || '')
+      setServings(initialRecipe.servings)
+      setIngredients(initialRecipe.ingredients)
+      setVariations(initialRecipe.variations)
+    }
+  }, [initialRecipe])
+
+  const isEditing = !!initialRecipe
 
   const addIngredient = () => {
     setIngredients([...ingredients, {
@@ -127,9 +140,11 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe }: Creat
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>Create New Recipe</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Recipe' : 'Create New Recipe'}</DialogTitle>
           <DialogDescription>
-            Add a new recipe to your library with ingredients, cooking instructions, and equipment needs
+            {isEditing 
+              ? 'Update your recipe details, ingredients, and cooking instructions' 
+              : 'Add a new recipe to your library with ingredients, cooking instructions, and equipment needs'}
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-4">
@@ -304,7 +319,7 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe }: Creat
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={!name || ingredients.length === 0}>
-            Create Recipe
+            {isEditing ? 'Save Changes' : 'Create Recipe'}
           </Button>
         </DialogFooter>
       </DialogContent>

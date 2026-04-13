@@ -31,6 +31,7 @@ export interface Recipe {
   ingredients: Ingredient[]
   variations: RecipeVariation[]
   tags?: string[]
+  clonedFrom?: string
   createdAt: number
   updatedAt: number
 }
