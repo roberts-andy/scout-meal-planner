@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Event } from '@/lib/types'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, Calendar, Trash } from '@phosphor-icons/react'
 import { format } from 'date-fns'
@@ -86,10 +87,20 @@ export function EventList({ events, onSelectEvent, onCreateEvent, onDeleteEvent 
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span>{event.days.length} days</span>
-                  <span>•</span>
-                  <span>{event.days.reduce((acc, day) => acc + day.meals.length, 0)} meals</span>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span>{event.days.length} days</span>
+                    <span>•</span>
+                    <span>{event.days.reduce((acc, day) => acc + day.meals.length, 0)} meals</span>
+                  </div>
+                  {(event.hike || event.highAltitude || event.tentCamping || event.cabinCamping) && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {event.hike && <Badge variant="secondary" className="text-xs">Hike</Badge>}
+                      {event.highAltitude && <Badge variant="secondary" className="text-xs">High Altitude</Badge>}
+                      {event.tentCamping && <Badge variant="secondary" className="text-xs">Tent Camping</Badge>}
+                      {event.cabinCamping && <Badge variant="secondary" className="text-xs">Cabin Camping</Badge>}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

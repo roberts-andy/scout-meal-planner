@@ -1,6 +1,7 @@
 import { Event, Recipe, MealFeedback } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft } from '@phosphor-icons/react'
+import { Badge } from '@/components/ui/badge'
+import { ArrowLeft, Link as LinkIcon } from '@phosphor-icons/react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EventSchedule } from './EventSchedule'
 import { EventShoppingList } from './EventShoppingList'
@@ -43,9 +44,36 @@ export function EventDetail({
             Back to Events
           </Button>
           <h1 className="text-3xl font-bold text-primary tracking-tight">{event.name}</h1>
-          <p className="text-muted-foreground mt-1">
-            {event.days.length} days • {event.days.reduce((acc, day) => acc + day.meals.length, 0)} meals planned
-          </p>
+          <div className="flex flex-wrap items-center gap-3 mt-2">
+            <p className="text-muted-foreground">
+              {event.days.length} days • {event.days.reduce((acc, day) => acc + day.meals.length, 0)} meals planned
+            </p>
+            {(event.hike || event.highAltitude || event.tentCamping || event.cabinCamping) && (
+              <>
+                <span className="text-muted-foreground">•</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {event.hike && <Badge variant="secondary" className="text-xs">Hike</Badge>}
+                  {event.highAltitude && <Badge variant="secondary" className="text-xs">High Altitude</Badge>}
+                  {event.tentCamping && <Badge variant="secondary" className="text-xs">Tent Camping</Badge>}
+                  {event.cabinCamping && <Badge variant="secondary" className="text-xs">Cabin Camping</Badge>}
+                </div>
+              </>
+            )}
+          </div>
+          {event.description && (
+            <p className="text-sm text-muted-foreground mt-2 max-w-3xl">{event.description}</p>
+          )}
+          {event.link && (
+            <a 
+              href={event.link} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline mt-2"
+            >
+              <LinkIcon size={16} />
+              Event Link
+            </a>
+          )}
         </div>
       </header>
 
