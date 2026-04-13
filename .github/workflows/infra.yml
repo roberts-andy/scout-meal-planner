@@ -1,0 +1,55 @@
+name: Deploy Azure Infrastructure
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-infra:
+    runs-on: ubuntu-latest
+    name: Deploy Infrastructure
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Bicep
+        id: deploy
+        run: |
+          result=$(az deployment sub create \
+            --location centralus \
+            --template-file infra/main.bicep \
+            --parameters infra/parameters.json \
+            --name "scout-meal-planner-$(date +%Y%m%d%H%M%S)" \
+            --query "properties.outputs" -o json)
+          echo "SWA URL: $(echo $result | jq -r '.staticWebAppUrl.value')"
+          echo "Cosmos endpoint: $(echo $result | jq -r '.cosmosAccountEndpoint.value')"
+
+      - name: Get SWA deployment token
+        id: swa-token
+        run: |
+          token=$(az staticwebapp secrets list \
+            --name swa-scout-meal-planner \
+            --resource-group rg-scout-meal-planner \
+            --query "properties.apiKey" -o tsv)
+          echo "::add-mask::$token"
+          echo "SWA_TOKEN=$token" >> "$GITHUB_OUTPUT"
+          echo "::notice::SWA deployment token retrieved. Add it as AZURE_STATIC_WEB_APPS_API_TOKEN secret."
+
+      - name: Set SWA token as repo secret
+        if: env.GH_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN }}
+        run: |
+          gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN \
+            --body "${{ steps.swa-token.outputs.SWA_TOKEN }}" \
+            --repo ${{ github.repository }}
+          echo "✅ AZURE_STATIC_WEB_APPS_API_TOKEN secret set automatically!"
