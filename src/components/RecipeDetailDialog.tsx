@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Recipe } from '@/lib/types'
+import { Recipe, MealFeedback } from '@/lib/types'
 import {
   Dialog,
   DialogContent,
@@ -11,22 +11,25 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { Users, Flame, GitBranch, ClockCounterClockwise } from '@phosphor-icons/react'
-import { formatQuantity } from '@/lib/helpers'
+import { Card, CardContent } from '@/components/ui/card'
+import { Users, Flame, GitBranch, ClockCounterClockwise, Star } from '@phosphor-icons/react'
+import { formatQuantity, calculateRecipeRatings } from '@/lib/helpers'
 import { RecipeVersionHistory } from './RecipeVersionHistory'
 
 interface RecipeDetailDialogProps {
   recipe: Recipe
   recipes?: Recipe[]
+  feedback?: MealFeedback[]
   open: boolean
   onOpenChange: (open: boolean) => void
   onUpdateRecipe: (recipe: Recipe) => void
 }
 
-export function RecipeDetailDialog({ recipe, recipes, open, onOpenChange }: RecipeDetailDialogProps) {
+export function RecipeDetailDialog({ recipe, recipes, feedback, open, onOpenChange }: RecipeDetailDialogProps) {
   const [showVersionHistory, setShowVersionHistory] = useState(false)
   const originalRecipe = recipe.clonedFrom && recipes?.find(r => r.id === recipe.clonedFrom)
   const hasVersionHistory = recipe.versions && recipe.versions.length > 0
+  const ratingSummary = feedback ? calculateRecipeRatings(recipe.id, recipe.name, feedback) : null
   
   return (
     <>
@@ -68,6 +71,88 @@ export function RecipeDetailDialog({ recipe, recipes, open, onOpenChange }: Reci
           </DialogHeader>
         <ScrollArea className="max-h-[70vh] pr-4">
           <div className="space-y-6 py-4">
+            {ratingSummary && (
+              <>
+                <Card className="bg-accent/5 border-accent/20">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-6">
+                      <div className="text-center">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Star size={28} weight="fill" className="text-accent" />
+                          <span className="text-3xl font-bold">
+                            {ratingSummary.overallAverage.toFixed(1)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {ratingSummary.totalFeedback} review{ratingSummary.totalFeedback !== 1 ? 's' : ''}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          from {ratingSummary.eventCount} event{ratingSummary.eventCount !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Taste</span>
+                          <div className="flex items-center gap-2">
+                            <div className="flex gap-0.5">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star
+                                  key={i}
+                                  size={14}
+                                  weight={i < Math.round(ratingSummary.averageRatings.taste) ? 'fill' : 'regular'}
+                                  className={i < Math.round(ratingSummary.averageRatings.taste) ? 'text-accent' : 'text-muted-foreground'}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-sm text-muted-foreground w-8">
+                              {ratingSummary.averageRatings.taste.toFixed(1)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Difficulty</span>
+                          <div className="flex items-center gap-2">
+                            <div className="flex gap-0.5">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star
+                                  key={i}
+                                  size={14}
+                                  weight={i < Math.round(ratingSummary.averageRatings.difficulty) ? 'fill' : 'regular'}
+                                  className={i < Math.round(ratingSummary.averageRatings.difficulty) ? 'text-accent' : 'text-muted-foreground'}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-sm text-muted-foreground w-8">
+                              {ratingSummary.averageRatings.difficulty.toFixed(1)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Portion Size</span>
+                          <div className="flex items-center gap-2">
+                            <div className="flex gap-0.5">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star
+                                  key={i}
+                                  size={14}
+                                  weight={i < Math.round(ratingSummary.averageRatings.portionSize) ? 'fill' : 'regular'}
+                                  className={i < Math.round(ratingSummary.averageRatings.portionSize) ? 'text-accent' : 'text-muted-foreground'}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-sm text-muted-foreground w-8">
+                              {ratingSummary.averageRatings.portionSize.toFixed(1)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Separator />
+              </>
+            )}
+            
             <div className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-1">
                 <Users size={16} />

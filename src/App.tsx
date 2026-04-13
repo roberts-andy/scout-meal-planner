@@ -117,6 +117,7 @@ export default function App() {
           <TabsContent value="recipes" className="mt-0">
             <RecipeLibrary
               recipes={recipes || []}
+              feedback={feedback || []}
               onCreateRecipe={handleCreateRecipe}
               onUpdateRecipe={handleUpdateRecipe}
               onDeleteRecipe={handleDeleteRecipe}
