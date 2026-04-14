@@ -45,6 +45,7 @@ jobs:
           echo "SWA_TOKEN=$token" >> "$GITHUB_OUTPUT"
 
       - name: Set GitHub secrets
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN }}
         if: env.GH_TOKEN != ''
