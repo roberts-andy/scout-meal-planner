@@ -27,7 +27,6 @@ export default function App() {
   const updateFeedbackMutation = useUpdateFeedback()
   const deleteFeedback = useDeleteFeedback()
 
-  
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'events' | 'recipes' | 'test'>('events')
 
