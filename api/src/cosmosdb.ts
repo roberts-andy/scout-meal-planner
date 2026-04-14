@@ -1,13 +1,17 @@
 import { CosmosClient, Database, Container, ItemDefinition, JSONValue } from '@azure/cosmos'
+import { DefaultAzureCredential } from '@azure/identity'
 
+const endpoint = process.env.COSMOS_ENDPOINT
 const connectionString = process.env.COSMOS_CONNECTION_STRING
 const databaseId = process.env.COSMOS_DATABASE || 'scout-meal-planner'
 
-if (!connectionString) {
-  throw new Error('COSMOS_CONNECTION_STRING environment variable is required')
+if (!endpoint && !connectionString) {
+  throw new Error('Either COSMOS_ENDPOINT or COSMOS_CONNECTION_STRING environment variable is required')
 }
 
-const client = new CosmosClient(connectionString)
+const client = endpoint
+  ? new CosmosClient({ endpoint, aadCredentials: new DefaultAzureCredential() })
+  : new CosmosClient(connectionString!)
 
 let database: Database
 let containers: Record<string, Container> = {}

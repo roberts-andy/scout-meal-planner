@@ -10,11 +10,12 @@
   },
   "dependencies": {
     "@azure/cosmos": "^4.9.2",
-    "@azure/functions": "^4.6.0"
+    "@azure/functions": "^4.6.0",
+    "@azure/identity": "^4.13.1"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
     "@types/node": "^20.0.0",
-    "azure-functions-core-tools": "^4.0.0"
+    "azure-functions-core-tools": "^4.0.0",
+    "typescript": "^5.7.0"
   }
 }
