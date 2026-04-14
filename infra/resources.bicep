@@ -16,6 +16,12 @@ param repositoryUrl string
 @description('GitHub branch')
 param repositoryBranch string
 
+@description('Name of the Function App')
+param functionAppName string
+
+@description('Name of the Storage Account for Function App')
+param storageAccountName string
+
 // Cosmos DB Account — Serverless
 resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   name: cosmosAccountName
@@ -23,7 +29,6 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   kind: 'GlobalDocumentDB'
   properties: {
     databaseAccountOfferType: 'Standard'
-    disableLocalAuth: false
     locations: [
       {
         locationName: location
@@ -97,6 +102,68 @@ resource feedbackContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/c
   }
 }
 
+// Storage Account for Function App
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+  name: storageAccountName
+  location: location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+}
+
+// App Service Plan — Consumption (serverless)
+resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
+  name: '${functionAppName}-plan'
+  location: location
+  sku: {
+    name: 'Y1'
+    tier: 'Dynamic'
+  }
+  properties: {
+    reserved: true
+  }
+}
+
+// Function App with managed identity
+resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
+  name: functionAppName
+  location: location
+  kind: 'functionapp,linux'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    serverFarmId: appServicePlan.id
+    siteConfig: {
+      linuxFxVersion: 'NODE|22'
+      appSettings: [
+        { name: 'AzureWebJobsStorage', value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};EndpointSuffix=core.windows.net;AccountKey=${storageAccount.listKeys().keys[0].value}' }
+        { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
+        { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'node' }
+        { name: 'WEBSITE_NODE_DEFAULT_VERSION', value: '~22' }
+        { name: 'COSMOS_ENDPOINT', value: cosmosAccount.properties.documentEndpoint }
+        { name: 'COSMOS_DATABASE', value: cosmosDatabaseName }
+      ]
+    }
+    httpsOnly: true
+  }
+}
+
+// Cosmos DB Built-in Data Contributor role
+var cosmosDataContributorRoleId = '00000000-0000-0000-0000-000000000002'
+
+// Assign Cosmos DB data contributor role to Function App managed identity
+resource cosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = {
+  parent: cosmosAccount
+  name: guid(cosmosAccount.id, functionApp.id, cosmosDataContributorRoleId)
+  properties: {
+    roleDefinitionId: '${cosmosAccount.id}/sqlRoleDefinitions/${cosmosDataContributorRoleId}'
+    principalId: functionApp.identity.principalId
+    scope: cosmosAccount.id
+  }
+}
+
 // Static Web App — Free tier
 resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
   name: staticWebAppName
@@ -110,21 +177,21 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
     branch: repositoryUrl != '' ? repositoryBranch : null
     buildProperties: {
       appLocation: '/'
-      apiLocation: 'api'
       outputLocation: 'dist'
     }
   }
 }
 
-// Wire Cosmos connection string into SWA app settings
-resource swaAppSettings 'Microsoft.Web/staticSites/config@2023-12-01' = {
+// Link Function App as SWA backend
+resource swaBackend 'Microsoft.Web/staticSites/linkedBackends@2023-12-01' = {
   parent: staticWebApp
-  name: 'appsettings'
+  name: 'backend'
   properties: {
-    COSMOS_CONNECTION_STRING: cosmosAccount.listConnectionStrings().connectionStrings[0].connectionString
-    COSMOS_DATABASE: cosmosDatabaseName
+    backendResourceId: functionApp.id
+    region: location
   }
 }
 
 output staticWebAppUrl string = staticWebApp.properties.defaultHostname
 output cosmosAccountEndpoint string = cosmosAccount.properties.documentEndpoint
+output functionAppName string = functionApp.name

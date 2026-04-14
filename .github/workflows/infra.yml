@@ -32,6 +32,7 @@ jobs:
             --query "properties.outputs" -o json)
           echo "SWA URL: $(echo $result | jq -r '.staticWebAppUrl.value')"
           echo "Cosmos endpoint: $(echo $result | jq -r '.cosmosAccountEndpoint.value')"
+          echo "Function App: $(echo $result | jq -r '.functionAppName.value')"
 
       - name: Get SWA deployment token
         id: swa-token
@@ -42,27 +43,6 @@ jobs:
             --query "properties.apiKey" -o tsv)
           echo "::add-mask::$token"
           echo "SWA_TOKEN=$token" >> "$GITHUB_OUTPUT"
-
-      - name: Get Cosmos connection string
-        id: cosmos
-        run: |
-          connstr=$(az cosmosdb keys list \
-            --name cosmos-scout-meal-planner \
-            --resource-group rg-scout-meal-planner \
-            --type connection-strings \
-            --query "connectionStrings[0].connectionString" -o tsv)
-          echo "::add-mask::$connstr"
-          echo "COSMOS_CONNECTION_STRING=$connstr" >> "$GITHUB_OUTPUT"
-
-      - name: Set Cosmos connection string in SWA app settings
-        run: |
-          az staticwebapp appsettings set \
-            --name swa-scout-meal-planner \
-            --resource-group rg-scout-meal-planner \
-            --setting-names \
-              "COSMOS_CONNECTION_STRING=${{ steps.cosmos.outputs.COSMOS_CONNECTION_STRING }}" \
-              "COSMOS_DATABASE=scout-meal-planner"
-          echo "✅ Cosmos DB app settings configured"
 
       - name: Set GitHub secrets
         env:

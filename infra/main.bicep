@@ -21,6 +21,12 @@ param repositoryUrl string = ''
 @description('GitHub branch for SWA deployment')
 param repositoryBranch string = 'main'
 
+@description('Name of the Function App')
+param functionAppName string = 'func-scout-meal-planner'
+
+@description('Name of the Storage Account for Function App')
+param storageAccountName string = 'stscoutmealplanner'
+
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
   location: location
@@ -36,8 +42,11 @@ module resources 'resources.bicep' = {
     cosmosDatabaseName: cosmosDatabaseName
     repositoryUrl: repositoryUrl
     repositoryBranch: repositoryBranch
+    functionAppName: functionAppName
+    storageAccountName: storageAccountName
   }
 }
 
 output staticWebAppUrl string = resources.outputs.staticWebAppUrl
 output cosmosAccountEndpoint string = resources.outputs.cosmosAccountEndpoint
+output functionAppName string = resources.outputs.functionAppName

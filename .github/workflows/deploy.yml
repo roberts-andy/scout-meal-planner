@@ -7,6 +7,10 @@ on:
     types: [opened, synchronize, reopened, closed]
     branches: [main]
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   build_and_deploy:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
@@ -26,6 +30,16 @@ jobs:
       - name: Build frontend
         run: npm run build
 
+      - name: Deploy frontend to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: /dist
+          config_file_location: /
+          skip_app_build: true
+
       - name: Install API dependencies
         run: cd api && npm ci
 
@@ -35,20 +49,22 @@ jobs:
       - name: Prune API dev dependencies
         run: cd api && npm prune --omit=dev
 
-      - name: Create API local.settings.json
-        run: echo '{"IsEncrypted":false,"Values":{"FUNCTIONS_WORKER_RUNTIME":"node","AzureWebJobsStorage":""}}' > api/local.settings.json
-
-      - name: Deploy to Azure Static Web Apps
-        uses: Azure/static-web-apps-deploy@v1
+      - name: Azure Login
+        uses: azure/login@v2
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          action: upload
-          app_location: /dist
-          api_location: api
-          config_file_location: /
-          skip_app_build: true
-          skip_api_build: true
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy API to Function App
+        run: |
+          cd api
+          zip -r ../api.zip . -x "node_modules/.package-lock.json" "src/*" "tsconfig.json" ".funcignore"
+          cd ..
+          az functionapp deployment source config-zip \
+            --resource-group rg-scout-meal-planner \
+            --name func-scout-meal-planner \
+            --src api.zip
 
   close_pull_request:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
