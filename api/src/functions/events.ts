@@ -39,7 +39,8 @@ async function eventsHandler(req: HttpRequest, context: InvocationContext): Prom
     return { status: 405, jsonBody: { error: 'Method not allowed' } }
   } catch (err) {
     context.error(`${method} /api/events${id ? '/' + id : ''} failed:`, err)
-    return { status: 500, jsonBody: { error: 'Internal server error' } }
+    const message = err instanceof Error ? err.message : String(err)
+    return { status: 500, jsonBody: { error: message } }
   }
 }
 
