@@ -105,9 +105,6 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
     name: 'Free'
     tier: 'Free'
   }
-  identity: {
-    type: 'SystemAssigned'
-  }
   properties: {
     repositoryUrl: repositoryUrl != '' ? repositoryUrl : null
     branch: repositoryUrl != '' ? repositoryBranch : null
@@ -119,26 +116,12 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
   }
 }
 
-// Cosmos DB Built-in Data Contributor role ID
-var cosmosDataContributorRoleId = '00000000-0000-0000-0000-000000000002'
-
-// Assign Cosmos DB data contributor role to SWA managed identity
-resource cosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = {
-  parent: cosmosAccount
-  name: guid(cosmosAccount.id, staticWebApp.id, cosmosDataContributorRoleId)
-  properties: {
-    roleDefinitionId: '${cosmosAccount.id}/sqlRoleDefinitions/${cosmosDataContributorRoleId}'
-    principalId: staticWebApp.identity.principalId
-    scope: cosmosAccount.id
-  }
-}
-
-// Wire Cosmos endpoint into SWA app settings
+// Wire Cosmos connection string into SWA app settings
 resource swaAppSettings 'Microsoft.Web/staticSites/config@2023-12-01' = {
   parent: staticWebApp
   name: 'appsettings'
   properties: {
-    COSMOS_ENDPOINT: cosmosAccount.properties.documentEndpoint
+    COSMOS_CONNECTION_STRING: cosmosAccount.listConnectionStrings().connectionStrings[0].connectionString
     COSMOS_DATABASE: cosmosDatabaseName
   }
 }
