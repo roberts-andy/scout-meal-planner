@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [develop]
+    paths-ignore:
+      - 'infra/**'
+      - '*.md'
+  pull_request:
+    branches: [develop, main]
+    paths-ignore:
+      - 'infra/**'
+      - '*.md'
+
+permissions:
+  contents: read
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    name: Build & Test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Run frontend tests
+        run: npm test
+
+      - name: Install API dependencies
+        run: cd api && npm ci
+
+      - name: Build API
+        run: cd api && npm run build

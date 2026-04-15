@@ -1,4 +1,4 @@
-name: Deploy to Azure Static Web Apps
+name: Deploy to Azure
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - 'infra/**'
       - '.github/workflows/infra.yml'
+      - '.github/workflows/ci.yml'
       - '*.md'
   pull_request:
     types: [opened, synchronize, reopened, closed]
@@ -13,6 +14,7 @@ on:
     paths-ignore:
       - 'infra/**'
       - '.github/workflows/infra.yml'
+      - '.github/workflows/ci.yml'
       - '*.md'
   workflow_dispatch:
 
