@@ -114,11 +114,21 @@ jobs:
           cd api
           zip -r ../api.zip . -x "src/*" "tsconfig.json"
 
-      - name: Deploy to Function App
-        uses: Azure/functions-action@v1
-        with:
-          app-name: func-scout-meal-planner
-          package: api.zip
+      - name: Upload package to deployment storage
+        run: |
+          az storage blob upload \
+            --account-name stscoutmealplanner \
+            --container-name app-package-func-scout-meal-planner \
+            --name api.zip \
+            --file api.zip \
+            --auth-mode login \
+            --overwrite
+
+      - name: Trigger function app deployment sync
+        run: |
+          az functionapp restart \
+            --name func-scout-meal-planner \
+            --resource-group rg-scout-meal-planner
 
   # ── PR cleanup ──
   close_pull_request:
