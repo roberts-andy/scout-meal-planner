@@ -69,11 +69,10 @@ jobs:
           cd api
           zip -r ../api.zip . -x "src/*" "tsconfig.json"
           cd ..
-          az functionapp deploy \
+          az functionapp deployment source config-zip \
             --resource-group rg-scout-meal-planner \
             --name func-scout-meal-planner \
-            --src-path api.zip \
-            --type zip
+            --src api.zip
 
   close_pull_request:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
