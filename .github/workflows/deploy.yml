@@ -114,10 +114,13 @@ jobs:
           cd api
           zip -r ../api.zip . -x "src/*" "tsconfig.json"
           cd ..
-          az functionapp deployment source config-zip \
+          az functionapp deploy \
             --resource-group rg-scout-meal-planner \
             --name func-scout-meal-planner \
-            --src api.zip
+            --src-path api.zip \
+            --type zip \
+            --clean true \
+            --restart true
 
   # ── PR cleanup ──
   close_pull_request:
