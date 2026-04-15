@@ -15,11 +15,12 @@ if (-not (Test-Path "api/node_modules")) {
 
 # Set env vars for Cosmos DB Emulator
 $env:COSMOS_EMULATOR = "true"
-$env:VITE_API_URL = "http://localhost:3001/api"
+# Clear VITE_API_URL so the Vite proxy is used (don't call API directly cross-origin)
+$env:VITE_API_URL = ""
 
 Write-Host ""
 Write-Host "Starting dev environment..." -ForegroundColor Green
-Write-Host "  Frontend: http://localhost:5173" -ForegroundColor Yellow
+Write-Host "  Frontend: http://localhost:5000 (Vite proxies /api to Express)" -ForegroundColor Yellow
 Write-Host "  API:      http://localhost:3001/api" -ForegroundColor Yellow
 Write-Host "  Health:   http://localhost:3001/api/health" -ForegroundColor Yellow
 Write-Host ""

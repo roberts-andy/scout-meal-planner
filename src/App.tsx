@@ -13,9 +13,9 @@ import { useRecipes, useCreateRecipe, useUpdateRecipe, useDeleteRecipe } from '@
 import { useFeedback, useCreateFeedback, useUpdateFeedback, useDeleteFeedback } from '@/hooks/useFeedback'
 
 export default function App() {
-  const { data: events = [], isLoading: eventsLoading } = useEvents()
-  const { data: recipes = [], isLoading: recipesLoading } = useRecipes()
-  const { data: feedback = [], isLoading: feedbackLoading } = useFeedback()
+  const { data: events = [], isLoading: eventsLoading, error: eventsError } = useEvents()
+  const { data: recipes = [], isLoading: recipesLoading, error: recipesError } = useRecipes()
+  const { data: feedback = [], isLoading: feedbackLoading, error: feedbackError } = useFeedback()
 
   
   const createEvent = useCreateEvent()
@@ -83,6 +83,18 @@ export default function App() {
     if (fb) {
       deleteFeedback.mutate({ id: feedbackId, eventId: fb.eventId })
     }
+  }
+
+  const queryError = eventsError || recipesError || feedbackError
+  if (queryError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-2">
+          <p className="text-destructive font-semibold">Failed to load data</p>
+          <p className="text-muted-foreground text-sm">{queryError.message}</p>
+        </div>
+      </div>
+    )
   }
 
   if (eventsLoading || recipesLoading || feedbackLoading) {

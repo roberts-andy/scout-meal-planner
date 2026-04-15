@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { CosmosClient, Database, Container } from '@azure/cosmos'
 
 const endpoint = process.env.COSMOS_ENDPOINT || 'https://localhost:8081/'
