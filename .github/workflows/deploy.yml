@@ -109,18 +109,16 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy to Function App
+      - name: Prepare package
         run: |
           cd api
           zip -r ../api.zip . -x "src/*" "tsconfig.json"
-          cd ..
-          az functionapp deploy \
-            --resource-group rg-scout-meal-planner \
-            --name func-scout-meal-planner \
-            --src-path api.zip \
-            --type zip \
-            --clean true \
-            --restart true
+
+      - name: Deploy to Function App
+        uses: Azure/functions-action@v1
+        with:
+          app-name: func-scout-meal-planner
+          package: api.zip
 
   # ── PR cleanup ──
   close_pull_request:
