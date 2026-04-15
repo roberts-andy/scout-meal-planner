@@ -22,6 +22,19 @@ export default defineConfig({
       '@': resolve(projectRoot, 'src')
     }
   },
+  build: {
+    chunkSizeWarningLimit: 1600, // proxy.js from spark plugin is ~1.5MB, can't be reduced
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/@radix-ui')) return 'vendor-radix';
+          if (id.includes('node_modules/framer-motion')) return 'vendor-motion';
+          if (id.includes('node_modules/@tanstack')) return 'vendor-query';
+          if (id.includes('node_modules/@phosphor-icons')) return 'vendor-icons';
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       '/api': {
