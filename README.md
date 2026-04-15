@@ -4,7 +4,7 @@ A meal planning application for scout troops to plan, organize, and manage meals
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────┐     ┌──────────────────────┐     ┌────────────────────┐
 │  Azure Static Web   │     │  Azure Functions      │     │  Azure Cosmos DB   │
 │  Apps (SWA)         │────▶│  (Flex Consumption)   │────▶│  (Serverless)      │
@@ -12,10 +12,10 @@ A meal planning application for scout troops to plan, organize, and manage meals
 │  React 19 SPA       │     │  Node.js 22 / TS      │     │  SQL API           │
 │  Vite + Tailwind    │     │  REST API             │     │  3 containers      │
 └─────────────────────┘     └──────────────────────┘     └────────────────────┘
-```
+```text
 
 | Layer | Technology | Location |
-|-------|-----------|----------|
+| ----- | ---------- | -------- |
 | Frontend | React 19, TypeScript, Tailwind CSS, Radix UI, React Query | `src/` |
 | API | Azure Functions v4, Node.js 22, TypeScript | `api/` |
 | Database | Azure Cosmos DB (serverless, SQL API) | 3 containers: `events`, `recipes`, `feedback` |
@@ -35,7 +35,7 @@ A meal planning application for scout troops to plan, organize, and manage meals
 
 ## Project Structure
 
-```
+```text
 scout-meal-planner/
 ├── src/                          # Frontend (React SPA)
 │   ├── main.tsx                  # App bootstrap (React Query, Error Boundary)
@@ -133,6 +133,7 @@ npm run dev:all
 ```
 
 This starts:
+
 - Frontend at `http://localhost:5173` (Vite dev server with HMR)
 - API at `http://localhost:3001/api` (Express with Cosmos DB emulator)
 
@@ -150,7 +151,7 @@ This uses the SWA CLI to proxy both the frontend and the Functions API together.
 ### Available Scripts
 
 | Script | Description |
-|--------|------------|
+| ------ | ----------- |
 | `npm run dev` | Vite dev server only (frontend at :5173) |
 | `npm run dev:server` | Express API server only (API at :3001) |
 | `npm run dev:all` | Both frontend and API in parallel |
@@ -162,7 +163,7 @@ This uses the SWA CLI to proxy both the frontend and the Functions API together.
 ### Environment Variables
 
 | Variable | Where | Description |
-|----------|-------|-------------|
+| -------- | ----- | ----------- |
 | `COSMOS_EMULATOR` | server | Set to `true` to use Cosmos DB Emulator |
 | `COSMOS_ENDPOINT` | api/server | Cosmos DB account endpoint |
 | `COSMOS_CONNECTION_STRING` | server | Alternative to endpoint + identity auth |
@@ -182,6 +183,7 @@ gh workflow run infra.yml
 ```
 
 This creates:
+
 - Resource group `rg-scout-meal-planner` in `centralus`
 - Cosmos DB account (serverless) with 3 containers
 - Storage account (identity-based auth, no shared keys)
@@ -200,13 +202,14 @@ gh workflow run deploy.yml
 ```
 
 The workflow:
+
 1. Builds frontend with Vite → deploys to SWA
 2. Builds API with TypeScript → zips → deploys to Function App via `config-zip`
 
 ### Required GitHub Secrets
 
 | Secret | Description |
-|--------|-------------|
+| ------ | ----------- |
 | `AZURE_CLIENT_ID` | Service principal app ID (for OIDC) |
 | `AZURE_TENANT_ID` | Azure AD tenant ID |
 | `AZURE_SUBSCRIPTION_ID` | Azure subscription ID |
@@ -217,7 +220,7 @@ The workflow:
 All endpoints are served under `/api` and proxied through SWA to the Function App.
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
+| ------ | -------- | ----------- |
 | GET | `/api/events` | List all events |
 | GET | `/api/events/{id}` | Get event by ID |
 | POST | `/api/events` | Create event |
@@ -237,12 +240,15 @@ All endpoints are served under `/api` and proxied through SWA to the Function Ap
 ## Data Model
 
 ### Event
+
 Multi-day camping trip with daily meal schedule. Contains nested `EventDay` → `Meal` structure.
 
 ### Recipe
+
 Cooking recipe with multiple variations (one per cooking method). Supports versioning with event-specific snapshots and version diffing.
 
 ### MealFeedback
+
 Post-event feedback linked to a specific event, meal, and recipe. Includes star ratings (taste, difficulty, portion size) and free-form comments.
 
 ## License
