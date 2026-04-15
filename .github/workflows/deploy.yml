@@ -69,16 +69,11 @@ jobs:
           cd api
           zip -r ../api.zip . -x "src/*" "tsconfig.json"
           cd ..
-          az storage blob upload \
-            --account-name stscoutmealplanner \
-            --container-name function-releases \
-            --name latest.zip \
-            --file api.zip \
-            --overwrite \
-            --auth-mode login
-          az functionapp restart \
+          az functionapp deploy \
             --resource-group rg-scout-meal-planner \
-            --name func-scout-meal-planner
+            --name func-scout-meal-planner \
+            --src-path api.zip \
+            --type zip
 
   close_pull_request:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
