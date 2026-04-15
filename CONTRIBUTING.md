@@ -7,7 +7,7 @@ This project follows the [GitFlow](https://nvie.com/posts/a-successful-git-branc
 ### Branch Overview
 
 | Branch | Purpose | Merges Into |
-|--------|---------|-------------|
+| ------ | ------- | ----------- |
 | `main` | Production-ready code. Deployed to Azure. | — |
 | `develop` | Integration branch for completed features. | `main` (via release) |
 | `feature/*` | New features and enhancements. | `develop` |
@@ -16,7 +16,7 @@ This project follows the [GitFlow](https://nvie.com/posts/a-successful-git-branc
 
 ### Workflow
 
-```
+```text
 feature/add-meal-photos ──→ develop ──→ release/1.2.0 ──→ main
                                                             ↑
                                           hotfix/fix-login ─┘
