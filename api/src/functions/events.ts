@@ -6,6 +6,7 @@ const CONTAINER = 'events'
 async function eventsHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const id = req.params.id
   const method = req.method
+  context.log(`${method} /api/events${id ? '/' + id : ''}`)
 
   try {
     if (method === 'GET' && !id) {
