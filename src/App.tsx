@@ -17,7 +17,6 @@ export default function App() {
   const { data: recipes = [], isLoading: recipesLoading, error: recipesError } = useRecipes()
   const { data: feedback = [], isLoading: feedbackLoading, error: feedbackError } = useFeedback()
 
-  
   const createEvent = useCreateEvent()
   const updateEvent = useUpdateEvent()
   const deleteEvent = useDeleteEvent()
