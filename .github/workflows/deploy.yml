@@ -65,14 +65,10 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Deploy API to Function App
-        run: |
-          cd api
-          zip -r ../api.zip . -x "node_modules/.package-lock.json" "src/*" "tsconfig.json" ".funcignore"
-          cd ..
-          az functionapp deployment source config-zip \
-            --resource-group rg-scout-meal-planner \
-            --name func-scout-meal-planner \
-            --src api.zip
+        uses: azure/functions-action@v2
+        with:
+          app-name: func-scout-meal-planner
+          package: api
 
   close_pull_request:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
