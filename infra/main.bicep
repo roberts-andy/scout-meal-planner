@@ -27,6 +27,9 @@ param functionAppName string = 'func-scout-meal-planner'
 @description('Name of the Storage Account for Function App')
 param storageAccountName string = 'stscoutmealplanner'
 
+@description('Object ID of the GitHub Actions service principal for deployment')
+param deployerPrincipalId string = ''
+
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
   location: location
@@ -44,6 +47,7 @@ module resources 'resources.bicep' = {
     repositoryBranch: repositoryBranch
     functionAppName: functionAppName
     storageAccountName: storageAccountName
+    deployerPrincipalId: deployerPrincipalId
   }
 }
 

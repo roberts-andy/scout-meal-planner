@@ -22,6 +22,9 @@
     },
     "repositoryBranch": {
       "value": "main"
+    },
+    "deployerPrincipalId": {
+      "value": "c96e135f-f098-489f-bb15-07894d415ebe"
     }
   }
 }

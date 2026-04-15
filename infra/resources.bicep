@@ -22,6 +22,9 @@ param functionAppName string
 @description('Name of the Storage Account for Function App')
 param storageAccountName string
 
+@description('Object ID of the GitHub Actions service principal for deployment')
+param deployerPrincipalId string = ''
+
 // Cosmos DB Account — Serverless
 resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   name: cosmosAccountName
@@ -110,6 +113,14 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     name: 'Standard_LRS'
   }
   kind: 'StorageV2'
+  properties: {
+    allowSharedKeyAccess: false
+  }
+}
+
+// Blob container for function app deployment packages
+resource deployContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  name: '${storageAccount.name}/default/function-releases'
 }
 
 // App Service Plan — Consumption (serverless)
@@ -142,6 +153,8 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
         { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'node' }
         { name: 'WEBSITE_NODE_DEFAULT_VERSION', value: '~22' }
+        { name: 'WEBSITE_RUN_FROM_PACKAGE', value: 'https://${storageAccount.name}.blob.${environment().suffixes.storage}/function-releases/latest.zip' }
+        { name: 'SCM_DO_BUILD_DURING_DEPLOYMENT', value: 'false' }
         { name: 'COSMOS_ENDPOINT', value: cosmosAccount.properties.documentEndpoint }
         { name: 'COSMOS_DATABASE', value: cosmosDatabaseName }
       ]
@@ -183,6 +196,17 @@ resource storageTableRoleAssignment 'Microsoft.Authorization/roleAssignments@202
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3')
     principalId: functionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Storage Blob Data Contributor for deployer SP (to upload deployment packages)
+resource deployerBlobRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployerPrincipalId != '') {
+  name: guid(storageAccount.id, deployerPrincipalId, 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+  scope: storageAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+    principalId: deployerPrincipalId
     principalType: 'ServicePrincipal'
   }
 }
