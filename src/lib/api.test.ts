@@ -1,0 +1,135 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { eventsApi, recipesApi, feedbackApi } from './api'
+
+const mockFetch = vi.fn()
+vi.stubGlobal('fetch', mockFetch)
+
+function jsonResponse(data: unknown, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: () => Promise.resolve(data),
+  }
+}
+
+function emptyResponse(status = 204) {
+  return {
+    ok: true,
+    status,
+    json: () => Promise.resolve(undefined),
+  }
+}
+
+beforeEach(() => {
+  mockFetch.mockReset()
+})
+
+// ── Events API ──
+
+describe('eventsApi', () => {
+  it('getAll fetches /events', async () => {
+    const events = [{ id: '1', name: 'Camp' }]
+    mockFetch.mockResolvedValueOnce(jsonResponse(events))
+    const result = await eventsApi.getAll()
+    expect(result).toEqual(events)
+    expect(mockFetch).toHaveBeenCalledWith('/api/events', expect.objectContaining({
+      headers: { 'Content-Type': 'application/json' },
+    }))
+  })
+
+  it('getById fetches /events/{id}', async () => {
+    const event = { id: '1', name: 'Camp' }
+    mockFetch.mockResolvedValueOnce(jsonResponse(event))
+    const result = await eventsApi.getById('1')
+    expect(result).toEqual(event)
+    expect(mockFetch).toHaveBeenCalledWith('/api/events/1', expect.anything())
+  })
+
+  it('create posts to /events', async () => {
+    const event = { id: '1', name: 'Camp' } as any
+    mockFetch.mockResolvedValueOnce(jsonResponse(event, 201))
+    await eventsApi.create(event)
+    expect(mockFetch).toHaveBeenCalledWith('/api/events', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify(event),
+    }))
+  })
+
+  it('update puts to /events/{id}', async () => {
+    const event = { id: '1', name: 'Updated' } as any
+    mockFetch.mockResolvedValueOnce(jsonResponse(event))
+    await eventsApi.update(event)
+    expect(mockFetch).toHaveBeenCalledWith('/api/events/1', expect.objectContaining({
+      method: 'PUT',
+    }))
+  })
+
+  it('delete sends DELETE to /events/{id}', async () => {
+    mockFetch.mockResolvedValueOnce(emptyResponse())
+    await eventsApi.delete('1')
+    expect(mockFetch).toHaveBeenCalledWith('/api/events/1', expect.objectContaining({
+      method: 'DELETE',
+    }))
+  })
+
+  it('throws on non-ok response', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ error: 'Not found' }, 404))
+    await expect(eventsApi.getById('bad')).rejects.toThrow('Not found')
+  })
+})
+
+// ── Recipes API ──
+
+describe('recipesApi', () => {
+  it('getAll fetches /recipes', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse([]))
+    const result = await recipesApi.getAll()
+    expect(result).toEqual([])
+  })
+
+  it('create posts to /recipes', async () => {
+    const recipe = { id: '1', name: 'Pancakes' } as any
+    mockFetch.mockResolvedValueOnce(jsonResponse(recipe, 201))
+    await recipesApi.create(recipe)
+    expect(mockFetch).toHaveBeenCalledWith('/api/recipes', expect.objectContaining({
+      method: 'POST',
+    }))
+  })
+
+  it('delete sends DELETE to /recipes/{id}', async () => {
+    mockFetch.mockResolvedValueOnce(emptyResponse())
+    await recipesApi.delete('1')
+    expect(mockFetch).toHaveBeenCalledWith('/api/recipes/1', expect.objectContaining({
+      method: 'DELETE',
+    }))
+  })
+})
+
+// ── Feedback API ──
+
+describe('feedbackApi', () => {
+  it('getByEvent fetches /feedback/event/{eventId}', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse([]))
+    const result = await feedbackApi.getByEvent('ev-1')
+    expect(result).toEqual([])
+    expect(mockFetch).toHaveBeenCalledWith('/api/feedback/event/ev-1', expect.anything())
+  })
+
+  it('delete includes eventId as query param', async () => {
+    mockFetch.mockResolvedValueOnce(emptyResponse())
+    await feedbackApi.delete('fb-1', 'ev-1')
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/feedback/fb-1?eventId=ev-1',
+      expect.objectContaining({ method: 'DELETE' }),
+    )
+  })
+
+  it('delete encodes eventId in query param', async () => {
+    mockFetch.mockResolvedValueOnce(emptyResponse())
+    await feedbackApi.delete('fb-1', 'ev with spaces')
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/feedback/fb-1?eventId=ev%20with%20spaces',
+      expect.objectContaining({ method: 'DELETE' }),
+    )
+  })
+})
