@@ -17,9 +17,11 @@ let database: Database
 let containers: Record<string, Container> = {}
 
 const containerDefinitions = [
-  { id: 'events', partitionKey: '/id' },
-  { id: 'recipes', partitionKey: '/id' },
-  { id: 'feedback', partitionKey: '/eventId' },
+  { id: 'troops', partitionKey: '/id' },
+  { id: 'members', partitionKey: '/troopId' },
+  { id: 'events', partitionKey: '/troopId' },
+  { id: 'recipes', partitionKey: '/troopId' },
+  { id: 'feedback', partitionKey: '/troopId' },
 ]
 
 export async function initDatabase(): Promise<void> {
@@ -50,6 +52,17 @@ export function getContainer(name: string): Container {
 export async function getAll<T>(containerName: string): Promise<T[]> {
   const container = getContainer(containerName)
   const { resources } = await container.items.readAll<T>().fetchAll()
+  return resources
+}
+
+export async function getAllByTroop<T>(containerName: string, troopId: string): Promise<T[]> {
+  const container = getContainer(containerName)
+  const { resources } = await container.items
+    .query<T>({
+      query: 'SELECT * FROM c WHERE c.troopId = @troopId',
+      parameters: [{ name: '@troopId', value: troopId }],
+    })
+    .fetchAll()
   return resources
 }
 

@@ -13,6 +13,15 @@ if (-not (Test-Path "api/node_modules")) {
     Push-Location api; npm install; Pop-Location
 }
 
+# Load .env file if present (gitignored — copy .env.example to .env and fill in values)
+if (Test-Path ".env") {
+    Get-Content ".env" | ForEach-Object {
+        if ($_ -match '^\s*([^#][^=]+?)\s*=\s*(.+)$') {
+            [System.Environment]::SetEnvironmentVariable($Matches[1], $Matches[2], 'Process')
+        }
+    }
+}
+
 # Set env vars for Cosmos DB Emulator
 $env:COSMOS_EMULATOR = "true"
 # Clear VITE_API_URL so the Vite proxy is used (don't call API directly cross-origin)

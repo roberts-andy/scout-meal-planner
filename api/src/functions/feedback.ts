@@ -1,35 +1,46 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
-import { getAll, create, update, remove, queryItems } from '../cosmosdb.js'
+import { getAllByTroop, create, update, remove, queryItems } from '../cosmosdb.js'
+import { getTroopContext, unauthorized, forbidden } from '../middleware/auth.js'
+import { checkPermission } from '../middleware/roles.js'
 
 const CONTAINER = 'feedback'
 
 async function feedbackHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const id = req.params.id
   const method = req.method
+  context.log(`${method} /api/feedback${id ? '/' + id : ''}`)
+
+  const auth = await getTroopContext(req, context)
+  if (!auth) return unauthorized()
 
   try {
     if (method === 'GET' && !id) {
-      const feedback = await getAll(CONTAINER)
+      const feedback = await getAllByTroop(CONTAINER, auth.troopId)
       return { jsonBody: feedback }
     }
 
     if (method === 'POST') {
+      if (!checkPermission(auth.role, 'submitFeedback')) return forbidden()
       const body = await req.json() as any
+      body.troopId = auth.troopId
+      body.createdBy = { userId: auth.userId, displayName: auth.displayName }
+      body.updatedBy = body.createdBy
       const feedback = await create(CONTAINER, body)
       return { status: 201, jsonBody: feedback }
     }
 
     if (method === 'PUT' && id) {
+      if (!checkPermission(auth.role, 'submitFeedback')) return forbidden()
       const body = await req.json() as any
-      const { eventId } = body
-      const feedback = await update(CONTAINER, id, body, eventId)
+      body.troopId = auth.troopId
+      body.updatedBy = { userId: auth.userId, displayName: auth.displayName }
+      const feedback = await update(CONTAINER, id, body, auth.troopId)
       return { jsonBody: feedback }
     }
 
     if (method === 'DELETE' && id) {
-      const eventId = req.query.get('eventId')
-      if (!eventId) return { status: 400, jsonBody: { error: 'eventId query parameter required' } }
-      await remove(CONTAINER, id, eventId)
+      if (!checkPermission(auth.role, 'manageEvents')) return forbidden()
+      await remove(CONTAINER, id, auth.troopId)
       return { status: 204 }
     }
 
@@ -42,12 +53,19 @@ async function feedbackHandler(req: HttpRequest, context: InvocationContext): Pr
 
 async function feedbackByEventHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const eventId = req.params.eventId
+  context.log(`GET /api/feedback/event/${eventId}`)
+
+  const auth = await getTroopContext(req, context)
+  if (!auth) return unauthorized()
 
   try {
     const feedback = await queryItems(
       CONTAINER,
-      'SELECT * FROM c WHERE c.eventId = @eventId',
-      [{ name: '@eventId', value: eventId }]
+      'SELECT * FROM c WHERE c.eventId = @eventId AND c.troopId = @troopId',
+      [
+        { name: '@eventId', value: eventId },
+        { name: '@troopId', value: auth.troopId },
+      ]
     )
     return { jsonBody: feedback }
   } catch (err) {

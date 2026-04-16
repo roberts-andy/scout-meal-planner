@@ -25,6 +25,12 @@ param storageAccountName string
 @description('Object ID of the GitHub Actions service principal for deployment')
 param deployerPrincipalId string = ''
 
+@description('Entra External ID tenant ID (CIAM)')
+param entraTenantId string = ''
+
+@description('Entra External ID client/application ID')
+param entraClientId string = ''
+
 @description('Maximum instance count for Flex Consumption scaling')
 param maximumInstanceCount int = 100
 
@@ -75,7 +81,7 @@ resource eventsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/con
     resource: {
       id: 'events'
       partitionKey: {
-        paths: ['/id']
+        paths: ['/troopId']
         kind: 'Hash'
       }
     }
@@ -90,7 +96,7 @@ resource recipesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/co
     resource: {
       id: 'recipes'
       partitionKey: {
-        paths: ['/id']
+        paths: ['/troopId']
         kind: 'Hash'
       }
     }
@@ -105,7 +111,37 @@ resource feedbackContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/c
     resource: {
       id: 'feedback'
       partitionKey: {
-        paths: ['/eventId']
+        paths: ['/troopId']
+        kind: 'Hash'
+      }
+    }
+  }
+}
+
+// Container: troops
+resource troopsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
+  parent: cosmosDatabase
+  name: 'troops'
+  properties: {
+    resource: {
+      id: 'troops'
+      partitionKey: {
+        paths: ['/id']
+        kind: 'Hash'
+      }
+    }
+  }
+}
+
+// Container: members
+resource membersContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
+  parent: cosmosDatabase
+  name: 'members'
+  properties: {
+    resource: {
+      id: 'members'
+      partitionKey: {
+        paths: ['/troopId']
         kind: 'Hash'
       }
     }
@@ -192,6 +228,8 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'AzureWebJobsStorage__tableServiceUri', value: 'https://${storageAccount.name}.table.${environment().suffixes.storage}' }
         { name: 'COSMOS_ENDPOINT', value: cosmosAccount.properties.documentEndpoint }
         { name: 'COSMOS_DATABASE', value: cosmosDatabaseName }
+        { name: 'ENTRA_TENANT_ID', value: entraTenantId }
+        { name: 'ENTRA_CLIENT_ID', value: entraClientId }
       ]
     }
     httpsOnly: true

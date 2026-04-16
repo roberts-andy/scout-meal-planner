@@ -18,6 +18,8 @@
     },
     "dependencies": {
         "@azure/cosmos": "^4.9.2",
+        "@azure/msal-browser": "^5.6.3",
+        "@azure/msal-react": "^5.2.1",
         "@github/spark": ">=0.43.1 <1",
         "@heroicons/react": "^2.2.0",
         "@hookform/resolvers": "^4.1.3",
