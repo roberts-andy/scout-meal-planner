@@ -11,6 +11,8 @@ export interface AuthState {
   troopId: string | null
   role: TroopRole | null
   needsOnboarding: boolean
+  authError: { status: number | null; message: string } | null
+  retryMembership: () => void
   getAccessToken: () => Promise<string>
   login: () => Promise<void>
   logout: () => void
@@ -22,6 +24,10 @@ export function useAuth(): AuthState {
   const [role, setRole] = useState<TroopRole | null>(null)
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
   const [memberLoading, setMemberLoading] = useState(false)
+  const [authError, setAuthError] = useState<AuthState['authError']>(null)
+  const [retryCount, setRetryCount] = useState(0)
+
+  const retryMembership = useCallback(() => setRetryCount(c => c + 1), [])
 
   const account = accounts[0] || null
   const isAuthenticated = !!account
@@ -68,11 +74,13 @@ export function useAuth(): AuthState {
       setTroopId(null)
       setRole(null)
       setNeedsOnboarding(false)
+      setAuthError(null)
       return
     }
 
     let cancelled = false
     setMemberLoading(true)
+    setAuthError(null)
 
     ;(async () => {
       try {
@@ -88,11 +96,28 @@ export function useAuth(): AuthState {
           setTroopId(data.troopId)
           setRole(data.role)
           setNeedsOnboarding(false)
+          setAuthError(null)
         } else if (res.status === 404) {
           setNeedsOnboarding(true)
+          setAuthError(null)
+        } else {
+          // 401/403/500/etc — surface so the UI can show something actionable
+          // instead of falling through to "Failed to load data".
+          const body = await res.text().catch(() => '')
+          const parsed = (() => {
+            try { return JSON.parse(body) as { error?: string } } catch { return null }
+          })()
+          setAuthError({
+            status: res.status,
+            message: parsed?.error || body || `Membership check failed (HTTP ${res.status})`,
+          })
         }
-      } catch {
-        // Network error — will retry on next render
+      } catch (err) {
+        if (cancelled) return
+        setAuthError({
+          status: null,
+          message: err instanceof Error ? err.message : 'Network error contacting the API',
+        })
       } finally {
         if (!cancelled) setMemberLoading(false)
       }
@@ -101,7 +126,7 @@ export function useAuth(): AuthState {
     return () => {
       cancelled = true
     }
-  }, [isAuthenticated, getAccessToken])
+  }, [isAuthenticated, getAccessToken, retryCount])
 
   return {
     isAuthenticated,
@@ -110,6 +135,8 @@ export function useAuth(): AuthState {
     troopId,
     role,
     needsOnboarding,
+    authError,
+    retryMembership,
     getAccessToken,
     login,
     logout,
