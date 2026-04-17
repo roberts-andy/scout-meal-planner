@@ -1,3 +1,5 @@
+extension 'br:mcr.microsoft.com/bicep/extensions/microsoftgraph/v1.0:0.1.8-preview'
+
 @description('Azure region for all resources')
 param location string
 
@@ -25,11 +27,8 @@ param storageAccountName string
 @description('Object ID of the GitHub Actions service principal for deployment')
 param deployerPrincipalId string = ''
 
-@description('Entra External ID tenant ID (CIAM)')
-param entraTenantId string = ''
-
-@description('Entra External ID client/application ID')
-param entraClientId string = ''
+@description('Display name for the MSA sign-in app registration')
+param msaAppDisplayName string = 'ScoutMealPlanner'
 
 @description('Maximum instance count for Flex Consumption scaling')
 param maximumInstanceCount int = 100
@@ -228,8 +227,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'AzureWebJobsStorage__tableServiceUri', value: 'https://${storageAccount.name}.table.${environment().suffixes.storage}' }
         { name: 'COSMOS_ENDPOINT', value: cosmosAccount.properties.documentEndpoint }
         { name: 'COSMOS_DATABASE', value: cosmosDatabaseName }
-        { name: 'ENTRA_TENANT_ID', value: entraTenantId }
-        { name: 'ENTRA_CLIENT_ID', value: entraClientId }
+        { name: 'ENTRA_CLIENT_ID', value: msaApp.appId }
       ]
     }
     httpsOnly: true
@@ -323,6 +321,20 @@ resource swaBackend 'Microsoft.Web/staticSites/linkedBackends@2023-12-01' = {
   }
 }
 
+// ── App Registration: MSA sign-in (Personal Microsoft Accounts only) ──
+resource msaApp 'Microsoft.Graph/applications@v1.0' = {
+  uniqueName: msaAppDisplayName
+  displayName: msaAppDisplayName
+  signInAudience: 'PersonalMicrosoftAccount'
+  spa: {
+    redirectUris: [
+      'http://localhost:5000'
+      'https://${staticWebApp.properties.defaultHostname}'
+    ]
+  }
+}
+
 output staticWebAppUrl string = staticWebApp.properties.defaultHostname
 output cosmosAccountEndpoint string = cosmosAccount.properties.documentEndpoint
 output functionAppName string = functionApp.name
+output msaAppClientId string = msaApp.appId

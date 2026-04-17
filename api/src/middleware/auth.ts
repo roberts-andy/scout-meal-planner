@@ -2,15 +2,15 @@ import { HttpRequest, InvocationContext } from '@azure/functions'
 import { createRemoteJWKSet, jwtVerify, JWTPayload } from 'jose'
 import { queryItems } from '../cosmosdb.js'
 
-const TENANT_ID = process.env.ENTRA_TENANT_ID
 const CLIENT_ID = process.env.ENTRA_CLIENT_ID
 
-if (!TENANT_ID || !CLIENT_ID) {
-  console.warn('ENTRA_TENANT_ID or ENTRA_CLIENT_ID not set — auth will reject all requests')
+if (!CLIENT_ID) {
+  console.warn('ENTRA_CLIENT_ID not set — auth will reject all requests')
 }
 
-const jwksUri = `https://${TENANT_ID}.ciamlogin.com/${TENANT_ID}/discovery/v2.0/keys`
-const issuer = `https://${TENANT_ID}.ciamlogin.com/${TENANT_ID}/v2.0`
+// Microsoft identity platform /consumers endpoint
+const jwksUri = 'https://login.microsoftonline.com/consumers/discovery/v2.0/keys'
+const issuer = 'https://login.microsoftonline.com/9188040d-6c67-4c5b-b112-36a304b66dad/v2.0'
 
 let jwks: ReturnType<typeof createRemoteJWKSet> | null = null
 

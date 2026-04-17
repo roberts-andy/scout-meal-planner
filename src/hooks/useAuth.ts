@@ -42,11 +42,13 @@ export function useAuth(): AuthState {
         ...loginRequest,
         account,
       })
-      return response.accessToken
+      // Use idToken (not accessToken) since we're authenticating with /consumers
+      // and OIDC scopes only — the accessToken would be for MS Graph, not our API
+      return response.idToken
     } catch (err) {
       if (err instanceof InteractionRequiredAuthError) {
         const response = await instance.acquireTokenPopup(loginRequest)
-        return response.accessToken
+        return response.idToken
       }
       throw err
     }
