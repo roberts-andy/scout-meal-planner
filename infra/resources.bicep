@@ -271,12 +271,23 @@ resource storageTableRoleAssignment 'Microsoft.Authorization/roleAssignments@202
   }
 }
 
-// Storage Blob Data Contributor for deployer SP (to upload deployment packages)
+// Storage Blob Data Owner for deployer SP (to upload deployment packages)
 resource deployerBlobRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployerPrincipalId != '') {
-  name: guid(storageAccount.id, deployerPrincipalId, 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+  name: guid(storageAccount.id, deployerPrincipalId, 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b')
   scope: storageAccount
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b')
+    principalId: deployerPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Storage Account Contributor for deployer SP (to manage firewall rules during deployment)
+resource deployerStorageContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployerPrincipalId != '') {
+  name: guid(storageAccount.id, deployerPrincipalId, '17d1049b-9a84-46fb-8f53-869881c3d3ab')
+  scope: storageAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '17d1049b-9a84-46fb-8f53-869881c3d3ab')
     principalId: deployerPrincipalId
     principalType: 'ServicePrincipal'
   }
