@@ -1,6 +1,6 @@
 import { HttpRequest, InvocationContext } from '@azure/functions'
 import { createRemoteJWKSet, jwtVerify, JWTPayload } from 'jose'
-import { queryItems } from '../cosmosdb.js'
+import { queryItems, update } from '../cosmosdb.js'
 
 const CLIENT_ID = process.env.ENTRA_CLIENT_ID
 
@@ -70,9 +70,25 @@ export async function getTroopContext(req: HttpRequest, context: InvocationConte
     [{ name: '@userId', value: claims.userId }]
   )
 
-  if (members.length === 0) return null
+  let member = members[0]
 
-  const member = members[0]
+  // Fallback: match by email for seeded members whose userId hasn't been set yet
+  if (!member && claims.email) {
+    const byEmail = await queryItems<any>(
+      'members',
+      'SELECT * FROM c WHERE c.email = @email AND c.status = "active" AND (c.userId = "" OR NOT IS_DEFINED(c.userId))',
+      [{ name: '@email', value: claims.email }]
+    )
+    if (byEmail.length > 0) {
+      member = byEmail[0]
+      // Backfill the real userId so future lookups use the fast path
+      member.userId = claims.userId
+      member.displayName = claims.displayName || member.displayName
+      await update('members', member.id, member, member.troopId)
+    }
+  }
+
+  if (!member) return null
   return {
     userId: claims.userId,
     email: claims.email,
