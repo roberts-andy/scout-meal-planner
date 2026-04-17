@@ -121,6 +121,14 @@ jobs:
           cd api
           zip -r ../api.zip . -x "src/*" "tsconfig.json"
 
+      - name: Open storage firewall for deployment
+        run: |
+          az storage account update \
+            --name stscoutmealplanner \
+            --resource-group rg-scout-meal-planner \
+            --default-action Allow
+          sleep 30
+
       - name: Upload package to deployment storage
         run: |
           az storage blob upload \
@@ -130,6 +138,14 @@ jobs:
             --file api.zip \
             --auth-mode login \
             --overwrite
+
+      - name: Close storage firewall
+        if: always()
+        run: |
+          az storage account update \
+            --name stscoutmealplanner \
+            --resource-group rg-scout-meal-planner \
+            --default-action Deny
 
       - name: Trigger function app deployment sync
         run: |
