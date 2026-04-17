@@ -1,0 +1,37 @@
+{
+  "name": "Scout Meal Planner",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/scout-meal-planner",
+  "features": {
+    "ghcr.io/devcontainers/features/azure-cli:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/jlaundry/devcontainer-features/azure-functions-core-tools:1": {
+      "version": "4"
+    }
+  },
+  "postCreateCommand": "npm install && cd api && npm install",
+  "postStartCommand": ".devcontainer/wait-for-cosmos.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-azurefunctions",
+        "ms-azuretools.vscode-azurestaticwebapps",
+        "bradlc.vscode-tailwindcss"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+      }
+    }
+  },
+  "forwardPorts": [4280, 5000, 7071, 8081],
+  "portsAttributes": {
+    "4280": { "label": "SWA CLI", "onAutoForward": "notify" },
+    "5000": { "label": "Vite Dev Server", "onAutoForward": "silent" },
+    "7071": { "label": "Azure Functions", "onAutoForward": "silent" },
+    "8081": { "label": "Cosmos DB Emulator", "onAutoForward": "silent" }
+  }
+}
