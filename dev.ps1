@@ -38,10 +38,9 @@ $env:COSMOS_EMULATOR = "true"
 $env:VITE_API_URL = ""
 
 Write-Host ""
-Write-Host "Starting dev environment..." -ForegroundColor Green
-Write-Host "  Frontend: http://localhost:5000 (Vite proxies /api to Express)" -ForegroundColor Yellow
-Write-Host "  API:      http://localhost:3001/api" -ForegroundColor Yellow
-Write-Host "  Health:   http://localhost:3001/api/health" -ForegroundColor Yellow
+Write-Host "Starting dev environment (SWA CLI + Azure Functions)..." -ForegroundColor Green
+Write-Host "  Frontend + API: http://localhost:4280" -ForegroundColor Yellow
+Write-Host "  Health:         http://localhost:4280/api/health" -ForegroundColor Yellow
 Write-Host ""
 
-npm run dev:all
+npm run dev:swa

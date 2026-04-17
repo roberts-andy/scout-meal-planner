@@ -81,15 +81,6 @@ scout-meal-planner/
 │           ├── recipes.ts        # GET/POST/PUT/DELETE /api/recipes/{id?}
 │           └── feedback.ts       # CRUD /api/feedback/{id?} + GET /api/feedback/event/{eventId}
 │
-├── server/                       # Local dev Express server (alternative to Azure Functions)
-│   ├── index.ts                  # Express app (port 3001, CORS to localhost:5173)
-│   ├── cosmosdb.ts               # Cosmos DB client (supports emulator mode)
-│   ├── tsconfig.json
-│   └── routes/
-│       ├── events.ts             # Express router for events
-│       ├── recipes.ts            # Express router for recipes
-│       └── feedback.ts           # Express router for feedback
-│
 ├── infra/                        # Azure infrastructure (Bicep)
 │   ├── main.bicep                # Subscription-scoped deployment orchestrator
 │   ├── resources.bicep           # All Azure resources (Cosmos, Storage, Functions, SWA, RBAC)
@@ -118,58 +109,44 @@ scout-meal-planner/
 - [Azure Functions Core Tools v4](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local) (optional, for running Functions locally)
 - [Azure Static Web Apps CLI](https://azure.github.io/static-web-apps-cli/) (optional, for full SWA emulation)
 
-### Quick Start (Express dev server)
+### Quick Start (SWA CLI + Azure Functions)
 
-```bash
-# Install all dependencies
+```powershell
+# Install dependencies
 npm install
-cd api && npm install && cd ..
+cd api; npm install; cd ..
 
-# Start Cosmos DB Emulator, then:
-export COSMOS_EMULATOR=true
-
-# Start frontend (Vite) + API (Express) together
-npm run dev:all
-```
-
-This starts:
-
-- Frontend at `http://localhost:5173` (Vite dev server with HMR)
-- API at `http://localhost:3001/api` (Express with Cosmos DB emulator)
-
-Set `VITE_API_URL=http://localhost:3001/api` in a `.env` file so the frontend talks to the Express server.
-
-### Alternative: Azure Functions + SWA CLI
-
-```bash
-# Start the full SWA emulation (matches production more closely)
+# Start Cosmos DB Emulator, then run frontend + API via SWA CLI
 npm run dev:swa
 ```
 
-This uses the SWA CLI to proxy both the frontend and the Functions API together.
+This starts the SWA CLI emulator at `http://localhost:4280`, which serves the Vite frontend and proxies `/api` to the local Azure Functions host. This matches production routing.
+
+Alternatively, run `./dev.ps1` to load `.env`, validate required variables, and launch the SWA CLI.
 
 ### Available Scripts
 
 | Script | Description |
 | ------ | ----------- |
-| `npm run dev` | Vite dev server only (frontend at :5173) |
-| `npm run dev:server` | Express API server only (API at :3001) |
-| `npm run dev:all` | Both frontend and API in parallel |
-| `npm run dev:swa` | SWA CLI with Functions API |
+| `npm run dev` | Vite dev server only (frontend at :5173, no API) |
+| `npm run dev:swa` | SWA CLI with Functions API (recommended) |
 | `npm run build` | TypeScript check + Vite production build |
 | `npm run lint` | ESLint |
+| `npm run test` | Run Vitest unit tests once |
+| `npm run test:watch` | Run Vitest in watch mode |
+| `npm run test:coverage` | Run tests with coverage report |
 | `npm run preview` | Preview production build locally |
 
 ### Environment Variables
 
 | Variable | Where | Description |
 | -------- | ----- | ----------- |
-| `COSMOS_EMULATOR` | server | Set to `true` to use Cosmos DB Emulator |
-| `COSMOS_ENDPOINT` | api/server | Cosmos DB account endpoint |
-| `COSMOS_CONNECTION_STRING` | server | Alternative to endpoint + identity auth |
-| `COSMOS_DATABASE` | api | Database name (default: `scout-meal-planner`) |
+| `VITE_ENTRA_CLIENT_ID` | frontend (.env) | Entra app registration client ID |
 | `VITE_API_URL` | frontend (.env) | API base URL (default: `/api`) |
-| `API_PORT` | server | Express server port (default: `3001`) |
+| `COSMOS_ENDPOINT` | api | Cosmos DB account endpoint (with managed identity) |
+| `COSMOS_CONNECTION_STRING` | api | Alternative to endpoint + identity auth |
+| `COSMOS_DATABASE` | api | Database name (default: `scout-meal-planner`) |
+| `ENTRA_CLIENT_ID` | api | Entra app client ID for JWT audience validation |
 
 ## Deployment
 
