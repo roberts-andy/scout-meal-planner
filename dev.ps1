@@ -41,6 +41,7 @@ if (-not $env:VITE_ENTRA_CLIENT_ID -or $env:VITE_ENTRA_CLIENT_ID -eq "REPLACE_ME
     exit 1
 }
 
+
 # Clear VITE_API_URL so the Vite proxy is used (don't call API directly cross-origin)
 $env:VITE_API_URL = ""
 
