@@ -9,7 +9,7 @@ A meal planning application for scout troops to plan, organize, and manage meals
 │  Azure Static Web   │     │  Azure Functions      │     │  Azure Cosmos DB   │
 │  Apps (SWA)         │────▶│  (Flex Consumption)   │────▶│  (Serverless)      │
 │                     │     │                       │     │                    │
-│  React 19 SPA       │     │  Node.js 22 / TS      │     │  SQL API           │
+│  React 19 SPA       │     │  Node.js 20 LTS / TS  │     │  SQL API           │
 │  Vite + Tailwind    │     │  REST API             │     │  3 containers      │
 └─────────────────────┘     └──────────────────────┘     └────────────────────┘
 ```text
@@ -17,7 +17,7 @@ A meal planning application for scout troops to plan, organize, and manage meals
 | Layer | Technology | Location |
 | ----- | ---------- | -------- |
 | Frontend | React 19, TypeScript, Tailwind CSS, Radix UI, React Query | `src/` |
-| API | Azure Functions v4, Node.js 22, TypeScript | `api/` |
+| API | Azure Functions v4, Node.js 20 LTS, TypeScript | `api/` |
 | Database | Azure Cosmos DB (serverless, SQL API) | 3 containers: `events`, `recipes`, `feedback` |
 | Hosting | Azure Static Web Apps (Standard) | CDN-distributed SPA |
 | Infrastructure | Bicep (subscription-scoped) | `infra/` |
@@ -104,37 +104,66 @@ scout-meal-planner/
 
 ### Prerequisites
 
-- [Node.js 22+](https://nodejs.org/)
-- [Azure Cosmos DB Emulator](https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-develop-emulator) (or a Cosmos DB account)
-- [Azure Functions Core Tools v4](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local) (optional, for running Functions locally)
-- [Azure Static Web Apps CLI](https://azure.github.io/static-web-apps-cli/) (optional, for full SWA emulation)
+| Tool | Version | Install |
+| ---- | ------- | ------- |
+| **fnm** (Fast Node Manager) | latest | `winget install Schniz.fnm` (Windows) or [fnm docs](https://github.com/Schniz/fnm#installation) |
+| **Node.js** | 20 LTS (pinned via `.nvmrc`) | Installed automatically by fnm: `fnm install 20` |
+| **Azure Cosmos DB Emulator** | latest | [Download](https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-develop-emulator) — must be running on `https://localhost:8081/` before starting the dev server |
+| **Azure Functions Core Tools** | v4 | Installed as a project dependency (`azure-functions-core-tools` in `api/package.json`) — no global install needed |
+| **Azure Static Web Apps CLI** | v2 | Installed as a project dependency (`@azure/static-web-apps-cli` in root `package.json`) — no global install needed |
 
-### Quick Start (SWA CLI + Azure Functions)
+#### fnm setup
+
+fnm auto-switches to the Node version in `.nvmrc` when you `cd` into the project. Add this to your PowerShell profile (`$PROFILE.CurrentUserAllHosts`):
 
 ```powershell
-# Install dependencies
-npm install
-cd api; npm install; cd ..
-
-# Start Cosmos DB Emulator, then run frontend + API via SWA CLI
-npm run dev:swa
+fnm env --use-on-cd --shell power-shell | Out-String | Invoke-Expression
 ```
 
-This starts the SWA CLI emulator at `http://localhost:4280`, which serves the Vite frontend and proxies `/api` to the local Azure Functions host. This matches production routing.
+> **Note:** `dev.ps1` activates fnm automatically, so this works even with `--noprofile` shells.
 
-Alternatively, run `./dev.ps1` to load `.env`, validate required variables, and launch the SWA CLI.
+#### Cosmos DB Emulator
+
+Start the emulator before running `dev.ps1`. The emulator's well-known connection string is pre-filled in `.env.example` — just copy it to `.env`.
+
+To switch to a remote Cosmos DB account later, replace `COSMOS_CONNECTION_STRING` in `.env` with your real connection string and remove `NODE_TLS_REJECT_UNAUTHORIZED=0`.
+
+### Quick Start
+
+```powershell
+# 1. Clone and enter the project (fnm auto-switches to Node 20 if set up)
+cd scout-meal-planner
+node --version  # should print v20.x
+
+# 2. Copy the env template and fill in your values
+cp .env.example .env
+# Edit .env → set VITE_ENTRA_CLIENT_ID and ENTRA_CLIENT_ID to your app's client ID
+# The Cosmos DB Emulator connection string is pre-filled — no changes needed for local dev
+
+# 3. Start the Cosmos DB Emulator (Windows system tray → Azure Cosmos DB Emulator → Start)
+
+# 4. Launch everything
+.\dev.ps1
+```
+
+This starts:
+- **Vite** dev server on `http://localhost:5000`
+- **Azure Functions** host on `http://localhost:7071`
+- **SWA CLI** emulator on **`http://localhost:4280`** (use this URL) — proxies `/api` to Functions and serves the frontend from Vite
 
 ### Available Scripts
 
 | Script | Description |
 | ------ | ----------- |
-| `npm run dev` | Vite dev server only (frontend at :5173, no API) |
-| `npm run dev:swa` | SWA CLI with Functions API (recommended) |
+| `.\dev.ps1` | **Recommended.** Loads `.env`, activates fnm, starts SWA CLI + Vite + Functions |
+| `npm run dev` | Vite dev server only (frontend at `:5000`, no API) |
+| `npm run dev:swa` | SWA CLI + Vite + Functions (same as `dev.ps1` but without `.env` loading) |
 | `npm run build` | TypeScript check + Vite production build |
 | `npm run lint` | ESLint |
 | `npm run test` | Run Vitest unit tests once |
 | `npm run test:watch` | Run Vitest in watch mode |
-| `npm run test:coverage` | Run tests with coverage report |
+| `npm run test:coverage` | Run tests with v8 coverage report |
+| `npm run test:e2e` | Run Playwright end-to-end tests |
 | `npm run preview` | Preview production build locally |
 
 ### Environment Variables
