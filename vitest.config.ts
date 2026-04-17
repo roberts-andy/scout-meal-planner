@@ -1,3 +1,4 @@
+// Vitest configuration for the frontend (jsdom environment).
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react-swc'
 import { resolve } from 'path'
