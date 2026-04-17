@@ -51,6 +51,7 @@ npm run lint
 ## Key Conventions
 
 - Node 20 LTS (pinned in `.nvmrc`)
+- Trunk-based branching: all work on short-lived branches off `main`, no `develop` branch
 - TypeScript strict mode everywhere
 - Tests use Vitest (unit) and Playwright (e2e)
 - API schemas defined with Zod in `api/src/schemas.ts`
