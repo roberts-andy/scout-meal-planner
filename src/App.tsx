@@ -1,18 +1,63 @@
 import { useState, useEffect } from 'react'
 import { Event, Recipe, MealFeedback } from '@/lib/types'
+import { setTokenProvider } from '@/lib/api'
 import { migrateRecipeToVersioning } from '@/lib/helpers'
+import { useAuthContext } from '@/components/AuthProvider'
+import { SignIn } from '@/components/SignIn'
+import { TroopOnboarding } from '@/components/TroopOnboarding'
+import { TroopAdmin } from '@/components/TroopAdmin'
 import { EventList } from '@/components/EventList'
 import { RecipeLibrary } from '@/components/RecipeLibrary'
 import { EventDetail } from '@/components/EventDetail'
 import { VersioningTest } from '@/components/VersioningTest'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Calendar, CookingPot, Flask } from '@phosphor-icons/react'
+import { Calendar, CookingPot, Flask, GearSix, SignOut } from '@phosphor-icons/react'
 import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent } from '@/hooks/useEvents'
 import { useRecipes, useCreateRecipe, useUpdateRecipe, useDeleteRecipe } from '@/hooks/useRecipes'
 import { useFeedback, useCreateFeedback, useUpdateFeedback, useDeleteFeedback } from '@/hooks/useFeedback'
 
 export default function App() {
+  const auth = useAuthContext()
+
+  // Wire up the token provider so all API calls include the Bearer token
+  useEffect(() => {
+    if (auth.isAuthenticated) {
+      setTokenProvider(auth.getAccessToken)
+    }
+  }, [auth.isAuthenticated, auth.getAccessToken])
+
+  // Not authenticated → show sign-in
+  if (!auth.isAuthenticated) {
+    if (auth.isLoading) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <p className="text-muted-foreground">Signing in...</p>
+        </div>
+      )
+    }
+    return <SignIn />
+  }
+
+  // Authenticated but no troop → onboarding
+  if (auth.needsOnboarding) {
+    return <TroopOnboarding onComplete={() => window.location.reload()} />
+  }
+
+  // Still loading membership
+  if (auth.isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    )
+  }
+
+  return <AppContent />
+}
+
+function AppContent() {
+  const { role, user, logout } = useAuthContext()
   const { data: events = [], isLoading: eventsLoading, error: eventsError } = useEvents()
   const { data: recipes = [], isLoading: recipesLoading, error: recipesError } = useRecipes()
   const { data: feedback = [], isLoading: feedbackLoading, error: feedbackError } = useFeedback()
@@ -28,7 +73,7 @@ export default function App() {
   const deleteFeedback = useDeleteFeedback()
 
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'events' | 'recipes' | 'test'>('events')
+  const [activeTab, setActiveTab] = useState<'events' | 'recipes' | 'test' | 'admin'>('events')
 
   useEffect(() => {
     if (recipes && recipes.length > 0) {
@@ -123,15 +168,24 @@ export default function App() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card sticky top-0 z-10">
-        <div className="container mx-auto px-6 py-4">
-          <h1 className="text-3xl font-bold text-primary tracking-tight">Scout Meal Planner</h1>
-          <p className="text-muted-foreground mt-1">Plan events, manage recipes, and organize meals</p>
+        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-primary tracking-tight">Scout Meal Planner</h1>
+            <p className="text-muted-foreground mt-1">Plan events, manage recipes, and organize meals</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">{user?.displayName}</span>
+            <Button variant="ghost" size="sm" onClick={logout}>
+              <SignOut className="mr-1 h-4 w-4" />
+              Sign out
+            </Button>
+          </div>
         </div>
       </header>
 
       <main className="container mx-auto px-6 py-8">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'events' | 'recipes' | 'test')} className="w-full">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3 mb-8">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="w-full">
+          <TabsList className={`grid w-full max-w-2xl mb-8 ${role === 'troopAdmin' ? 'grid-cols-4' : 'grid-cols-3'}`}>
             <TabsTrigger value="events" className="flex items-center gap-2">
               <Calendar size={18} />
               Events
@@ -144,6 +198,12 @@ export default function App() {
               <Flask size={18} />
               Test Versioning
             </TabsTrigger>
+            {role === 'troopAdmin' && (
+              <TabsTrigger value="admin" className="flex items-center gap-2">
+                <GearSix size={18} />
+                Troop Admin
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="events" className="mt-0">
@@ -172,6 +232,12 @@ export default function App() {
               onUpdateRecipe={handleUpdateRecipe}
             />
           </TabsContent>
+
+          {role === 'troopAdmin' && (
+            <TabsContent value="admin" className="mt-0">
+              <TroopAdmin />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
     </div>

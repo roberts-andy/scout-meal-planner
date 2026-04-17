@@ -54,3 +54,4 @@ module resources 'resources.bicep' = {
 output staticWebAppUrl string = resources.outputs.staticWebAppUrl
 output cosmosAccountEndpoint string = resources.outputs.cosmosAccountEndpoint
 output functionAppName string = resources.outputs.functionAppName
+output msaAppClientId string = resources.outputs.msaAppClientId

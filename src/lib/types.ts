@@ -1,3 +1,50 @@
+// ── Auth & Multi-tenancy ──
+
+export type TroopRole = 'troopAdmin' | 'adultLeader' | 'seniorPatrolLeader' | 'patrolLeader' | 'scout'
+export type MemberStatus = 'active' | 'pending'
+
+export interface Troop {
+  id: string
+  name: string
+  inviteCode: string
+  createdBy: string
+  createdAt: number
+  updatedAt: number
+}
+
+export interface TroopMember {
+  id: string
+  troopId: string
+  userId: string
+  email: string
+  displayName: string
+  role: TroopRole
+  status: MemberStatus
+  invitedAt?: number
+  joinedAt: number
+}
+
+export interface AuthUser {
+  userId: string
+  email: string
+  displayName: string
+}
+
+export interface AuthContext {
+  user: AuthUser
+  troopId: string
+  role: TroopRole
+}
+
+// ── Audit ──
+
+export interface AuditInfo {
+  userId: string
+  displayName: string
+}
+
+// ── Meal Planning ──
+
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'other'
 
 export type CookingMethod = 'open-fire' | 'camp-stove' | 'dutch-oven' | 'skillet' | 'grill' | 'no-cook' | 'other'
@@ -39,6 +86,7 @@ export interface RecipeVersion {
 
 export interface Recipe {
   id: string
+  troopId: string
   name: string
   description?: string
   servings: number
@@ -48,6 +96,8 @@ export interface Recipe {
   clonedFrom?: string
   createdAt: number
   updatedAt: number
+  createdBy?: AuditInfo
+  updatedBy?: AuditInfo
   currentVersion: number
   versions: RecipeVersion[]
 }
@@ -70,6 +120,7 @@ export interface EventDay {
 
 export interface Event {
   id: string
+  troopId: string
   name: string
   startDate: string
   endDate: string
@@ -83,6 +134,8 @@ export interface Event {
   link?: string
   createdAt: number
   updatedAt: number
+  createdBy?: AuditInfo
+  updatedBy?: AuditInfo
 }
 
 export interface FeedbackRating {
@@ -93,6 +146,7 @@ export interface FeedbackRating {
 
 export interface MealFeedback {
   id: string
+  troopId: string
   eventId: string
   mealId: string
   recipeId: string
@@ -104,6 +158,8 @@ export interface MealFeedback {
   photos?: string[]
   createdAt: number
   updatedAt?: number
+  createdBy?: AuditInfo
+  updatedBy?: AuditInfo
 }
 
 export interface ShoppingListItem {
