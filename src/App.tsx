@@ -39,6 +39,35 @@ export default function App() {
     return <SignIn />
   }
 
+  // Membership lookup failed (401/403/500/network). Render an actionable
+  // screen rather than falling through to <AppContent /> where every query
+  // would fail the same way and produce a generic "Failed to load data".
+  if (auth.authError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="max-w-md text-center space-y-4">
+          <p className="text-destructive font-semibold">
+            {auth.authError.status === 401 || auth.authError.status === 403
+              ? 'We could not verify your access.'
+              : 'We could not load your troop membership.'}
+          </p>
+          <p className="text-muted-foreground text-sm">
+            {auth.authError.message}
+            {auth.authError.status != null && ` (HTTP ${auth.authError.status})`}
+          </p>
+          <div className="flex items-center justify-center gap-2">
+            <Button variant="default" size="sm" onClick={auth.retryMembership}>
+              Retry
+            </Button>
+            <Button variant="ghost" size="sm" onClick={auth.logout}>
+              Sign out
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // Authenticated but no troop → onboarding
   if (auth.needsOnboarding) {
     return <TroopOnboarding onComplete={() => window.location.reload()} />
@@ -131,10 +160,15 @@ function AppContent() {
 
   const queryError = eventsError || recipesError || feedbackError
   if (queryError) {
+    const failed = [
+      eventsError && 'events',
+      recipesError && 'recipes',
+      feedbackError && 'feedback',
+    ].filter(Boolean).join(', ')
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-2">
-          <p className="text-destructive font-semibold">Failed to load data</p>
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="max-w-md text-center space-y-2">
+          <p className="text-destructive font-semibold">Failed to load {failed || 'data'}</p>
           <p className="text-muted-foreground text-sm">{queryError.message}</p>
         </div>
       </div>

@@ -104,18 +104,23 @@ async function membersHandler(req: HttpRequest, context: InvocationContext): Pro
 async function memberMeHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   context.log('GET /api/members/me')
 
-  const auth = await getTroopContext(req, context)
-  if (!auth) {
-    // User is authenticated but has no troop membership
-    return { status: 404, jsonBody: { error: 'No troop membership found' } }
-  }
+  try {
+    const auth = await getTroopContext(req, context)
+    if (!auth) {
+      // User is authenticated but has no troop membership
+      return { status: 404, jsonBody: { error: 'No troop membership found' } }
+    }
 
-  return {
-    jsonBody: {
-      troopId: auth.troopId,
-      userId: auth.userId,
-      role: auth.role,
-    },
+    return {
+      jsonBody: {
+        troopId: auth.troopId,
+        userId: auth.userId,
+        role: auth.role,
+      },
+    }
+  } catch (err) {
+    context.error('GET /api/members/me failed:', err)
+    return { status: 500, jsonBody: { error: 'Internal server error' } }
   }
 }
 
