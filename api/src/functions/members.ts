@@ -2,6 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { queryItems, update, remove } from '../cosmosdb.js'
 import { getTroopContext, unauthorized, forbidden } from '../middleware/auth.js'
 import { checkPermission } from '../middleware/roles.js'
+import { updateMemberSchema, validationError } from '../schemas.js'
 
 const CONTAINER = 'members'
 
@@ -28,7 +29,9 @@ async function membersHandler(req: HttpRequest, context: InvocationContext): Pro
     if (method === 'PUT' && id) {
       if (!checkPermission(auth.role, 'manageMembers')) return forbidden()
 
-      const body = await req.json() as any
+      const parsed = updateMemberSchema.safeParse(await req.json())
+      if (!parsed.success) return validationError(parsed.error)
+      const body = parsed.data
 
       // Find the member in this troop
       const members = await queryItems<any>(

@@ -2,6 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { getAll, getById, create, update, queryItems } from '../cosmosdb.js'
 import { validateToken, getTroopContext, unauthorized, forbidden } from '../middleware/auth.js'
 import { checkPermission } from '../middleware/roles.js'
+import { createTroopSchema, updateTroopSchema, joinTroopSchema, validationError } from '../schemas.js'
 import { randomBytes } from 'crypto'
 
 const CONTAINER = 'troops'
@@ -19,13 +20,14 @@ async function troopsHandler(req: HttpRequest, context: InvocationContext): Prom
     const claims = await validateToken(req)
     if (!claims) return unauthorized()
 
-    const body = await req.json() as any
+    const parsed = createTroopSchema.safeParse(await req.json())
+    if (!parsed.success) return validationError(parsed.error)
     const now = Date.now()
     const troopId = crypto.randomUUID()
 
     const troop = {
       id: troopId,
-      name: body.name,
+      name: parsed.data.name,
       inviteCode: generateInviteCode(),
       createdBy: claims.userId,
       createdAt: now,
@@ -66,11 +68,12 @@ async function troopsHandler(req: HttpRequest, context: InvocationContext): Prom
     if (!auth) return unauthorized()
     if (!checkPermission(auth.role, 'manageTroop')) return forbidden()
 
-    const body = await req.json() as any
+    const parsed = updateTroopSchema.safeParse(await req.json())
+    if (!parsed.success) return validationError(parsed.error)
     const existing = await getById<any>(CONTAINER, auth.troopId)
     if (!existing) return { status: 404, jsonBody: { error: 'Troop not found' } }
 
-    const updated = { ...existing, ...body, id: auth.troopId, updatedAt: Date.now() }
+    const updated = { ...existing, ...parsed.data, id: auth.troopId, updatedAt: Date.now() }
     const result = await update(CONTAINER, auth.troopId, updated)
     return { jsonBody: result }
   }
@@ -85,12 +88,9 @@ async function joinTroopHandler(req: HttpRequest, context: InvocationContext): P
   const claims = await validateToken(req)
   if (!claims) return unauthorized()
 
-  const body = await req.json() as any
-  const { inviteCode } = body
-
-  if (!inviteCode) {
-    return { status: 400, jsonBody: { error: 'inviteCode is required' } }
-  }
+  const parsed = joinTroopSchema.safeParse(await req.json())
+  if (!parsed.success) return validationError(parsed.error)
+  const { inviteCode } = parsed.data
 
   // Find troop by invite code
   const troops = await queryItems<any>(
