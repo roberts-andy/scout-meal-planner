@@ -29,6 +29,7 @@ export function StarRating({
           type="button"
           onClick={() => handleClick(star)}
           disabled={readonly}
+          title={`Rate ${star} of ${maxStars} stars`}
           className={`transition-colors ${
             readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110'
           }`}

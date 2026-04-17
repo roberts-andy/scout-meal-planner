@@ -1,38 +1,69 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
-import { getAll, getById, create, update, remove } from '../cosmosdb.js'
+import { getAllByTroop, getById, create, update, remove } from '../cosmosdb.js'
+import { getTroopContext, unauthorized, forbidden } from '../middleware/auth.js'
+import { checkPermission } from '../middleware/roles.js'
+import { createEventSchema, updateEventSchema, validationError } from '../schemas.js'
 
 const CONTAINER = 'events'
 
 async function eventsHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const id = req.params.id
   const method = req.method
+  context.log(`${method} /api/events${id ? '/' + id : ''}`)
+
+  const auth = await getTroopContext(req, context)
+  if (!auth) return unauthorized()
 
   try {
     if (method === 'GET' && !id) {
-      const events = await getAll(CONTAINER)
+      const events = await getAllByTroop(CONTAINER, auth.troopId)
       return { jsonBody: events }
     }
 
     if (method === 'GET' && id) {
-      const event = await getById(CONTAINER, id)
+      const event = await getById(CONTAINER, id, auth.troopId)
       if (!event) return { status: 404, jsonBody: { error: 'Event not found' } }
       return { jsonBody: event }
     }
 
     if (method === 'POST') {
-      const body = await req.json() as any
-      const event = await create(CONTAINER, body)
+      if (!checkPermission(auth.role, 'manageEvents')) return forbidden()
+      const parsed = createEventSchema.safeParse(await req.json())
+      if (!parsed.success) return validationError(parsed.error)
+      const now = Date.now()
+      const audit = { userId: auth.userId, displayName: auth.displayName }
+      const event = await create(CONTAINER, {
+        id: crypto.randomUUID(),
+        troopId: auth.troopId,
+        ...parsed.data,
+        createdAt: now,
+        updatedAt: now,
+        createdBy: audit,
+        updatedBy: audit,
+      })
       return { status: 201, jsonBody: event }
     }
 
     if (method === 'PUT' && id) {
-      const body = await req.json() as any
-      const event = await update(CONTAINER, id, body)
+      if (!checkPermission(auth.role, 'manageEvents')) return forbidden()
+      const parsed = updateEventSchema.safeParse(await req.json())
+      if (!parsed.success) return validationError(parsed.error)
+      const existing = await getById(CONTAINER, id, auth.troopId)
+      if (!existing) return { status: 404, jsonBody: { error: 'Event not found' } }
+      const event = await update(CONTAINER, id, {
+        ...existing,
+        ...parsed.data,
+        id,
+        troopId: auth.troopId,
+        updatedAt: Date.now(),
+        updatedBy: { userId: auth.userId, displayName: auth.displayName },
+      }, auth.troopId)
       return { jsonBody: event }
     }
 
     if (method === 'DELETE' && id) {
-      await remove(CONTAINER, id)
+      if (!checkPermission(auth.role, 'manageEvents')) return forbidden()
+      await remove(CONTAINER, id, auth.troopId)
       return { status: 204 }
     }
 

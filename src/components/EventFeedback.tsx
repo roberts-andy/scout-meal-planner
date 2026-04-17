@@ -411,6 +411,7 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
                   onChange={handleFileChange}
                   className="hidden"
                   id="photo-upload"
+                  aria-label="Upload photos of completed meal"
                 />
                 <Button
                   type="button"
@@ -434,6 +435,7 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
                         <button
                           type="button"
                           onClick={() => handleRemovePhoto(index)}
+                          title={`Remove photo ${index + 1}`}
                           className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <X size={14} />
