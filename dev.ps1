@@ -1,7 +1,16 @@
 # Start local dev environment
-# Prerequisites: Node.js 22+, Azure Cosmos DB Emulator running
+# Prerequisites: Node.js 20 LTS (pinned via .nvmrc), Azure Cosmos DB Emulator running
 
 $ErrorActionPreference = "Stop"
+
+# Auto-activate fnm + Node version from .nvmrc (works even with PowerShell --noprofile)
+if (Get-Command fnm -ErrorAction SilentlyContinue) {
+    fnm env --use-on-cd --shell power-shell | Out-String | Invoke-Expression
+    if (Test-Path ".nvmrc") { fnm use --install-if-missing | Out-Null }
+} elseif ((node --version) -notmatch '^v(20|22)\.') {
+    Write-Host "WARNING: Node $(node --version) may be incompatible with Azure Functions Core Tools v4." -ForegroundColor Yellow
+    Write-Host "         Install fnm (winget install Schniz.fnm) or switch to Node 20 LTS." -ForegroundColor Yellow
+}
 
 # Install dependencies if needed
 if (-not (Test-Path "node_modules")) {
@@ -32,14 +41,19 @@ if (-not $env:VITE_ENTRA_CLIENT_ID -or $env:VITE_ENTRA_CLIENT_ID -eq "REPLACE_ME
     exit 1
 }
 
-# Set env vars for Cosmos DB Emulator
-$env:COSMOS_EMULATOR = "true"
 # Clear VITE_API_URL so the Vite proxy is used (don't call API directly cross-origin)
 $env:VITE_API_URL = ""
 
+# Validate Cosmos DB connection — must be set in .env (emulator or real account)
+if (-not $env:COSMOS_ENDPOINT -and -not $env:COSMOS_CONNECTION_STRING) {
+    Write-Host "ERROR: Set COSMOS_CONNECTION_STRING in .env (see .env.example for the emulator value)" -ForegroundColor Red
+    exit 1
+}
+
 Write-Host ""
-Write-Host "Starting dev environment (SWA CLI + Azure Functions)..." -ForegroundColor Green
+Write-Host "Starting dev environment (Vite + SWA CLI + Azure Functions)..." -ForegroundColor Green
 Write-Host "  Frontend + API: http://localhost:4280" -ForegroundColor Yellow
+Write-Host "  Vite (direct):  http://localhost:5000" -ForegroundColor DarkGray
 Write-Host "  Health:         http://localhost:4280/api/health" -ForegroundColor Yellow
 Write-Host ""
 

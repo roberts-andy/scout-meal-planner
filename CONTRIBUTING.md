@@ -89,7 +89,7 @@ git push origin develop
 .\dev.ps1
 ```
 
-Requires Node.js 22+ and Azure Cosmos DB Emulator. See [README.md](README.md) for details.
+Requires fnm + Node.js 20 LTS (pinned via `.nvmrc`) and the Azure Cosmos DB Emulator running on `https://localhost:8081/`. See [README.md](README.md#local-development) for full setup instructions.
 
 ## Testing
 
