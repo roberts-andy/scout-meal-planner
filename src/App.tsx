@@ -143,12 +143,12 @@ function AppContent() {
     deleteRecipe.mutate(recipeId)
   }
 
-  const handleAddFeedback = (newFeedback: MealFeedback) => {
-    createFeedback.mutate(newFeedback)
+  const handleAddFeedback = async (newFeedback: MealFeedback) => {
+    await createFeedback.mutateAsync(newFeedback)
   }
 
-  const handleUpdateFeedback = (updatedFeedback: MealFeedback) => {
-    updateFeedbackMutation.mutate(updatedFeedback)
+  const handleUpdateFeedback = async (updatedFeedback: MealFeedback) => {
+    await updateFeedbackMutation.mutateAsync(updatedFeedback)
   }
 
   const handleDeleteFeedback = (feedbackId: string) => {

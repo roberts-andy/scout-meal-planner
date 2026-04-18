@@ -16,8 +16,8 @@ interface EventDetailProps {
   feedback: MealFeedback[]
   onUpdateEvent: (event: Event) => void
   onBack: () => void
-  onAddFeedback: (feedback: MealFeedback) => void
-  onUpdateFeedback: (feedback: MealFeedback) => void
+  onAddFeedback: (feedback: MealFeedback) => Promise<void>
+  onUpdateFeedback: (feedback: MealFeedback) => Promise<void>
   onDeleteFeedback: (feedbackId: string) => void
   onUpdateRecipe: (recipe: Recipe) => void
 }
