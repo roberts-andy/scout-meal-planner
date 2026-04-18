@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { eventsApi, recipesApi, feedbackApi } from './api'
+import { eventsApi, recipesApi, feedbackApi, membersApi } from './api'
 
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
@@ -131,5 +131,17 @@ describe('feedbackApi', () => {
       '/api/feedback/fb-1?eventId=ev%20with%20spaces',
       expect.objectContaining({ method: 'DELETE' }),
     )
+  })
+})
+
+describe('membersApi', () => {
+  it('create posts to /members', async () => {
+    const member = { displayName: 'New Member', email: 'new@example.com', role: 'scout' }
+    mockFetch.mockResolvedValueOnce(jsonResponse({ id: 'm1', ...member }, 201))
+    await membersApi.create(member)
+    expect(mockFetch).toHaveBeenCalledWith('/api/members', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify(member),
+    }))
   })
 })

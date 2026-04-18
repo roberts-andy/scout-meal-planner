@@ -128,6 +128,12 @@ export const updateMemberSchema = z.object({
   status: memberStatus.optional(),
 })
 
+export const createMemberSchema = z.object({
+  displayName: z.string().min(1).max(100),
+  email: z.string().email(),
+  role: troopRole,
+})
+
 /** Format a ZodError into an HTTP 400 response */
 export function validationError(error: ZodError) {
   return {
