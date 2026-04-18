@@ -14,10 +14,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Calendar as CalendarIcon } from '@phosphor-icons/react'
 import { format, eachDayOfInterval } from 'date-fns'
-import { cn } from '@/lib/utils'
+import type { DateRange } from 'react-day-picker'
 
 interface CreateEventDialogProps {
   open: boolean
@@ -27,8 +25,7 @@ interface CreateEventDialogProps {
 
 export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateEventDialogProps) {
   const [name, setName] = useState('')
-  const [startDate, setStartDate] = useState<Date>()
-  const [endDate, setEndDate] = useState<Date>()
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const [description, setDescription] = useState('')
   const [link, setLink] = useState('')
   const [hike, setHike] = useState(false)
@@ -37,11 +34,11 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
   const [cabinCamping, setCabinCamping] = useState(false)
 
   const handleSubmit = () => {
-    if (!name || !startDate || !endDate) return
+    if (!name || !dateRange?.from || !dateRange?.to) return
 
     const days: EventDay[] = eachDayOfInterval({
-      start: startDate,
-      end: endDate
+      start: dateRange.from,
+      end: dateRange.to
     }).map(date => ({
       date: format(date, 'yyyy-MM-dd'),
       meals: []
@@ -50,8 +47,8 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
     const newEvent: Event = {
       id: `event-${Date.now()}`,
       name,
-      startDate: format(startDate, 'yyyy-MM-dd'),
-      endDate: format(endDate, 'yyyy-MM-dd'),
+      startDate: format(dateRange.from, 'yyyy-MM-dd'),
+      endDate: format(dateRange.to, 'yyyy-MM-dd'),
       days,
       description: description || undefined,
       link: link || undefined,
@@ -65,8 +62,7 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
 
     onCreateEvent(newEvent)
     setName('')
-    setStartDate(undefined)
-    setEndDate(undefined)
+    setDateRange(undefined)
     setDescription('')
     setLink('')
     setHike(false)
@@ -78,7 +74,7 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[640px]">
         <DialogHeader>
           <DialogTitle>Create New Event</DialogTitle>
           <DialogDescription>
@@ -106,55 +102,29 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
             />
           </div>
           <div className="grid gap-2">
-            <Label>Start Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    'justify-start text-left font-normal',
-                    !startDate && 'text-muted-foreground'
-                  )}
-                >
-                  <CalendarIcon className="mr-2" size={18} />
-                  {startDate ? format(startDate, 'PPP') : 'Pick a date'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <CalendarComponent
-                  mode="single"
-                  selected={startDate}
-                  onSelect={setStartDate}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-          <div className="grid gap-2">
-            <Label>End Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    'justify-start text-left font-normal',
-                    !endDate && 'text-muted-foreground'
-                  )}
-                >
-                  <CalendarIcon className="mr-2" size={18} />
-                  {endDate ? format(endDate, 'PPP') : 'Pick a date'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <CalendarComponent
-                  mode="single"
-                  selected={endDate}
-                  onSelect={setEndDate}
-                  disabled={(date) => startDate ? date < startDate : false}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <Label>Trip Dates</Label>
+            <div className="text-sm text-muted-foreground">
+              {dateRange?.from ? (
+                dateRange.to ? (
+                  <>
+                    {format(dateRange.from, 'MMM d, yyyy')} — {format(dateRange.to, 'MMM d, yyyy')}
+                  </>
+                ) : (
+                  <>
+                    {format(dateRange.from, 'MMM d, yyyy')} — <span className="italic">select end date</span>
+                  </>
+                )
+              ) : (
+                'Select start and end dates'
+              )}
+            </div>
+            <CalendarComponent
+              mode="range"
+              selected={dateRange}
+              onSelect={setDateRange}
+              numberOfMonths={2}
+              disabled={{ before: new Date() }}
+            />
           </div>
           <div className="grid gap-2">
             <Label>Event Characteristics</Label>
@@ -208,7 +178,7 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={!name || !startDate || !endDate}>
+          <Button onClick={handleSubmit} disabled={!name || !dateRange?.from || !dateRange?.to}>
             Create Event
           </Button>
         </DialogFooter>

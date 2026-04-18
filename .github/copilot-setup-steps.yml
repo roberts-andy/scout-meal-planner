@@ -1,0 +1,25 @@
+# Setup steps for GitHub Copilot coding agent
+# Runs after the devcontainer starts, before the agent begins coding.
+# The agent uses these to validate its work (build + test) before opening a PR.
+
+steps:
+  - name: Install frontend dependencies
+    run: npm ci
+
+  - name: Install API dependencies
+    run: cd api && npm ci
+
+  - name: Build frontend
+    run: npm run build
+
+  - name: Build API
+    run: cd api && npm run build
+
+  - name: Run frontend tests
+    run: npm test
+
+  - name: Run API tests
+    run: cd api && npm test
+
+  - name: Lint
+    run: npm run lint

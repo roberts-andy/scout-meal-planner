@@ -57,6 +57,29 @@ npm run lint
 - API schemas defined with Zod in `api/src/schemas.ts`
 - Frontend auth via MSAL (Microsoft Entra ID, /consumers endpoint)
 - API auth via JWT validation middleware (`api/src/middleware/auth.ts`)
+- UI components use shadcn/ui (Radix + Tailwind) in `src/components/ui/`
+- Data fetching uses TanStack Query hooks in `src/hooks/`
+- API client functions live in `src/lib/api.ts`
+
+## Agent Workflow
+
+When assigned an issue:
+
+1. Read the issue carefully. If it references other files or features, explore them first.
+2. Create a branch named `issue-<number>-<short-description>` from `main`.
+3. Implement the change following the conventions above.
+4. For API changes: add or update Zod schemas in `api/src/schemas.ts`, add the function in `api/src/functions/`, and write tests alongside (`*.test.ts`).
+5. For frontend changes: use existing UI components from `src/components/ui/`, add hooks in `src/hooks/`, and write tests for non-trivial logic.
+6. Run the full validation: `npm run build && npm test && npm run lint && cd api && npm run build && npm test`.
+7. All builds and tests must pass before opening a PR.
+8. Open a PR targeting `main` with a clear description of what changed and why.
+
+## Do Not
+
+- Do not modify `infra/` (Bicep) files unless the issue explicitly requests infrastructure changes.
+- Do not commit `.env` files or secrets.
+- Do not add new dependencies without a clear reason stated in the PR description.
+- Do not change the auth middleware (`api/src/middleware/auth.ts`) unless the issue specifically requires it.
 
 ## Cosmos DB
 
