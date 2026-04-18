@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { eventsApi, recipesApi, feedbackApi, membersApi } from './api'
+import { eventsApi, recipesApi, feedbackApi, membersApi, isModerationError, getModerationReasons } from './api'
 
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
@@ -143,5 +143,46 @@ describe('membersApi', () => {
       method: 'POST',
       body: JSON.stringify(member),
     }))
+  })
+})
+
+// ── Moderation Helpers ──
+
+describe('isModerationError', () => {
+  it('returns true for a 422 error with details', () => {
+    const err = new Error('Content flagged') as Error & { status?: number; details?: unknown }
+    err.status = 422
+    err.details = { comments: ['Inappropriate language detected'] }
+    expect(isModerationError(err)).toBe(true)
+  })
+
+  it('returns false for non-422 errors', () => {
+    const err = new Error('Not found') as Error & { status?: number }
+    err.status = 404
+    expect(isModerationError(err)).toBe(false)
+  })
+
+  it('returns false for plain errors without status', () => {
+    expect(isModerationError(new Error('oops'))).toBe(false)
+  })
+})
+
+describe('getModerationReasons', () => {
+  it('extracts field reasons from error details', () => {
+    const err = new Error('Flagged') as Error & { details: Record<string, string[]> }
+    err.details = {
+      comments: ['Profanity detected'],
+      whatWorked: ['Inappropriate content'],
+    }
+    const reasons = getModerationReasons(err)
+    expect(reasons).toEqual([
+      'comments: Profanity detected',
+      'whatWorked: Inappropriate content',
+    ])
+  })
+
+  it('returns empty array when no details', () => {
+    const err = new Error('Flagged') as Error & { details?: undefined }
+    expect(getModerationReasons(err)).toEqual([])
   })
 })

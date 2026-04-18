@@ -1,8 +1,10 @@
 import { useState, useRef } from 'react'
 import { Event, Recipe, MealFeedback, FeedbackRating } from '@/lib/types'
+import { isModerationError, getModerationReasons } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ChatCircle, Plus, Camera, X, Image as ImageIcon, User, PencilSimple, Trash, ClockCounterClockwise } from '@phosphor-icons/react'
+import { ChatCircle, Plus, Camera, X, Image as ImageIcon, User, PencilSimple, Trash, ClockCounterClockwise, ShieldWarning } from '@phosphor-icons/react'
+import { ModerationBadge } from '@/components/ModerationBadge'
 import {
   Dialog,
   DialogContent,
@@ -21,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -33,8 +36,8 @@ interface EventFeedbackProps {
   event: Event
   recipes: Recipe[]
   feedback: MealFeedback[]
-  onAddFeedback: (feedback: MealFeedback) => void
-  onUpdateFeedback: (feedback: MealFeedback) => void
+  onAddFeedback: (feedback: MealFeedback) => Promise<void>
+  onUpdateFeedback: (feedback: MealFeedback) => Promise<void>
   onDeleteFeedback: (feedbackId: string) => void
 }
 
@@ -42,6 +45,8 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingFeedback, setEditingFeedback] = useState<MealFeedback | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [moderationError, setModerationError] = useState<string[] | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedMealId, setSelectedMealId] = useState('')
   const [scoutName, setScoutName] = useState('')
   const [comments, setComments] = useState('')
@@ -120,44 +125,59 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
     setWhatToChange('')
     setPhotos([])
     setRatings({ taste: 0, difficulty: 0, portionSize: 0 })
+    setModerationError(null)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const meal = allMeals.find(m => m.meal.id === selectedMealId)
     if (!meal || !meal.meal.recipeId) return
 
-    if (editingFeedback) {
-      const updatedFeedback: MealFeedback = {
-        ...editingFeedback,
-        mealId: selectedMealId,
-        recipeId: meal.meal.recipeId,
-        scoutName: scoutName || undefined,
-        rating: ratings,
-        comments,
-        whatWorked,
-        whatToChange,
-        photos: photos.length > 0 ? photos : undefined,
-        updatedAt: Date.now()
-      }
-      onUpdateFeedback(updatedFeedback)
-    } else {
-      const newFeedback: MealFeedback = {
-        id: `feedback-${Date.now()}`,
-        eventId: event.id,
-        mealId: selectedMealId,
-        recipeId: meal.meal.recipeId,
-        scoutName: scoutName || undefined,
-        rating: ratings,
-        comments,
-        whatWorked,
-        whatToChange,
-        photos: photos.length > 0 ? photos : undefined,
-        createdAt: Date.now()
-      }
-      onAddFeedback(newFeedback)
-    }
+    setModerationError(null)
+    setIsSubmitting(true)
 
-    handleCloseDialog()
+    try {
+      if (editingFeedback) {
+        const updatedFeedback: MealFeedback = {
+          ...editingFeedback,
+          mealId: selectedMealId,
+          recipeId: meal.meal.recipeId,
+          scoutName: scoutName || undefined,
+          rating: ratings,
+          comments,
+          whatWorked,
+          whatToChange,
+          photos: photos.length > 0 ? photos : undefined,
+          updatedAt: Date.now()
+        }
+        await onUpdateFeedback(updatedFeedback)
+      } else {
+        const newFeedback: MealFeedback = {
+          id: `feedback-${Date.now()}`,
+          eventId: event.id,
+          mealId: selectedMealId,
+          recipeId: meal.meal.recipeId,
+          scoutName: scoutName || undefined,
+          rating: ratings,
+          comments,
+          whatWorked,
+          whatToChange,
+          photos: photos.length > 0 ? photos : undefined,
+          createdAt: Date.now()
+        }
+        await onAddFeedback(newFeedback)
+      }
+
+      handleCloseDialog()
+    } catch (error) {
+      if (isModerationError(error)) {
+        setModerationError(getModerationReasons(error))
+      } else {
+        // Re-throw non-moderation errors so they bubble to error boundaries
+        throw error
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleDelete = (feedbackId: string) => {
@@ -219,6 +239,12 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
                           </>
                         )}
                         <span>{format(new Date(fb.createdAt), 'MMM d, yyyy')}</span>
+                        {fb.moderationStatus && fb.moderationStatus !== 'approved' && (
+                          <>
+                            <span className="text-muted-foreground">•</span>
+                            <ModerationBadge status={fb.moderationStatus} />
+                          </>
+                        )}
                         {fb.updatedAt && (
                           <>
                             <span className="text-muted-foreground">•</span>
@@ -315,6 +341,21 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {moderationError && (
+              <Alert variant="destructive">
+                <ShieldWarning size={16} />
+                <AlertTitle>Content flagged</AlertTitle>
+                <AlertDescription>
+                  <p className="mb-1">Your feedback was flagged by our content filter:</p>
+                  <ul className="list-disc pl-4 text-sm">
+                    {moderationError.map((reason, i) => (
+                      <li key={i}>{reason}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-1 text-sm">Please revise your feedback and try again.</p>
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="scout-name">Scout Name (Optional)</Label>
               <Input
@@ -460,9 +501,9 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
             </Button>
             <Button 
               onClick={handleSubmit} 
-              disabled={!selectedMealId || (ratings.taste === 0 && ratings.difficulty === 0 && ratings.portionSize === 0)}
+              disabled={isSubmitting || !selectedMealId || (ratings.taste === 0 && ratings.difficulty === 0 && ratings.portionSize === 0)}
             >
-              {editingFeedback ? 'Update Feedback' : 'Submit Feedback'}
+              {isSubmitting ? 'Submitting…' : editingFeedback ? 'Update Feedback' : 'Submit Feedback'}
             </Button>
           </DialogFooter>
         </DialogContent>

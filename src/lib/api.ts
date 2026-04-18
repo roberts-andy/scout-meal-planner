@@ -1,4 +1,4 @@
-import type { Event, Recipe, MealFeedback, Troop, TroopMember } from './types'
+import type { Event, Recipe, MealFeedback, Troop, TroopMember, FlaggedItem } from './types'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
@@ -106,4 +106,31 @@ export const membersApi = {
     request<TroopMember>(`/members/${id}`, { method: 'PUT', body: JSON.stringify({ status: 'active' }) }),
   remove: (id: string) =>
     request<void>(`/members/${id}`, { method: 'DELETE' }),
+}
+
+// Moderation
+export const moderationApi = {
+  getFlagged: () => request<FlaggedItem[]>('/moderation/flagged'),
+  review: (id: string, action: 'approve' | 'reject') =>
+    request<FlaggedItem>(`/moderation/${id}/review`, {
+      method: 'PUT',
+      body: JSON.stringify({ action }),
+    }),
+}
+
+/** Check if an error is a 422 moderation rejection */
+export function isModerationError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  const e = err as Error & { status?: number }
+  return e.status === 422
+}
+
+/** Extract per-field moderation reasons from a moderation error */
+export function getModerationReasons(err: unknown): string[] {
+  if (!(err instanceof Error)) return []
+  const e = err as Error & { details?: Record<string, string[]> }
+  if (!e.details || typeof e.details !== 'object') return []
+  return Object.entries(e.details).flatMap(([field, messages]) =>
+    Array.isArray(messages) ? messages.map((msg) => `${field}: ${msg}`) : []
+  )
 }
