@@ -47,7 +47,8 @@ async function membersHandler(req: HttpRequest, context: InvocationContext): Pro
       const member = await create(CONTAINER, {
         id: crypto.randomUUID(),
         troopId: auth.troopId,
-        // This member was added by an admin and has not linked an auth account yet.
+        // This starts empty for admin-added members and is backfilled by auth middleware
+        // when the same email signs in for the first time.
         userId: '',
         status: 'active',
         joinedAt: Date.now(),

@@ -22,17 +22,18 @@ const roleLabels: Record<TroopRole, string> = {
 }
 
 const allRoles: TroopRole[] = ['troopAdmin', 'adultLeader', 'seniorPatrolLeader', 'patrolLeader', 'scout']
+const DEFAULT_MEMBER_FORM: { displayName: string; email: string; role: TroopRole } = {
+  displayName: '',
+  email: '',
+  role: 'scout',
+}
 
 export function TroopAdmin() {
   const { user, role } = useAuthContext()
   const queryClient = useQueryClient()
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false)
   const [addMemberError, setAddMemberError] = useState('')
-  const [memberForm, setMemberForm] = useState<{ displayName: string; email: string; role: TroopRole }>({
-    displayName: '',
-    email: '',
-    role: 'scout',
-  })
+  const [memberForm, setMemberForm] = useState<{ displayName: string; email: string; role: TroopRole }>(DEFAULT_MEMBER_FORM)
 
   const troopQuery = useQuery({ queryKey: ['troop'], queryFn: troopsApi.get })
   const membersQuery = useQuery({ queryKey: ['members'], queryFn: membersApi.getAll })
@@ -58,7 +59,7 @@ export function TroopAdmin() {
       queryClient.invalidateQueries({ queryKey: ['members'] })
       setIsAddMemberDialogOpen(false)
       setAddMemberError('')
-      setMemberForm({ displayName: '', email: '', role: 'scout' })
+      setMemberForm(DEFAULT_MEMBER_FORM)
     },
   })
 

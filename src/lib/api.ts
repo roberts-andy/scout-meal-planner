@@ -29,7 +29,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
         .flatMap(([field, messages]) =>
           Array.isArray(messages)
             ? messages.map((message) => `${field}: ${String(message)}`)
-            : `${field}: ${String(messages)}`
+            : [`${field}: ${String(messages)}`]
         )
         .join(', ')
       : ''
