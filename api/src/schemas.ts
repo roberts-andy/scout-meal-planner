@@ -49,6 +49,8 @@ const mealSchema = z.object({
   name: z.string().optional(),
   recipeId: z.string().optional(),
   scoutCount: z.number().int().min(0),
+  isTrailside: z.boolean().default(false),
+  isTimeConstrained: z.boolean().default(false),
   selectedVariationId: z.string().optional(),
   notes: z.string().optional(),
   time: z.string().optional(),

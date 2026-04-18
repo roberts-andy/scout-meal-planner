@@ -108,6 +108,8 @@ export interface Meal {
   name?: string
   recipeId?: string
   scoutCount: number
+  isTrailside?: boolean
+  isTimeConstrained?: boolean
   selectedVariationId?: string
   notes?: string
   time?: string
