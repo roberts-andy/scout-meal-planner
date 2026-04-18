@@ -111,6 +111,7 @@ Continued meeting time waste (30–60+ min per trip), repeated shopping errors, 
 
 ### Out of Scope (justify if empty)
 * Multi-troop-per-user support and cross-troop recipe sharing — post-MVP when pilot validates the model. Multi-troop will introduce a new admin role for approving new troops. Note: the current architecture is already multi-tenant (multiple troops coexist safely with data isolated by `troopId`); what is deferred is allowing a single user to belong to more than one troop with a troop-switcher UI.
+* Dedicated parent role with activity reports and self-service data deletion — post-MVP. For the pilot, parental consent is handled via Microsoft Family accounts and admin-assisted deletion (see Section 11).
 * Patrol management within the app — one scout records information; patrol structure is managed offline.
 * In-app brainstorming and voting — SPL records decisions made during in-person discussion.
 * Individual scout shopper assignment in-app — shopping lists are emailed instead.
@@ -245,6 +246,7 @@ A purpose-built meal planning tool for scout troops that preserves scout-led pla
 | FR-028 | Invite members | Scoutmaster invites new members by generating an invite code or sending an invite link through the UI when adding a member. | Compliance | Scoutmaster | Must | Invite code and invite link both produce a valid join flow. New member appears in troop roster after accepting. | BRD: BR-024 |
 | FR-029 | Assign and change roles | Scoutmaster assigns or changes a member's role (Leader, Scout). | Compliance | Scoutmaster | Must | Role change takes effect immediately. Member sees updated permissions on next action. | BRD: BR-024 |
 | FR-030 | Deactivate or remove members | Scoutmaster deactivates or removes a member from the troop. Deactivated members lose access but data is retained. Removed members are permanently dissociated. | Compliance | Scoutmaster | Must | Deactivated member cannot log in to troop. Removed member no longer appears in roster. Feedback and event history attributed to deactivated members remain intact. | BRD: BR-024 |
+| FR-031 | Delete member data | Troop admin deletes all data associated with a specific member across all containers (feedback, event audit trails, membership record). Supports COPPA parental deletion requests. | Compliance | Scoutmaster | Must | After deletion, no records attributable to the member remain. Feedback from deleted members is either anonymized or removed. Confirmation prompt before execution. | COPPA compliance |
 
 ### Feature Hierarchy (Optional)
 ```plain
@@ -360,6 +362,17 @@ Scout Meal Planner MVP
 * Adult members: name + Microsoft account (via Entra ID). No additional PII stored by the application.
 * Parents: no account required — access via shareable read-only link.
 
+### COPPA Consent Model (MVP)
+The application collects minimal data from scouts (first name and auth token via Microsoft Entra ID). The MVP consent model relies on three controls:
+
+1. **Microsoft Family accounts** — Scouts under 13 must use a Microsoft account managed by a parent/guardian. The parent controls the account and can revoke access at any time. Microsoft's own COPPA-compliant family consent flow applies at account creation.
+2. **Consent notice at join** — When a scout joins a troop via invite code, the app displays a consent notice: "By joining, a parent/guardian confirms they consent to data collection as described in our privacy policy." The invite code itself is distributed by the troop leader to parents, establishing an offline consent chain.
+3. **Admin-assisted data deletion** — Troop admin can delete all data associated with a specific member (FR-031) on behalf of a parental request. For the pilot, a "Request Data Deletion" link in the privacy policy provides an email-based fallback.
+
+**Deferred to post-MVP**: Dedicated parent role with self-service activity reports and data deletion UI. For the pilot (single troop, known families), admin-assisted deletion is sufficient.
+
+See [Privacy Policy](../policies/privacy-policy.md) for the full data handling reference.
+
 ### Threat Considerations
 * Unauthorized access to troop data — mitigated by Entra ID auth + RBAC middleware.
 * Inappropriate content from youth users — mitigated by content moderation service.
@@ -428,7 +441,7 @@ Feature flags enable progressive rollout, safe experimentation, and quick kill-s
 | OQ-001 | What are Scouting America's specific technology platform requirements for youth-facing apps? | Scoutmaster | Before prototype | Open |
 | OQ-002 | ~~What performance targets are appropriate for mobile page load and API response times?~~ | Dev | — | Resolved — optimize for perceived speed, no hard targets |
 | OQ-003 | ~~What test coverage target is realistic for a solo developer?~~ | Dev | — | Resolved — ~70% API unit, key frontend components, smoke e2e |
-| OQ-004 | Should the app support COPPA compliance explicitly, or is Scouting America compliance sufficient? | Dev | Before youth access | Open |
+| OQ-004 | ~~Should the app support COPPA compliance explicitly, or is Scouting America compliance sufficient?~~ | Dev | — | Resolved — MVP uses Microsoft Family accounts for parental consent, consent notice at join, admin-assisted data deletion (FR-031), and a privacy policy. Dedicated parent role deferred to post-MVP. |
 | OQ-005 | ~~What is the monitoring and alerting strategy for the MVP?~~ | Dev | — | Resolved — Azure Application Insights with default alerts |
 
 ## 15. Changelog
@@ -436,6 +449,7 @@ Feature flags enable progressive rollout, safe experimentation, and quick kill-s
 |---------|------|-------|---------|------|
 | 0.1 | 2026-04-18 | andyrob | Initial PRD draft — populated from approved BRD v1.0 and existing design direction | Creation |
 | 1.0 | 2026-04-18 | andyrob | Approved — added troop admin FRs (FR-028–030), feature flags, user journeys, communication plan. 2 open questions remain (external dependencies, not blockers). | Approval |
+| 1.1 | 2026-04-18 | andyrob | Added COPPA consent model (Section 11), FR-031 (member data deletion), resolved OQ-004, added parent role to out-of-scope, linked privacy policy. | Update |
 
 ## 16. References & Provenance
 | Ref ID | Type | Source | Summary | Conflict Resolution |
