@@ -1,0 +1,8 @@
+{
+  "universe": "custom",
+  "description": "Agent naming and identity policy",
+  "rules": [
+    "Names should be descriptive of the role",
+    "Each agent has a unique identity"
+  ]
+}
