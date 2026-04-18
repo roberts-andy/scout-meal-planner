@@ -1,0 +1,76 @@
+{
+  "brdFile": "docs/brds/scout-meal-planner-mvp-brd.md",
+  "lastAccessed": "2026-04-18T00:00:00Z",
+  "currentPhase": "finalized",
+  "questionsAsked": [
+    "initiative-name",
+    "business-problem",
+    "business-driver",
+    "initiative-type",
+    "primary-stakeholders",
+    "meeting-workflow",
+    "recording-methods",
+    "shopping-and-packing",
+    "must-have-for-launch",
+    "can-wait",
+    "timeline",
+    "meeting-time-baseline",
+    "shopping-equipment-errors",
+    "troop-size",
+    "scout-adoption",
+    "parent-access",
+    "biggest-risk"
+  ],
+  "answeredQuestions": {
+    "initiative-name": "Scout Meal Planner MVP Launch — pilot with a single scout troop, potential expansion to other troops",
+    "business-problem": "Meal planning takes too long in meetings; scouts record things inconsistently; communication breakdowns between scouts and leaders result in incorrect food purchases, wrong equipment, and less time for other activities",
+    "business-driver": "Operational efficiency",
+    "initiative-type": "New product pilot with potential multi-troop expansion",
+    "primary-stakeholders": "Scoutmaster (sponsor), Assistant Scoutmaster, SPL (youth leader), Scouts (primary users), Parents of scouts (secondary users)",
+    "meeting-workflow": "SPL-led meeting: logistics briefing → meal list with parameters → brainstorm and vote → patrol assignment → detailed patrol planning → handoff to Scoutmaster → transcribe and send to parents → shop → pack → post-trip retro",
+    "recording-methods": "Inconsistent: paper, phones, memory. Scoutmaster manually transcribes. No reusable recipe record.",
+    "shopping-and-packing": "Shopping list divided by meal, assigned to individual scouts. Scouts buy and bring to departure point.",
+    "must-have-for-launch": "Full meal planning workflow for a trip plus recipe library for reuse",
+    "can-wait": "Multi-troop support, cross-troop recipe sharing, advanced filters/favorites/feedback",
+    "timeline": "Prototype by May 2026, live by September 2026",
+    "meeting-time-baseline": "30-60+ minutes per meeting for meal planning",
+    "shopping-equipment-errors": "Most trips have issues — also common: recipe steps incomplete or not brought on trip",
+    "troop-size": "~25 scouts, ~10 adult leaders, occasional parents/guests. Trip groups 8-20+ people.",
+    "scout-adoption": "Ages 12-18, generally comfortable with web apps. Mobile-first web required. Native app is stretch goal.",
+    "parent-access": "Shareable link is sufficient — no parent login needed for MVP",
+    "biggest-risk": "Scouting America technology platform compliance for youth-facing app. Need PII handling, communication compliance, content moderation (Azure Content Safety or similar).",
+    "patrol-assignment": "Not in MVP — one scout (patrol leader) records information. No patrol management in-app.",
+    "brainstorming-voting": "Not in MVP — SPL records decided meals after in-person discussion.",
+    "shopping-assignment": "App should email shopping list. No in-app assignment to individual scout shoppers.",
+    "recipe-on-trip": "Recipes must be printable. Offline access is a future nice-to-have."
+  },
+  "referencesProcessed": [
+    {
+      "file": "PRD.md",
+      "status": "analyzed",
+      "keyFindings": "Detailed product features: event/meal scheduling, recipe management with variations, dynamic scaling, equipment tracking, shopping list generation, custom notes, scout feedback system. Design direction, component selection, and UX patterns defined."
+    }
+  ],
+  "nextActions": [
+    "Review and validate full BRD for completeness",
+    "Confirm requirement priorities with stakeholder",
+    "Finalize document for approval"
+  ],
+  "qualityChecks": [
+    "objectives-defined-with-baselines",
+    "stakeholders-documented",
+    "scope-defined",
+    "as-is-process-documented",
+    "to-be-process-documented",
+    "requirements-elicited",
+    "risks-documented",
+    "dependencies-documented",
+    "constraints-documented",
+    "benefits-documented",
+    "data-requirements-documented"
+  ],
+  "userPreferences": {
+    "detail-level": "comprehensive",
+    "question-style": "structured"
+  }
+}
