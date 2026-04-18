@@ -3,6 +3,7 @@ import { getAllByTroop, getById, create, update, remove } from '../cosmosdb.js'
 import { getTroopContext, unauthorized, forbidden } from '../middleware/auth.js'
 import { checkPermission } from '../middleware/roles.js'
 import { createEventSchema, updateEventSchema, validationError } from '../schemas.js'
+import { moderateContent, moderationError, eventTextFields } from '../middleware/moderation.js'
 
 const CONTAINER = 'events'
 
@@ -30,12 +31,15 @@ async function eventsHandler(req: HttpRequest, context: InvocationContext): Prom
       if (!checkPermission(auth.role, 'manageEvents')) return forbidden()
       const parsed = createEventSchema.safeParse(await req.json())
       if (!parsed.success) return validationError(parsed.error)
+      const moderation = await moderateContent(eventTextFields(parsed.data))
+      if (moderation.status === 'flagged') return moderationError(moderation)
       const now = Date.now()
       const audit = { userId: auth.userId, displayName: auth.displayName }
       const event = await create(CONTAINER, {
         id: crypto.randomUUID(),
         troopId: auth.troopId,
         ...parsed.data,
+        moderationStatus: moderation.status,
         createdAt: now,
         updatedAt: now,
         createdBy: audit,
@@ -48,6 +52,8 @@ async function eventsHandler(req: HttpRequest, context: InvocationContext): Prom
       if (!checkPermission(auth.role, 'manageEvents')) return forbidden()
       const parsed = updateEventSchema.safeParse(await req.json())
       if (!parsed.success) return validationError(parsed.error)
+      const moderation = await moderateContent(eventTextFields(parsed.data))
+      if (moderation.status === 'flagged') return moderationError(moderation)
       const existing = await getById(CONTAINER, id, auth.troopId)
       if (!existing) return { status: 404, jsonBody: { error: 'Event not found' } }
       const event = await update(CONTAINER, id, {
@@ -55,6 +61,7 @@ async function eventsHandler(req: HttpRequest, context: InvocationContext): Prom
         ...parsed.data,
         id,
         troopId: auth.troopId,
+        moderationStatus: moderation.status,
         updatedAt: Date.now(),
         updatedBy: { userId: auth.userId, displayName: auth.displayName },
       }, auth.troopId)

@@ -3,6 +3,7 @@ import { getAllByTroop, getById, create, update, remove } from '../cosmosdb.js'
 import { getTroopContext, unauthorized, forbidden } from '../middleware/auth.js'
 import { checkPermission } from '../middleware/roles.js'
 import { createRecipeSchema, updateRecipeSchema, validationError } from '../schemas.js'
+import { moderateContent, moderationError, recipeTextFields } from '../middleware/moderation.js'
 
 const CONTAINER = 'recipes'
 
@@ -30,12 +31,15 @@ async function recipesHandler(req: HttpRequest, context: InvocationContext): Pro
       if (!checkPermission(auth.role, 'manageRecipes')) return forbidden()
       const parsed = createRecipeSchema.safeParse(await req.json())
       if (!parsed.success) return validationError(parsed.error)
+      const moderation = await moderateContent(recipeTextFields(parsed.data))
+      if (moderation.status === 'flagged') return moderationError(moderation)
       const now = Date.now()
       const audit = { userId: auth.userId, displayName: auth.displayName }
       const recipe = await create(CONTAINER, {
         id: crypto.randomUUID(),
         troopId: auth.troopId,
         ...parsed.data,
+        moderationStatus: moderation.status,
         createdAt: now,
         updatedAt: now,
         createdBy: audit,
@@ -48,6 +52,8 @@ async function recipesHandler(req: HttpRequest, context: InvocationContext): Pro
       if (!checkPermission(auth.role, 'manageRecipes')) return forbidden()
       const parsed = updateRecipeSchema.safeParse(await req.json())
       if (!parsed.success) return validationError(parsed.error)
+      const moderation = await moderateContent(recipeTextFields(parsed.data))
+      if (moderation.status === 'flagged') return moderationError(moderation)
       const existing = await getById(CONTAINER, id, auth.troopId)
       if (!existing) return { status: 404, jsonBody: { error: 'Recipe not found' } }
       const recipe = await update(CONTAINER, id, {
@@ -55,6 +61,7 @@ async function recipesHandler(req: HttpRequest, context: InvocationContext): Pro
         ...parsed.data,
         id,
         troopId: auth.troopId,
+        moderationStatus: moderation.status,
         updatedAt: Date.now(),
         updatedBy: { userId: auth.userId, displayName: auth.displayName },
       }, auth.troopId)

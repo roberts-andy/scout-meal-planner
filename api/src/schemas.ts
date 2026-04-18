@@ -7,6 +7,7 @@ const cookingMethod = z.enum(['open-fire', 'camp-stove', 'dutch-oven', 'skillet'
 const ingredientUnit = z.enum(['cup', 'tbsp', 'tsp', 'oz', 'lb', 'g', 'kg', 'ml', 'l', 'whole', 'package', 'can', 'to-taste'])
 const troopRole = z.enum(['troopAdmin', 'adultLeader', 'seniorPatrolLeader', 'patrolLeader', 'scout'])
 const memberStatus = z.enum(['active', 'pending'])
+const moderationStatus = z.enum(['approved', 'flagged', 'pending'])
 
 // ── Nested object schemas ──
 
@@ -133,6 +134,8 @@ export const createMemberSchema = z.object({
   email: z.string().email(),
   role: troopRole,
 })
+
+export { mealType, cookingMethod, ingredientUnit, troopRole, memberStatus, moderationStatus }
 
 /** Format a ZodError into an HTTP 400 response */
 export function validationError(error: ZodError) {

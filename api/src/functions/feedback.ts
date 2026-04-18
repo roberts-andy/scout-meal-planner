@@ -3,6 +3,7 @@ import { getAllByTroop, getById, create, update, remove, queryItems } from '../c
 import { getTroopContext, unauthorized, forbidden } from '../middleware/auth.js'
 import { checkPermission } from '../middleware/roles.js'
 import { createFeedbackSchema, updateFeedbackSchema, validationError } from '../schemas.js'
+import { moderateContent, moderationError, feedbackTextFields } from '../middleware/moderation.js'
 
 const CONTAINER = 'feedback'
 
@@ -24,12 +25,15 @@ async function feedbackHandler(req: HttpRequest, context: InvocationContext): Pr
       if (!checkPermission(auth.role, 'submitFeedback')) return forbidden()
       const parsed = createFeedbackSchema.safeParse(await req.json())
       if (!parsed.success) return validationError(parsed.error)
+      const moderation = await moderateContent(feedbackTextFields(parsed.data))
+      if (moderation.status === 'flagged') return moderationError(moderation)
       const now = Date.now()
       const audit = { userId: auth.userId, displayName: auth.displayName }
       const feedback = await create(CONTAINER, {
         id: crypto.randomUUID(),
         troopId: auth.troopId,
         ...parsed.data,
+        moderationStatus: moderation.status,
         createdAt: now,
         updatedAt: now,
         createdBy: audit,
@@ -42,6 +46,8 @@ async function feedbackHandler(req: HttpRequest, context: InvocationContext): Pr
       if (!checkPermission(auth.role, 'submitFeedback')) return forbidden()
       const parsed = updateFeedbackSchema.safeParse(await req.json())
       if (!parsed.success) return validationError(parsed.error)
+      const moderation = await moderateContent(feedbackTextFields(parsed.data))
+      if (moderation.status === 'flagged') return moderationError(moderation)
       const existing = await getById(CONTAINER, id, auth.troopId)
       if (!existing) return { status: 404, jsonBody: { error: 'Feedback not found' } }
       const feedback = await update(CONTAINER, id, {
@@ -49,6 +55,7 @@ async function feedbackHandler(req: HttpRequest, context: InvocationContext): Pr
         ...parsed.data,
         id,
         troopId: auth.troopId,
+        moderationStatus: moderation.status,
         updatedAt: Date.now(),
         updatedBy: { userId: auth.userId, displayName: auth.displayName },
       }, auth.troopId)

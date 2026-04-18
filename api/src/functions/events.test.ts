@@ -31,8 +31,19 @@ vi.mock('../middleware/auth.js', async () => {
   }
 })
 
+// ── Mock moderation middleware ──
+vi.mock('../middleware/moderation.js', () => ({
+  moderateContent: vi.fn().mockResolvedValue({ status: 'approved', flaggedFields: [], reasons: {} }),
+  moderationError: vi.fn((result: any) => ({
+    status: 422,
+    jsonBody: { error: 'Content flagged by moderation', flaggedFields: result.flaggedFields },
+  })),
+  eventTextFields: vi.fn((body: any) => ({ name: body.name, description: body.description, notes: body.notes })),
+}))
+
 import * as cosmos from '../cosmosdb.js'
 import { getTroopContext } from '../middleware/auth.js'
+import { moderateContent } from '../middleware/moderation.js'
 import './events.js'
 
 const handler = registeredHandlers['events'] as (req: HttpRequest, ctx: any) => Promise<any>
@@ -199,5 +210,41 @@ describe('events handler — DELETE', () => {
     const result = await handler(makeReq({ method: 'DELETE', params: { id: 'e1' } }), ctx)
     expect(result.status).toBe(204)
     expect(cosmos.remove).toHaveBeenCalledWith('events', 'e1', 'troop-42')
+  })
+})
+
+describe('events handler — content moderation', () => {
+  it('returns 422 when POST content is flagged', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+    vi.mocked(moderateContent).mockResolvedValueOnce({
+      status: 'flagged',
+      flaggedFields: ['name'],
+      reasons: { name: 'Contains prohibited language' },
+    })
+    const result = await handler(makeReq({ method: 'POST', body: validEventBody }), ctx)
+    expect(result.status).toBe(422)
+    expect(cosmos.create).not.toHaveBeenCalled()
+  })
+
+  it('returns 422 when PUT content is flagged', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+    vi.mocked(moderateContent).mockResolvedValueOnce({
+      status: 'flagged',
+      flaggedFields: ['notes'],
+      reasons: { notes: 'Contains prohibited language' },
+    })
+    const result = await handler(makeReq({ method: 'PUT', params: { id: 'e1' }, body: validEventBody }), ctx)
+    expect(result.status).toBe(422)
+    expect(cosmos.update).not.toHaveBeenCalled()
+  })
+
+  it('stamps moderationStatus on created documents', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+    vi.mocked(moderateContent).mockResolvedValueOnce({ status: 'approved', flaggedFields: [], reasons: {} })
+    vi.mocked(cosmos.create).mockImplementationOnce(async (_c, item) => item as any)
+    const result = await handler(makeReq({ method: 'POST', body: validEventBody }), ctx)
+    expect(result.status).toBe(201)
+    const created = vi.mocked(cosmos.create).mock.calls[0][1] as any
+    expect(created.moderationStatus).toBe('approved')
   })
 })
