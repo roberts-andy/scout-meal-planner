@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react'
 import { Event, Recipe, MealFeedback, FeedbackRating } from '@/lib/types'
+import { hasEventEnded } from '@/lib/helpers'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ChatCircle, Plus, Camera, X, Image as ImageIcon, User, PencilSimple, Trash, ClockCounterClockwise } from '@phosphor-icons/react'
+import { ChatCircle, Plus, Camera, X, Image as ImageIcon, User, PencilSimple, Trash, ClockCounterClockwise, Clock } from '@phosphor-icons/react'
 import {
   Dialog,
   DialogContent,
@@ -55,6 +56,7 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
   })
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const feedbackEnabled = hasEventEnded(event)
   const eventFeedback = feedback.filter(f => f.eventId === event.id)
 
   const allMeals = event.days.flatMap((day, dayIndex) =>
@@ -184,11 +186,22 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
           <h2 className="text-2xl font-semibold mb-2">Meal Feedback</h2>
           <p className="text-muted-foreground">Collect feedback to improve future meals</p>
         </div>
-        <Button onClick={() => handleOpenDialog()} className="gap-2">
+        <Button onClick={() => handleOpenDialog()} className="gap-2" disabled={!feedbackEnabled}>
           <Plus size={20} />
           Add Feedback
         </Button>
       </div>
+
+      {!feedbackEnabled && (
+        <Card className="border-dashed">
+          <CardContent className="flex items-center gap-3 py-4">
+            <Clock size={20} className="text-muted-foreground flex-shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              Feedback can be submitted once the event has ended ({event.endDate}).
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {eventFeedback.length === 0 ? (
         <Card>

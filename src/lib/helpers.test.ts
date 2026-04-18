@@ -9,6 +9,7 @@ import {
   migrateRecipeToVersioning,
   isRecipeInEvent,
   isEventActive,
+  hasEventEnded,
   getRecipeEventVersion,
   shouldCreateNewVersion,
   calculateRecipeRatings,
@@ -355,6 +356,27 @@ describe('isEventActive', () => {
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T00:00:00`
     const event = makeEvent({ endDate: today })
     expect(isEventActive(event)).toBe(true)
+  })
+})
+
+// ── hasEventEnded ──
+
+describe('hasEventEnded', () => {
+  it('returns true for past event (feedback eligible)', () => {
+    const event = makeEvent({ endDate: '2020-01-01' })
+    expect(hasEventEnded(event)).toBe(true)
+  })
+
+  it('returns false for future event (feedback not yet eligible)', () => {
+    const event = makeEvent({ endDate: '2099-12-31' })
+    expect(hasEventEnded(event)).toBe(false)
+  })
+
+  it('returns false for event ending today (still active)', () => {
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T00:00:00`
+    const event = makeEvent({ endDate: today })
+    expect(hasEventEnded(event)).toBe(false)
   })
 })
 
