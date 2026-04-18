@@ -205,6 +205,11 @@ export function isEventActive(event: Event): boolean {
   return today <= endDate
 }
 
+/** Returns true when the event end date has passed (feedback is eligible). */
+export function hasEventEnded(event: Event): boolean {
+  return !isEventActive(event)
+}
+
 export function getRecipeEventVersion(recipe: Recipe, eventId: string): RecipeVersion | undefined {
   return recipe.versions.find(v => v.eventId === eventId)
 }
