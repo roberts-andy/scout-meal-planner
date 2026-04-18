@@ -6,7 +6,7 @@ const mealType = z.enum(['breakfast', 'lunch', 'dinner', 'snack', 'other'])
 const cookingMethod = z.enum(['open-fire', 'camp-stove', 'dutch-oven', 'skillet', 'grill', 'no-cook', 'other'])
 const ingredientUnit = z.enum(['cup', 'tbsp', 'tsp', 'oz', 'lb', 'g', 'kg', 'ml', 'l', 'whole', 'package', 'can', 'to-taste'])
 const troopRole = z.enum(['troopAdmin', 'adultLeader', 'seniorPatrolLeader', 'patrolLeader', 'scout'])
-const memberStatus = z.enum(['active', 'pending'])
+const memberStatus = z.enum(['active', 'pending', 'deactivated', 'removed'])
 
 // ── Nested object schemas ──
 
@@ -51,6 +51,7 @@ const mealSchema = z.object({
   scoutCount: z.number().int().min(0),
   selectedVariationId: z.string().optional(),
   notes: z.string().optional(),
+  dietaryNotes: z.string().optional(),
   time: z.string().optional(),
 })
 
