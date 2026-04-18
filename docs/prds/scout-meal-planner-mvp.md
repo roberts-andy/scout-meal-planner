@@ -1,7 +1,7 @@
 <!-- markdownlint-disable-file -->
 <!-- markdown-table-prettify-ignore-start -->
 # Scout Meal Planner MVP — Product Requirements Document (PRD)
-Version 1.0 | Status Approved | Owner andyrob | Team Solo Developer | Target September 2026 | Lifecycle MVP
+Version 1.2 | Status Approved | Owner andyrob | Team Solo Developer | Target September 2026 | Lifecycle MVP
 
 ## Progress Tracker
 | Phase | Done | Gaps | Updated |
@@ -13,7 +13,7 @@ Version 1.0 | Status Approved | Owner andyrob | Team Solo Developer | Target Sep
 | Metrics & Risks | Yes | None | 2026-04-18 |
 | Operationalization | Yes | None | 2026-04-18 |
 | Finalization | Yes | None | 2026-04-18 |
-Unresolved Critical Questions: 2 | TBDs: 0
+Unresolved Critical Questions: 0 | TBDs: 0
 
 ## 1. Executive Summary
 ### Context
@@ -382,7 +382,11 @@ See [Privacy Policy](../policies/privacy-policy.md) for the full data handling r
 ### Regulatory / Compliance (Conditional)
 | Regulation | Applicability | Action | Owner | Status |
 |-----------|--------------|--------|-------|--------|
-| Scouting America technology platform policy | Required for youth-facing app | Compliance review before youth access | Scoutmaster / Council | Not started |
+| Scouting America Youth Protection Policy | Required — applies to all online and technology-mediated interactions with youth | No one-on-one adult–youth digital comms (app has no messaging); group/moderated model; role-based access separates youth and adult capabilities (FR-026, FR-027) | Scoutmaster / Council | Addressed by design |
+| Scouting America Digital Safety & Online Conduct | Required — governs how technology may be used with youth | Content moderation (FR-023), admin content review (FR-025), no private DM feature, community standards enforced by RBAC | Dev | Addressed by design |
+| Scouting America Cyber Chip alignment | Required — youth digital safety pledges must not be contradicted | Platform does not enable unsupervised meetings, private contact, or risky sharing; read-only shareable links contain no PII | Dev | Addressed by design |
+| Scouting America age-appropriate access | Required — digital participation must be age-segmented, supervised, guardian-approved | RBAC roles separate scout/adult capabilities; COPPA consent model (Section 11); Microsoft Family accounts for under-13 | Dev | Addressed by design |
+| Scouting America approved platform policy | Required — council/unit must approve youth-facing tools | Scoutmaster approval gate before youth access (Phase 2 rollout); council notification if required | Scoutmaster / Council | Pending — approval before youth access |
 | COPPA (Children's Online Privacy Protection Act) | Potentially applicable if users under 13 | Minimize PII, parental consent for minors, review data practices | Dev | Design addresses; legal review TBD |
 
 ## 12. Operational Considerations
@@ -438,7 +442,7 @@ Feature flags enable progressive rollout, safe experimentation, and quick kill-s
 ## 14. Open Questions
 | Q ID | Question | Owner | Deadline | Status |
 |------|----------|-------|---------|--------|
-| OQ-001 | What are Scouting America's specific technology platform requirements for youth-facing apps? | Scoutmaster | Before prototype | Open |
+| OQ-001 | ~~What are Scouting America's specific technology platform requirements for youth-facing apps?~~ | Scoutmaster | — | Resolved — Scouting America does not publish a prescriptive technical checklist. Requirements are defined through five mandatory policy areas: (1) Youth Protection — no one-on-one digital communication, auditable channels; (2) Digital Safety — moderation, reporting, no unsupervised private interaction; (3) Cyber Chip alignment — platform must not enable behavior conflicting with youth digital safety pledges; (4) Age-appropriate access — age-segmented, supervised, guardian-approved; (5) Approved platforms — council/unit approval required. The PRD addresses all five: no messaging feature (1), content moderation FR-023/FR-025 (2), no conflicting features (3), RBAC + COPPA consent model (4), Scoutmaster approval gate in rollout (5). See REF-003–REF-006. |
 | OQ-002 | ~~What performance targets are appropriate for mobile page load and API response times?~~ | Dev | — | Resolved — optimize for perceived speed, no hard targets |
 | OQ-003 | ~~What test coverage target is realistic for a solo developer?~~ | Dev | — | Resolved — ~70% API unit, key frontend components, smoke e2e |
 | OQ-004 | ~~Should the app support COPPA compliance explicitly, or is Scouting America compliance sufficient?~~ | Dev | — | Resolved — MVP uses Microsoft Family accounts for parental consent, consent notice at join, admin-assisted data deletion (FR-031), and a privacy policy. Dedicated parent role deferred to post-MVP. |
@@ -450,15 +454,20 @@ Feature flags enable progressive rollout, safe experimentation, and quick kill-s
 | 0.1 | 2026-04-18 | andyrob | Initial PRD draft — populated from approved BRD v1.0 and existing design direction | Creation |
 | 1.0 | 2026-04-18 | andyrob | Approved — added troop admin FRs (FR-028–030), feature flags, user journeys, communication plan. 2 open questions remain (external dependencies, not blockers). | Approval |
 | 1.1 | 2026-04-18 | andyrob | Added COPPA consent model (Section 11), FR-031 (member data deletion), resolved OQ-004, added parent role to out-of-scope, linked privacy policy. | Update |
+| 1.2 | 2026-04-18 | andyrob | Resolved OQ-001 with Scouting America policy research. Expanded compliance table from 1 row to 5 policy areas. Added REF-003–REF-006 (Scouting America policy sources). All open questions now resolved. | Update |
 
 ## 16. References & Provenance
 | Ref ID | Type | Source | Summary | Conflict Resolution |
 |--------|------|--------|---------|--------------------|
 | REF-001 | BRD | docs/brds/scout-meal-planner-mvp-brd.md | Approved BRD v1.0 — 27 business requirements, objectives, process flows, risks | Primary source for all functional requirements |
 | REF-002 | Design | PRD.md (root) | Original PRD with design direction — colors, fonts, components, animations, mobile patterns | Design elements preserved; feature scope replaced by BRD |
+| REF-003 | Policy | [Scouting America Youth Protection](https://www.scouting.org/training/youth-protection/) | Youth Protection policy — applies to online and technology-mediated interactions; no one-on-one adult–youth digital communication; transparency and auditable channels required | Scouting America policy is authoritative for youth safety requirements |
+| REF-004 | Policy | [Digital Safety and Online Scouting Activities](https://www.scouting.org/health-and-safety/safety-moments/digital-safety-and-online-scouting-activities/) | Digital safety guidance — protection from inappropriate contact/content, safe online behavior per Scout Oath and Law, no unsupervised private interaction | — |
+| REF-005 | Policy | [Scouting America official site](https://www.scouting.org/) | Age-segmented program design — digital participation follows same age-appropriate, supervised, guardian-approved principles as in-person activities | — |
+| REF-006 | Platform | [Scoutbook](https://www.scouting.org/resources/scoutbook/) | Official Scouting America digital platform — third-party apps must align with national youth protection policies; council/unit approval expected | — |
 
 ### Citation Usage
-All functional requirements (FR-001 through FR-027) trace directly to BRD business requirements (BR-001 through BR-027). Design direction (Section 5 UX/UI) preserved from REF-002. Feature scope and priorities governed by REF-001.
+All functional requirements (FR-001 through FR-027) trace directly to BRD business requirements (BR-001 through BR-027). Design direction (Section 5 UX/UI) preserved from REF-002. Feature scope and priorities governed by REF-001. Scouting America compliance requirements (Section 11 regulatory table) grounded in REF-003–REF-006.
 
 ## 17. Appendices (Optional)
 ### Glossary
