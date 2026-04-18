@@ -81,3 +81,93 @@
     font-family: var(--font-heading);
   }
 }
+
+/* ── Print Styles ── */
+@media print {
+  /* Hide all UI chrome */
+  body > *:not(#print-root) {
+    visibility: hidden;
+  }
+
+  #print-root {
+    visibility: visible;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: white;
+    color: black;
+    overflow: visible;
+    padding: 0.5in;
+    font-family: var(--font-body), system-ui, sans-serif;
+  }
+
+  #print-root * {
+    visibility: visible;
+  }
+
+  #print-root h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    font-family: var(--font-heading), system-ui, sans-serif;
+  }
+
+  #print-root h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 0.25rem;
+    font-family: var(--font-heading), system-ui, sans-serif;
+  }
+
+  #print-root .print-meta {
+    font-size: 0.85rem;
+    color: #555;
+    margin-bottom: 0.75rem;
+  }
+
+  #print-root .print-section {
+    margin-bottom: 1rem;
+    break-inside: avoid;
+  }
+
+  #print-root .print-ingredients {
+    columns: 2;
+    column-gap: 2rem;
+    font-size: 0.9rem;
+  }
+
+  #print-root .print-ingredients li {
+    break-inside: avoid;
+    padding: 0.15rem 0;
+  }
+
+  #print-root .print-instructions {
+    font-size: 0.9rem;
+  }
+
+  #print-root .print-instructions li {
+    margin-bottom: 0.35rem;
+    line-height: 1.4;
+  }
+
+  #print-root .print-equipment {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  #print-root .print-equipment span {
+    background: #f0f0f0;
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.25rem;
+    border: 1px solid #ddd;
+  }
+
+  @page {
+    margin: 0.5in;
+    size: letter;
+  }
+}

@@ -12,20 +12,23 @@ import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Card, CardContent } from '@/components/ui/card'
-import { Users, Flame, GitBranch, ClockCounterClockwise, Star } from '@phosphor-icons/react'
+import { Users, Flame, GitBranch, ClockCounterClockwise, Star, Printer } from '@phosphor-icons/react'
 import { formatQuantity, calculateRecipeRatings, revertRecipeToVersion } from '@/lib/helpers'
 import { RecipeVersionHistory } from './RecipeVersionHistory'
+import { PrintableRecipe } from './PrintableRecipe'
 
 interface RecipeDetailDialogProps {
   recipe: Recipe
   recipes?: Recipe[]
   feedback?: MealFeedback[]
+  /** Optional headcount for scaling ingredient quantities */
+  headcount?: number
   open: boolean
   onOpenChange: (open: boolean) => void
   onUpdateRecipe: (recipe: Recipe) => void
 }
 
-export function RecipeDetailDialog({ recipe, recipes, feedback, open, onOpenChange, onUpdateRecipe }: RecipeDetailDialogProps) {
+export function RecipeDetailDialog({ recipe, recipes, feedback, headcount, open, onOpenChange, onUpdateRecipe }: RecipeDetailDialogProps) {
   const [showVersionHistory, setShowVersionHistory] = useState(false)
   const originalRecipe = recipe.clonedFrom && recipes?.find(r => r.id === recipe.clonedFrom)
   const hasVersionHistory = recipe.versions && recipe.versions.length > 0
@@ -72,6 +75,15 @@ export function RecipeDetailDialog({ recipe, recipes, feedback, open, onOpenChan
                   History
                 </Button>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 shrink-0"
+                onClick={() => window.print()}
+              >
+                <Printer size={16} />
+                Print
+              </Button>
             </div>
           </DialogHeader>
         <ScrollArea className="max-h-[70vh] pr-4">
@@ -236,6 +248,8 @@ export function RecipeDetailDialog({ recipe, recipes, feedback, open, onOpenChan
       onOpenChange={setShowVersionHistory}
       onRevertVersion={handleRevertVersion}
     />
+
+    {open && <PrintableRecipe recipe={recipe} headcount={headcount} />}
     </>
   )
 }
