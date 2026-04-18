@@ -129,3 +129,106 @@ describe('members handler — POST', () => {
     expect(created.role).toBe('scout')
   })
 })
+
+describe('members handler — PUT (status changes)', () => {
+  it('updates member status to deactivated', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+    vi.mocked(cosmos.queryItems).mockResolvedValueOnce([
+      { id: 'member-1', troopId: 'troop-42', role: 'scout', status: 'active' },
+    ])
+    vi.mocked(cosmos.update).mockImplementationOnce(async (_c, _id, doc) => doc as any)
+
+    const result = await handler(
+      makeReq({ method: 'PUT', params: { id: 'member-1' }, body: { status: 'deactivated' } }),
+      ctx,
+    )
+
+    expect(result.jsonBody.status).toBe('deactivated')
+    expect(cosmos.update).toHaveBeenCalledWith(
+      'members',
+      'member-1',
+      expect.objectContaining({ status: 'deactivated' }),
+      'troop-42',
+    )
+  })
+
+  it('updates member status to removed', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+    vi.mocked(cosmos.queryItems).mockResolvedValueOnce([
+      { id: 'member-2', troopId: 'troop-42', role: 'scout', status: 'active' },
+    ])
+    vi.mocked(cosmos.update).mockImplementationOnce(async (_c, _id, doc) => doc as any)
+
+    const result = await handler(
+      makeReq({ method: 'PUT', params: { id: 'member-2' }, body: { status: 'removed' } }),
+      ctx,
+    )
+
+    expect(result.jsonBody.status).toBe('removed')
+  })
+
+  it('rejects invalid status value', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+
+    const result = await handler(
+      makeReq({ method: 'PUT', params: { id: 'member-1' }, body: { status: 'banned' } }),
+      ctx,
+    )
+
+    expect(result.status).toBe(400)
+    expect(cosmos.update).not.toHaveBeenCalled()
+  })
+
+  it('prevents deactivating the last active troop admin', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+    // First query: find the member
+    vi.mocked(cosmos.queryItems).mockResolvedValueOnce([
+      { id: 'admin-1', troopId: 'troop-42', role: 'troopAdmin', status: 'active' },
+    ])
+    // Second query: count active admins
+    vi.mocked(cosmos.queryItems).mockResolvedValueOnce([
+      { id: 'admin-1' },
+    ])
+
+    const result = await handler(
+      makeReq({ method: 'PUT', params: { id: 'admin-1' }, body: { status: 'deactivated' } }),
+      ctx,
+    )
+
+    expect(result.status).toBe(400)
+    expect(result.jsonBody.error).toContain('last active troop admin')
+    expect(cosmos.update).not.toHaveBeenCalled()
+  })
+
+  it('allows deactivating an admin when other active admins exist', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+    vi.mocked(cosmos.queryItems).mockResolvedValueOnce([
+      { id: 'admin-1', troopId: 'troop-42', role: 'troopAdmin', status: 'active' },
+    ])
+    // Two active admins exist
+    vi.mocked(cosmos.queryItems).mockResolvedValueOnce([
+      { id: 'admin-1' },
+      { id: 'admin-2' },
+    ])
+    vi.mocked(cosmos.update).mockImplementationOnce(async (_c, _id, doc) => doc as any)
+
+    const result = await handler(
+      makeReq({ method: 'PUT', params: { id: 'admin-1' }, body: { status: 'deactivated' } }),
+      ctx,
+    )
+
+    expect(result.jsonBody.status).toBe('deactivated')
+  })
+
+  it('returns 403 when non-admin tries to change status', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(scoutAuth)
+
+    const result = await handler(
+      makeReq({ method: 'PUT', params: { id: 'member-1' }, body: { status: 'deactivated' } }),
+      ctx,
+    )
+
+    expect(result.status).toBe(403)
+    expect(cosmos.update).not.toHaveBeenCalled()
+  })
+})

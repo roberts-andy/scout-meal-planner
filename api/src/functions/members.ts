@@ -86,11 +86,23 @@ async function membersHandler(req: HttpRequest, context: InvocationContext): Pro
       if (member.role === 'troopAdmin' && body.role && body.role !== 'troopAdmin') {
         const admins = await queryItems<any>(
           CONTAINER,
-          'SELECT * FROM c WHERE c.troopId = @troopId AND c.role = "troopAdmin"',
+          'SELECT * FROM c WHERE c.troopId = @troopId AND c.role = "troopAdmin" AND c.status = "active"',
           [{ name: '@troopId', value: auth.troopId }]
         )
         if (admins.length <= 1) {
           return { status: 400, jsonBody: { error: 'Cannot remove the last troop admin' } }
+        }
+      }
+
+      // Prevent deactivating/removing the last active troopAdmin
+      if (member.role === 'troopAdmin' && body.status && body.status !== 'active') {
+        const activeAdmins = await queryItems<any>(
+          CONTAINER,
+          'SELECT * FROM c WHERE c.troopId = @troopId AND c.role = "troopAdmin" AND c.status = "active"',
+          [{ name: '@troopId', value: auth.troopId }]
+        )
+        if (activeAdmins.length <= 1) {
+          return { status: 400, jsonBody: { error: 'Cannot deactivate the last active troop admin' } }
         }
       }
 
