@@ -82,27 +82,20 @@ async function membersHandler(req: HttpRequest, context: InvocationContext): Pro
 
       const member = members[0]
 
-      // Prevent removing the last troopAdmin
-      if (member.role === 'troopAdmin' && body.role && body.role !== 'troopAdmin') {
-        const admins = await queryItems<any>(
-          CONTAINER,
-          'SELECT * FROM c WHERE c.troopId = @troopId AND c.role = "troopAdmin" AND c.status = "active"',
-          [{ name: '@troopId', value: auth.troopId }]
-        )
-        if (admins.length <= 1) {
-          return { status: 400, jsonBody: { error: 'Cannot remove the last troop admin' } }
-        }
-      }
+      const isRoleChange = body.role && body.role !== member.role
+      const isDemotingAdmin = isRoleChange && member.role === 'troopAdmin' && body.role !== 'troopAdmin'
+      const isStatusChange = body.status && body.status !== member.status
+      const isDeactivatingOrRemoving = isStatusChange && (body.status === 'deactivated' || body.status === 'removed')
 
-      // Prevent deactivating/removing the last active troopAdmin
-      if (member.role === 'troopAdmin' && body.status && body.status !== 'active') {
+      // Unified last-admin guard: block role demotion OR deactivation/removal of the last active troopAdmin
+      if (member.role === 'troopAdmin' && (isDemotingAdmin || isDeactivatingOrRemoving)) {
         const activeAdmins = await queryItems<any>(
           CONTAINER,
-          'SELECT * FROM c WHERE c.troopId = @troopId AND c.role = "troopAdmin" AND c.status = "active"',
+          'SELECT c.id FROM c WHERE c.troopId = @troopId AND c.role = "troopAdmin" AND c.status = "active"',
           [{ name: '@troopId', value: auth.troopId }]
         )
         if (activeAdmins.length <= 1) {
-          return { status: 400, jsonBody: { error: 'Cannot deactivate the last active troop admin' } }
+          return { status: 400, jsonBody: { error: 'Cannot remove or demote the last active troop admin' } }
         }
       }
 
@@ -110,6 +103,15 @@ async function membersHandler(req: HttpRequest, context: InvocationContext): Pro
         ...member,
         role: body.role || member.role,
         status: body.status || member.status,
+        updatedAt: Date.now(),
+      } as any
+
+      // Audit trail for status changes
+      if (isStatusChange) {
+        updated.statusChangedAt = Date.now()
+        updated.statusChangedBy = auth.userId
+        updated.statusChangeReason = body.reason || undefined
+        updated.previousStatus = member.status
       }
 
       const result = await update(CONTAINER, id, updated, auth.troopId)

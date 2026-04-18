@@ -127,6 +127,7 @@ export const updateFeedbackSchema = createFeedbackSchema
 export const updateMemberSchema = z.object({
   role: troopRole.optional(),
   status: memberStatus.optional(),
+  reason: z.string().max(500).optional(),
 })
 
 export const createMemberSchema = z.object({
