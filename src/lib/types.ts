@@ -110,6 +110,7 @@ export interface Meal {
   scoutCount: number
   selectedVariationId?: string
   notes?: string
+  dietaryNotes?: string
   time?: string
 }
 

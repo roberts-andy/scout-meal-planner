@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Event, Recipe, Meal, MealType } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Trash, Users, Minus, PencilSimple, GitBranch, Lock } from '@phosphor-icons/react'
+import { Plus, Trash, Users, Minus, PencilSimple, GitBranch, Lock, Warning } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
@@ -15,6 +15,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { format } from 'date-fns'
 import { CreateRecipeDialog } from './CreateRecipeDialog'
 import { isEventActive } from '@/lib/helpers'
@@ -33,6 +34,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
   const [mealType, setMealType] = useState<MealType>('breakfast')
   const [recipeId, setRecipeId] = useState<string>('')
   const [scoutCount, setScoutCount] = useState(8)
+  const [dietaryNotes, setDietaryNotes] = useState('')
   const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null)
 
   const eventIsActive = isEventActive(event)
@@ -45,6 +47,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
       type: mealType,
       recipeId: recipeId || undefined,
       scoutCount,
+      dietaryNotes: dietaryNotes.trim() || undefined,
       selectedVariationId: undefined
     }
 
@@ -55,6 +58,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
     setIsAddMealOpen(false)
     setSelectedDayIndex(null)
     setRecipeId('')
+    setDietaryNotes('')
   }
 
   const handleDeleteMeal = (dayIndex: number, mealId: string) => {
@@ -168,6 +172,12 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
                                 <Plus size={14} />
                               </Button>
                             </div>
+                            {meal.dietaryNotes && (
+                              <div className="flex items-center gap-1.5 mt-1 text-sm text-amber-700 dark:text-amber-400">
+                                <Warning size={14} className="shrink-0" />
+                                <span>{meal.dietaryNotes}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -250,6 +260,17 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
                 min={1}
                 value={scoutCount}
                 onChange={(e) => setScoutCount(parseInt(e.target.value) || 1)}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="dietary-notes">Dietary Restrictions / Notes</Label>
+              <Textarea
+                id="dietary-notes"
+                placeholder="e.g., nut allergy, vegetarian option needed, gluten-free"
+                value={dietaryNotes}
+                onChange={(e) => setDietaryNotes(e.target.value)}
+                rows={2}
               />
             </div>
           </div>
