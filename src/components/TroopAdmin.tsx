@@ -90,7 +90,7 @@ export function TroopAdmin() {
         role: memberForm.role,
       })
     } catch (err) {
-      setAddMemberError(err instanceof Error ? err.message : 'Failed to add member')
+      setAddMemberError(err instanceof Error ? err.message : 'An unexpected error occurred while adding member')
     }
   }
 

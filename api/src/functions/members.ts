@@ -47,6 +47,7 @@ async function membersHandler(req: HttpRequest, context: InvocationContext): Pro
       const member = await create(CONTAINER, {
         id: crypto.randomUUID(),
         troopId: auth.troopId,
+        // This member was added by an admin and has not linked an auth account yet.
         userId: '',
         status: 'active',
         joinedAt: Date.now(),
