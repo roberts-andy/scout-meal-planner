@@ -1,0 +1,82 @@
+{
+  "prdFile": "docs/prds/scout-meal-planner-mvp.md",
+  "lastAccessed": "2026-04-18T18:00:00Z",
+  "currentPhase": "finalized",
+  "questionsAsked": [
+    "product-name", "target-users", "core-problem", "success-metrics",
+    "scope-in", "scope-out", "assumptions", "constraints",
+    "business-objectives", "stakeholders", "current-process", "future-process",
+    "risks", "dependencies", "data-requirements", "design-direction",
+    "performance-targets", "cicd-pipeline", "monitoring", "rollback",
+    "test-coverage", "content-moderation-testing"
+  ],
+  "answeredQuestions": {
+    "product-name": "Scout Meal Planner",
+    "target-users": "SPL, Scoutmaster, Scouts, Assistant Scoutmaster, Parents",
+    "core-problem": "Meal planning consumes excessive meeting time, produces inconsistent records, creates communication breakdowns",
+    "success-metrics": "Meeting time ≤15min, zero shopping errors, zero forgotten equipment, 100% recipe availability, 80% adoption, ≥50% feedback rate",
+    "scope-in": "Event mgmt, meal scheduling, recipe mgmt, scaling, shopping/equipment lists, printable recipes, shareable link, feedback, content moderation, auth/RBAC",
+    "scope-out": "Multi-troop, patrol mgmt, brainstorming/voting, shopper assignment, advanced search, analytics dashboards, budget tracking, offline/PWA, native apps, external integrations",
+    "assumptions": "Web browser access, 3 patrols, internet during meetings, Scoutmaster currently transcribes manually",
+    "constraints": "Single developer, prototype May 2026, live Sep 2026, youth PII minimal, Scouting America compliance, content moderation, mobile-first, 8-35+ headcount",
+    "business-objectives": "5 objectives from BRD (OBJ-001 through OBJ-005)",
+    "stakeholders": "Scoutmaster, Asst Scoutmaster, SPL, Scouts, Parents",
+    "current-process": "7-step as-is process from BRD",
+    "future-process": "8-step to-be process from BRD",
+    "risks": "7 risks from BRD (RSK-001 through RSK-007)",
+    "dependencies": "Scouting America compliance, Azure Content Safety, Entra ID MSAL",
+    "data-requirements": "Recipe library, event data, feedback, shopping/equipment list state",
+    "design-direction": "Outdoor field guide aesthetic, forest green + campfire orange, Space Grotesk + Source Sans 3, shadcn/ui, mobile-first",
+    "performance-targets": "No hard numbers — responsive during meetings, fast enough not to frustrate scouts. Default Azure SWA uptime.",
+    "cicd-pipeline": "GitHub Actions: ci.yml (PR build+test), deploy.yml (push-to-main: SWA frontend + Functions API), infra.yml (manual Bicep dispatch)",
+    "monitoring": "Azure Application Insights for frontend and API",
+    "rollback": "Redeploy previous version from main — sufficient for MVP",
+    "test-coverage": "~70% API unit, key frontend component tests, one smoke e2e suite",
+    "content-moderation-testing": "Azure Content Safety sandbox tier for dev/test"
+  },
+  "referencesProcessed": [
+    {
+      "file": "docs/brds/scout-meal-planner-mvp-brd.md",
+      "status": "analyzed",
+      "timestamp": "2026-04-18T12:00:00Z",
+      "keyFindings": "27 business requirements across 7 categories, 5 objectives, 6 KPIs, 7 risks, 3 dependencies, as-is and to-be processes",
+      "integratedSections": ["executive-summary", "problem-definition", "users-personas", "scope", "functional-requirements", "risks", "dependencies", "metrics", "privacy-security"],
+      "conflicts": [],
+      "pendingActions": []
+    },
+    {
+      "file": "PRD.md",
+      "status": "analyzed",
+      "timestamp": "2026-04-18T12:00:00Z",
+      "keyFindings": "Design direction: colors (forest green, stone gray, earth brown, campfire orange), typography (Space Grotesk, Source Sans 3), animations, component selection (shadcn/ui), mobile patterns, spacing",
+      "integratedSections": ["product-overview-ux"],
+      "conflicts": [
+        "Old PRD includes offline/PWA and advanced search as in-scope; BRD places these out of scope",
+        "Old PRD does not mention dietary restrictions, content moderation, printable recipes, or emailable shopping lists"
+      ],
+      "pendingActions": []
+    }
+  ],
+  "nextActions": [],
+  "qualityChecks": [
+    "goals-defined",
+    "scope-clarified",
+    "functional-requirements-traced-to-brd",
+    "personas-defined",
+    "risks-documented",
+    "nfrs-defined",
+    "cicd-documented",
+    "operational-readiness-defined",
+    "instrumentation-plan-defined",
+    "rollout-phases-dated",
+    "feature-flags-defined",
+    "user-journeys-mapped",
+    "communication-plan-defined",
+    "troop-admin-frs-added",
+    "version-1.0-approved"
+  ],
+  "userPreferences": {
+    "detail-level": "comprehensive",
+    "question-style": "structured"
+  }
+}
