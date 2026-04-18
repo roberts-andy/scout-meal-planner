@@ -1,0 +1,34 @@
+{
+  "agents": [
+    {
+      "name": "Lead",
+      "role": "Coordinator",
+      "status": "✅ Active"
+    },
+    {
+      "name": "Backend",
+      "role": "Backend Dev",
+      "status": "✅ Active"
+    },
+    {
+      "name": "Frontend",
+      "role": "Frontend Dev",
+      "status": "✅ Active"
+    },
+    {
+      "name": "Tester",
+      "role": "Tester",
+      "status": "✅ Active"
+    },
+    {
+      "name": "Scribe",
+      "role": "Session Logger",
+      "status": "📋 Silent"
+    },
+    {
+      "name": "Ralph",
+      "role": "Work Monitor",
+      "status": "🔄 Monitor"
+    }
+  ]
+}
