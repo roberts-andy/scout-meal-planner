@@ -24,9 +24,21 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    const detail = body.error ? `${body.error} (HTTP ${res.status})` : `Request failed with HTTP ${res.status}`
-    const err = new Error(detail) as Error & { status?: number }
+    const details = body.details && typeof body.details === 'object'
+      ? Object.entries(body.details as Record<string, unknown>)
+        .flatMap(([field, messages]) =>
+          Array.isArray(messages)
+            ? messages.map((message) => `${field}: ${String(message)}`)
+            : [`${field}: ${String(messages)}`]
+        )
+        .join(', ')
+      : ''
+    const detail = body.error
+      ? `${body.error}${details ? `: ${details}` : ''} (HTTP ${res.status})`
+      : `Request failed with HTTP ${res.status}`
+    const err = new Error(detail) as Error & { status?: number; details?: unknown }
     err.status = res.status
+    err.details = body.details
     throw err
   }
 
@@ -86,6 +98,8 @@ export const troopsApi = {
 export const membersApi = {
   getAll: () => request<TroopMember[]>('/members'),
   getMe: () => request<{ troopId: string; userId: string; role: string }>('/members/me'),
+  create: (member: { displayName: string; email: string; role: string }) =>
+    request<TroopMember>('/members', { method: 'POST', body: JSON.stringify(member) }),
   updateRole: (id: string, role: string) =>
     request<TroopMember>(`/members/${id}`, { method: 'PUT', body: JSON.stringify({ role }) }),
   approve: (id: string) =>
