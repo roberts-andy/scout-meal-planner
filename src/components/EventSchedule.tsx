@@ -31,7 +31,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
   const [isAddMealOpen, setIsAddMealOpen] = useState(false)
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null)
   const [mealType, setMealType] = useState<MealType>('breakfast')
-  const [mealCourse, setMealCourse] = useState<MealCourse | ''>('')
+  const [mealCourse, setMealCourse] = useState<MealCourse | undefined>(undefined)
   const [recipeId, setRecipeId] = useState<string>('')
   const [scoutCount, setScoutCount] = useState(8)
   const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null)
@@ -44,7 +44,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
     const newMeal: Meal = {
       id: `meal-${Date.now()}`,
       type: mealType,
-      course: mealCourse || undefined,
+      course: mealCourse,
       recipeId: recipeId || undefined,
       scoutCount,
       selectedVariationId: undefined
@@ -56,7 +56,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
     onUpdateEvent(updated)
     setIsAddMealOpen(false)
     setSelectedDayIndex(null)
-    setMealCourse('')
+    setMealCourse(undefined)
     setRecipeId('')
   }
 
@@ -253,7 +253,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
 
             <div className="grid gap-2">
               <Label>Course (Optional)</Label>
-              <Select value={mealCourse || 'none'} onValueChange={(value) => setMealCourse(value === 'none' ? '' : (value as MealCourse))}>
+              <Select value={mealCourse ?? 'none'} onValueChange={(value) => setMealCourse(value === 'none' ? undefined : (value as MealCourse))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
