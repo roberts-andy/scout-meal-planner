@@ -1,8 +1,8 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
-import { queryItems, update, remove } from '../cosmosdb.js'
+import { queryItems, create, update, remove } from '../cosmosdb.js'
 import { getTroopContext, unauthorized, forbidden } from '../middleware/auth.js'
 import { checkPermission } from '../middleware/roles.js'
-import { updateMemberSchema, validationError } from '../schemas.js'
+import { createMemberSchema, updateMemberSchema, validationError } from '../schemas.js'
 
 const CONTAINER = 'members'
 
@@ -23,6 +23,37 @@ async function membersHandler(req: HttpRequest, context: InvocationContext): Pro
         [{ name: '@troopId', value: auth.troopId }]
       )
       return { jsonBody: members }
+    }
+
+    // PUT /api/members/:id — update member role or status (admin/leader only)
+    if (method === 'POST' && !id) {
+      if (!checkPermission(auth.role, 'manageMembers')) return forbidden()
+
+      const parsed = createMemberSchema.safeParse(await req.json())
+      if (!parsed.success) return validationError(parsed.error)
+
+      const existingMembers = await queryItems<any>(
+        CONTAINER,
+        'SELECT * FROM c WHERE c.troopId = @troopId AND c.email = @email',
+        [
+          { name: '@troopId', value: auth.troopId },
+          { name: '@email', value: parsed.data.email },
+        ]
+      )
+      if (existingMembers.length > 0) {
+        return { status: 409, jsonBody: { error: 'Member with this email already exists' } }
+      }
+
+      const member = await create(CONTAINER, {
+        id: crypto.randomUUID(),
+        troopId: auth.troopId,
+        userId: '',
+        status: 'active',
+        joinedAt: Date.now(),
+        ...parsed.data,
+      })
+
+      return { status: 201, jsonBody: member }
     }
 
     // PUT /api/members/:id — update member role or status (admin/leader only)
@@ -125,7 +156,7 @@ async function memberMeHandler(req: HttpRequest, context: InvocationContext): Pr
 }
 
 app.http('members', {
-  methods: ['GET', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
   authLevel: 'anonymous',
   route: 'members/{id?}',
   handler: membersHandler,

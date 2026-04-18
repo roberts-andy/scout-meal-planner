@@ -1,9 +1,13 @@
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { membersApi, troopsApi } from '@/lib/api'
 import { useAuthContext } from './AuthProvider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Copy, UserCircleMinus, CheckCircle } from '@phosphor-icons/react'
@@ -22,6 +26,13 @@ const allRoles: TroopRole[] = ['troopAdmin', 'adultLeader', 'seniorPatrolLeader'
 export function TroopAdmin() {
   const { user, role } = useAuthContext()
   const queryClient = useQueryClient()
+  const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false)
+  const [addMemberError, setAddMemberError] = useState('')
+  const [memberForm, setMemberForm] = useState<{ displayName: string; email: string; role: TroopRole }>({
+    displayName: '',
+    email: '',
+    role: 'scout',
+  })
 
   const troopQuery = useQuery({ queryKey: ['troop'], queryFn: troopsApi.get })
   const membersQuery = useQuery({ queryKey: ['members'], queryFn: membersApi.getAll })
@@ -39,6 +50,16 @@ export function TroopAdmin() {
   const removeMember = useMutation({
     mutationFn: (id: string) => membersApi.remove(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members'] }),
+  })
+
+  const createMember = useMutation({
+    mutationFn: (member: { displayName: string; email: string; role: string }) => membersApi.create(member),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['members'] })
+      setIsAddMemberDialogOpen(false)
+      setAddMemberError('')
+      setMemberForm({ displayName: '', email: '', role: 'scout' })
+    },
   })
 
   if (role !== 'troopAdmin') {
@@ -60,6 +81,19 @@ export function TroopAdmin() {
     }
   }
 
+  async function handleAddMember() {
+    setAddMemberError('')
+    try {
+      await createMember.mutateAsync({
+        displayName: memberForm.displayName.trim(),
+        email: memberForm.email.trim(),
+        role: memberForm.role,
+      })
+    } catch (err) {
+      setAddMemberError(err instanceof Error ? err.message : 'Failed to add member')
+    }
+  }
+
   return (
     <div className="space-y-6 p-4">
       {/* Troop Info */}
@@ -69,14 +103,92 @@ export function TroopAdmin() {
           <CardDescription>Troop administration</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">Invite Code:</span>
-            <code className="rounded bg-muted px-2 py-1 text-sm font-mono">
-              {troop?.inviteCode || '...'}
-            </code>
-            <Button variant="ghost" size="icon" onClick={copyInviteCode} title="Copy invite code">
-              <Copy className="h-4 w-4" />
-            </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">Invite Code:</span>
+              <code className="rounded bg-muted px-2 py-1 text-sm font-mono">
+                {troop?.inviteCode || '...'}
+              </code>
+              <Button variant="ghost" size="icon" onClick={copyInviteCode} title="Copy invite code">
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
+              <DialogTrigger asChild>
+                <Button type="button">Add Member</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Member</DialogTitle>
+                  <DialogDescription>
+                    Add a member directly to your troop.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="displayName">Display Name</Label>
+                    <Input
+                      id="displayName"
+                      value={memberForm.displayName}
+                      onChange={(e) => setMemberForm((prev) => ({ ...prev, displayName: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={memberForm.email}
+                      onChange={(e) => setMemberForm((prev) => ({ ...prev, email: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="role">Role</Label>
+                    <Select
+                      value={memberForm.role}
+                      onValueChange={(value: TroopRole) => setMemberForm((prev) => ({ ...prev, role: value }))}
+                    >
+                      <SelectTrigger id="role">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allRoles.map((r) => (
+                          <SelectItem key={r} value={r}>
+                            {roleLabels[r]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {addMemberError && (
+                    <p className="text-sm text-destructive">{addMemberError}</p>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsAddMemberDialogOpen(false)}
+                    disabled={createMember.isPending}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleAddMember}
+                    disabled={
+                      createMember.isPending
+                      || !memberForm.displayName.trim()
+                      || !memberForm.email.trim()
+                    }
+                  >
+                    {createMember.isPending ? 'Adding...' : 'Add Member'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
             Share this code with troop members so they can join.
