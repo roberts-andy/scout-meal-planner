@@ -48,8 +48,8 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
       type: mealType,
       recipeId: recipeId || undefined,
       scoutCount,
-      isTrailside,
-      isTimeConstrained,
+      ...(isTrailside ? { isTrailside: true } : {}),
+      ...(isTimeConstrained ? { isTimeConstrained: true } : {}),
       selectedVariationId: undefined
     }
 
