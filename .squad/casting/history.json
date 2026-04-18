@@ -1,0 +1,13 @@
+[
+  {
+    "assignment_id": "goonies-2026-04-18",
+    "universe": "The Goonies",
+    "timestamp": "2026-04-18T18:58:56Z",
+    "agents": [
+      { "name": "Mikey", "role": "Lead" },
+      { "name": "Data", "role": "Frontend Dev" },
+      { "name": "Mouth", "role": "Backend Dev" },
+      { "name": "Stef", "role": "Tester" }
+    ]
+  }
+]
