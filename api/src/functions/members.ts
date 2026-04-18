@@ -25,14 +25,14 @@ async function membersHandler(req: HttpRequest, context: InvocationContext): Pro
       return { jsonBody: members }
     }
 
-    // PUT /api/members/:id — update member role or status (admin/leader only)
+    // POST /api/members — create a member in the troop (admin/leader only)
     if (method === 'POST' && !id) {
       if (!checkPermission(auth.role, 'manageMembers')) return forbidden()
 
       const parsed = createMemberSchema.safeParse(await req.json())
       if (!parsed.success) return validationError(parsed.error)
 
-      const existingMembers = await queryItems<any>(
+      const existingMembers = await queryItems<{ id: string }>(
         CONTAINER,
         'SELECT * FROM c WHERE c.troopId = @troopId AND c.email = @email',
         [
