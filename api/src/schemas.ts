@@ -88,6 +88,7 @@ export const createEventSchema = z.object({
   startDate: z.string().min(1),
   endDate: z.string().min(1),
   days: z.array(eventDaySchema),
+  purchasedItems: z.array(z.string()).optional(),
   notes: z.string().optional(),
   hike: z.boolean().optional(),
   highAltitude: z.boolean().optional(),

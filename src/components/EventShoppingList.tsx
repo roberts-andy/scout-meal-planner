@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Event, Recipe } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -9,10 +9,15 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 interface EventShoppingListProps {
   event: Event
   recipes: Recipe[]
+  onUpdateEvent: (event: Event) => void
 }
 
-export function EventShoppingList({ event, recipes }: EventShoppingListProps) {
-  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
+export function EventShoppingList({ event, recipes, onUpdateEvent }: EventShoppingListProps) {
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set(event.purchasedItems || []))
+
+  useEffect(() => {
+    setCheckedItems(new Set(event.purchasedItems || []))
+  }, [event.id, event.purchasedItems])
 
   const shoppingList = generateShoppingList(event, recipes, checkedItems)
   const categorized = categorizeIngredients(shoppingList)
@@ -25,6 +30,10 @@ export function EventShoppingList({ event, recipes }: EventShoppingListProps) {
       newChecked.add(key)
     }
     setCheckedItems(newChecked)
+    onUpdateEvent({
+      ...event,
+      purchasedItems: Array.from(newChecked),
+    })
   }
 
   if (shoppingList.length === 0) {

@@ -85,6 +85,14 @@ describe('createEventSchema', () => {
     expect(result.success).toBe(true)
   })
 
+  it('accepts optional purchasedItems', () => {
+    const result = createEventSchema.safeParse({
+      ...valid,
+      purchasedItems: ['flour-cup', 'milk-cup'],
+    })
+    expect(result.success).toBe(true)
+  })
+
   it('accepts optional meal course labels', () => {
     const withCourse = {
       ...valid,
@@ -99,6 +107,11 @@ describe('createEventSchema', () => {
 
   it('rejects invalid meal type', () => {
     const bad = { ...valid, days: [{ date: '2026-07-01', meals: [{ id: 'm1', type: 'brunch', scoutCount: 8 }] }] }
+    expect(createEventSchema.safeParse(bad).success).toBe(false)
+  })
+
+  it('rejects non-string purchasedItems values', () => {
+    const bad = { ...valid, purchasedItems: ['flour-cup', 123] }
     expect(createEventSchema.safeParse(bad).success).toBe(false)
   })
 

@@ -114,6 +114,7 @@ export function EventDetail({
             <EventShoppingList
               event={event}
               recipes={recipes}
+              onUpdateEvent={onUpdateEvent}
             />
           </TabsContent>
 
