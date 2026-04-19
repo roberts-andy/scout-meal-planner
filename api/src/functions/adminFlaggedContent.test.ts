@@ -217,4 +217,20 @@ describe('admin flagged content handler', () => {
     expect(result.status).toBe(400)
     expect(cosmos.update).not.toHaveBeenCalled()
   })
+
+  it('returns 409 when untyped id is ambiguous across recipe and feedback', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+    vi.mocked(cosmos.getById)
+      .mockResolvedValueOnce({ id: 'shared-id', troopId: 'troop-42' } as any)
+      .mockResolvedValueOnce({ id: 'shared-id', troopId: 'troop-42' } as any)
+
+    const result = await handler(makeReq({
+      method: 'PUT',
+      params: { id: 'shared-id' },
+      body: { action: 'approve' },
+    }), ctx)
+
+    expect(result.status).toBe(409)
+    expect(cosmos.update).not.toHaveBeenCalled()
+  })
 })

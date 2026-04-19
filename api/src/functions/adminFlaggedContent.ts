@@ -76,21 +76,25 @@ function parseReviewTarget(idParam: string): { contentType: ContentType; content
 async function resolveItem(
   idParam: string,
   troopId: string,
-): Promise<{ contentType: ContentType; item: ModeratedItem } | null> {
+): Promise<
+  | { status: 'ok'; contentType: ContentType; item: ModeratedItem }
+  | { status: 'ambiguous' }
+  | { status: 'not_found' }
+> {
   const typedTarget = parseReviewTarget(idParam)
   if (typedTarget) {
     const container = typedTarget.contentType === 'recipe' ? RECIPES_CONTAINER : FEEDBACK_CONTAINER
     const item = await getById<ModeratedItem>(container, typedTarget.contentId, troopId)
-    if (!item) return null
-    return { contentType: typedTarget.contentType, item }
+    if (!item) return { status: 'not_found' }
+    return { status: 'ok', contentType: typedTarget.contentType, item }
   }
 
   const recipe = await getById<ModeratedItem>(RECIPES_CONTAINER, idParam, troopId)
   const feedback = await getById<ModeratedItem>(FEEDBACK_CONTAINER, idParam, troopId)
-  if (recipe && feedback) return null
-  if (recipe) return { contentType: 'recipe', item: recipe }
-  if (feedback) return { contentType: 'feedback', item: feedback }
-  return null
+  if (recipe && feedback) return { status: 'ambiguous' }
+  if (recipe) return { status: 'ok', contentType: 'recipe', item: recipe }
+  if (feedback) return { status: 'ok', contentType: 'feedback', item: feedback }
+  return { status: 'not_found' }
 }
 
 async function adminFlaggedContentHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
@@ -126,7 +130,12 @@ async function adminFlaggedContentHandler(req: HttpRequest, context: InvocationC
       if (!parsed.success) return validationError(parsed.error)
 
       const resolved = await resolveItem(id, auth.troopId)
-      if (!resolved) return { status: 404, jsonBody: { error: 'Flagged content not found' } }
+      if (resolved.status === 'ambiguous') {
+        return { status: 409, jsonBody: { error: 'Ambiguous content id. Use contentType:id format.' } }
+      }
+      if (resolved.status === 'not_found') {
+        return { status: 404, jsonBody: { error: 'Flagged content not found' } }
+      }
 
       const now = Date.now()
       const audit = { userId: auth.userId, displayName: auth.displayName }
