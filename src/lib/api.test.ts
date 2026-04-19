@@ -197,6 +197,15 @@ describe('membersApi', () => {
       method: 'DELETE',
     }))
   })
+
+  it('updateStatus patches /troops/{troopId}/members/{id}', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ id: 'member-1', status: 'removed' }))
+    await membersApi.updateStatus('troop-1', 'member-1', 'removed')
+    expect(mockFetch).toHaveBeenCalledWith('/api/troops/troop-1/members/member-1', expect.objectContaining({
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'removed' }),
+    }))
+  })
 })
 
 describe('shareApi', () => {

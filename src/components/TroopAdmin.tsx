@@ -5,12 +5,13 @@ import { useAuthContext } from './AuthProvider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Copy, UserCircleMinus, CheckCircle } from '@phosphor-icons/react'
+import { Copy, UserCircleMinus, CheckCircle, UserCircle } from '@phosphor-icons/react'
 import type { MemberStatus, TroopMember, TroopRole } from '@/lib/types'
 
 const roleLabels: Record<TroopRole, string> = {
@@ -41,6 +42,7 @@ export function TroopAdmin() {
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false)
   const [addMemberError, setAddMemberError] = useState('')
   const [memberForm, setMemberForm] = useState<{ displayName: string; email: string; role: TroopRole }>(DEFAULT_MEMBER_FORM)
+  const [statusAction, setStatusAction] = useState<{ member: TroopMember; status: 'deactivated' | 'removed' } | null>(null)
 
   const troopQuery = useQuery({ queryKey: ['troop'], queryFn: troopsApi.get })
   const membersQuery = useQuery({ queryKey: ['members'], queryFn: membersApi.getAll })
@@ -58,6 +60,15 @@ export function TroopAdmin() {
   const removeMember = useMutation({
     mutationFn: (id: string) => membersApi.remove(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members'] }),
+  })
+
+  const updateMemberStatus = useMutation({
+    mutationFn: ({ troopId, id, status }: { troopId: string; id: string; status: 'deactivated' | 'removed' }) =>
+      membersApi.updateStatus(troopId, id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['members'] })
+      setStatusAction(null)
+    },
   })
 
   const deleteMemberData = useMutation({
@@ -90,7 +101,7 @@ export function TroopAdmin() {
   const troop = troopQuery.data
   const members = (membersQuery.data || []) as TroopMember[]
   const pendingMembers = members.filter((m) => m.status === 'pending')
-  const nonPendingMembers = members.filter((m) => m.status !== 'pending')
+  const activeMembers = members.filter((m) => m.status === 'active')
   const appOrigin = typeof window !== 'undefined' ? window.location.origin : ''
   const inviteLink = appOrigin && troop?.inviteCode
     ? `${appOrigin}/join?code=${encodeURIComponent(troop.inviteCode)}`
@@ -129,6 +140,19 @@ export function TroopAdmin() {
     const confirmed = window.confirm(`Delete all data for ${member.displayName}? This cannot be undone.`)
     if (!confirmed) return
     deleteMemberData.mutate(member.id)
+  }
+
+  function handleStatusAction(member: TroopMember, status: 'deactivated' | 'removed') {
+    setStatusAction({ member, status })
+  }
+
+  function confirmStatusAction() {
+    if (!statusAction || !troop?.id) return
+    updateMemberStatus.mutate({
+      troopId: troop.id,
+      id: statusAction.member.id,
+      status: statusAction.status,
+    })
   }
 
   return (
@@ -293,7 +317,7 @@ export function TroopAdmin() {
       {/* Active Members */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Members ({nonPendingMembers.length})</CardTitle>
+          <CardTitle className="text-lg">Members ({activeMembers.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -307,7 +331,7 @@ export function TroopAdmin() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {nonPendingMembers.map((member) => (
+              {activeMembers.map((member) => (
                 <TableRow key={member.id}>
                   <TableCell>
                     {member.displayName}
@@ -352,11 +376,21 @@ export function TroopAdmin() {
                         </Button>
                         <Button
                           size="sm"
-                          variant="ghost"
-                          onClick={() => removeMember.mutate(member.id)}
-                          disabled={removeMember.isPending}
+                          variant="outline"
+                          onClick={() => handleStatusAction(member, 'deactivated')}
+                          disabled={updateMemberStatus.isPending}
                         >
-                          <UserCircleMinus className="h-4 w-4 text-destructive" />
+                          <UserCircle className="mr-1 h-4 w-4" />
+                          Deactivate
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleStatusAction(member, 'removed')}
+                          disabled={updateMemberStatus.isPending}
+                        >
+                          <UserCircleMinus className="mr-1 h-4 w-4 text-destructive" />
+                          Remove
                         </Button>
                       </div>
                     )}
@@ -367,6 +401,27 @@ export function TroopAdmin() {
           </Table>
         </CardContent>
       </Card>
+
+      <AlertDialog open={statusAction !== null} onOpenChange={(open) => !open && setStatusAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {statusAction?.status === 'deactivated' ? 'Deactivate member?' : 'Remove member from troop?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {statusAction?.status === 'deactivated'
+                ? `Deactivate ${statusAction?.member.displayName}? They will lose access, but their data is retained.`
+                : `Remove ${statusAction?.member.displayName} from this troop? They will be dissociated from this troop.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updateMemberStatus.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmStatusAction} disabled={updateMemberStatus.isPending}>
+              {statusAction?.status === 'deactivated' ? 'Deactivate' : 'Remove'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { queryItems, create, update, remove } from '../cosmosdb.js'
 import { getTroopContext, unauthorized, forbidden } from '../middleware/auth.js'
 import { checkPermission } from '../middleware/roles.js'
-import { createMemberSchema, updateMemberSchema, validationError } from '../schemas.js'
+import { createMemberSchema, updateMemberSchema, updateTroopMemberStatusSchema, validationError } from '../schemas.js'
 
 const CONTAINER = 'members'
 const FEEDBACK_CONTAINER = 'feedback'
@@ -273,6 +273,58 @@ async function memberDataDeletionHandler(req: HttpRequest, context: InvocationCo
   }
 }
 
+async function troopMemberStatusHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  const { troopId, memberId } = req.params
+  context.log(`PATCH /api/troops/${troopId}/members/${memberId}`)
+
+  const auth = await getTroopContext(req, context)
+  if (!auth) return unauthorized()
+  if (auth.role !== 'troopAdmin') return forbidden()
+  if (troopId !== auth.troopId) return forbidden()
+
+  try {
+    const parsed = updateTroopMemberStatusSchema.safeParse(await req.json())
+    if (!parsed.success) return validationError(parsed.error)
+
+    const members = await queryItems<any>(
+      CONTAINER,
+      'SELECT * FROM c WHERE c.id = @id AND c.troopId = @troopId',
+      [
+        { name: '@id', value: memberId },
+        { name: '@troopId', value: troopId },
+      ]
+    )
+
+    if (members.length === 0) {
+      return { status: 404, jsonBody: { error: 'Member not found' } }
+    }
+
+    const member = members[0]
+
+    if (member.role === 'troopAdmin' && member.status === 'active') {
+      const admins = await queryItems<any>(
+        CONTAINER,
+        'SELECT * FROM c WHERE c.troopId = @troopId AND c.role = "troopAdmin" AND c.status = "active"',
+        [{ name: '@troopId', value: troopId }]
+      )
+      if (admins.length <= 1) {
+        return { status: 400, jsonBody: { error: 'Cannot remove the last troop admin' } }
+      }
+    }
+
+    const updated = {
+      ...member,
+      status: parsed.data.status,
+    }
+
+    const result = await update(CONTAINER, memberId, updated, troopId)
+    return { jsonBody: result }
+  } catch (err) {
+    context.error(`PATCH /api/troops/${troopId}/members/${memberId} failed:`, err)
+    return { status: 500, jsonBody: { error: 'Internal server error' } }
+  }
+}
+
 app.http('members', {
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   authLevel: 'anonymous',
@@ -292,4 +344,11 @@ app.http('memberDataDeletion', {
   authLevel: 'anonymous',
   route: 'members/{id}/data',
   handler: memberDataDeletionHandler,
+})
+
+app.http('troopMemberStatus', {
+  methods: ['PATCH'],
+  authLevel: 'anonymous',
+  route: 'troops/{troopId}/members/{memberId}',
+  handler: troopMemberStatusHandler,
 })
