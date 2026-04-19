@@ -1,4 +1,13 @@
-import type { Event, Recipe, MealFeedback, Troop, TroopMember, SharedEventPlan } from './types'
+import type {
+  Event,
+  Recipe,
+  MealFeedback,
+  Troop,
+  TroopMember,
+  SharedEventPlan,
+  FlaggedContentItem,
+  FlaggedContentType,
+} from './types'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
@@ -123,4 +132,13 @@ export const membersApi = {
 
 export const shareApi = {
   getByToken: (token: string) => request<SharedEventPlan>(`/share/${encodeURIComponent(token)}`),
+}
+
+export const adminApi = {
+  getFlaggedContent: () => request<FlaggedContentItem[]>('/admin/flagged-content'),
+  reviewFlaggedContent: (contentType: FlaggedContentType, id: string, action: 'approve' | 'reject') =>
+    request<void>(`/admin/flagged-content/${encodeURIComponent(contentType)}/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ action }),
+    }),
 }

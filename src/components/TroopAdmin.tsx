@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { membersApi, troopsApi } from '@/lib/api'
+import { adminApi, feedbackApi, membersApi, recipesApi, troopsApi } from '@/lib/api'
 import { useAuthContext } from './AuthProvider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Copy, UserCircleMinus, CheckCircle } from '@phosphor-icons/react'
-import type { TroopMember, TroopRole } from '@/lib/types'
+import type { FlaggedContentItem, MealFeedback, Recipe, TroopMember, TroopRole } from '@/lib/types'
 
 const roleLabels: Record<TroopRole, string> = {
   troopAdmin: 'Troop Admin',
@@ -37,6 +37,7 @@ export function TroopAdmin() {
 
   const troopQuery = useQuery({ queryKey: ['troop'], queryFn: troopsApi.get })
   const membersQuery = useQuery({ queryKey: ['members'], queryFn: membersApi.getAll })
+  const flaggedContentQuery = useQuery({ queryKey: ['admin', 'flagged-content'], queryFn: adminApi.getFlaggedContent })
 
   const updateRole = useMutation({
     mutationFn: ({ id, role }: { id: string; role: string }) => membersApi.updateRole(id, role),
@@ -72,6 +73,16 @@ export function TroopAdmin() {
     },
   })
 
+  const reviewFlaggedContent = useMutation({
+    mutationFn: ({ contentType, id, action }: { contentType: 'recipe' | 'feedback'; id: string; action: 'approve' | 'reject' }) =>
+      adminApi.reviewFlaggedContent(contentType, id, action),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'flagged-content'] })
+      queryClient.invalidateQueries({ queryKey: ['recipes'] })
+      queryClient.invalidateQueries({ queryKey: ['feedback'] })
+    },
+  })
+
   if (role !== 'troopAdmin') {
     return (
       <div className="p-6 text-center text-muted-foreground">
@@ -84,6 +95,7 @@ export function TroopAdmin() {
   const members = (membersQuery.data || []) as TroopMember[]
   const pendingMembers = members.filter((m) => m.status === 'pending')
   const activeMembers = members.filter((m) => m.status === 'active')
+  const flaggedItems = flaggedContentQuery.data || []
   const appOrigin = typeof window !== 'undefined' ? window.location.origin : ''
   const inviteLink = appOrigin && troop?.inviteCode
     ? `${appOrigin}/join?code=${encodeURIComponent(troop.inviteCode)}`
@@ -122,6 +134,24 @@ export function TroopAdmin() {
     const confirmed = window.confirm(`Delete all data for ${member.displayName}? This cannot be undone.`)
     if (!confirmed) return
     deleteMemberData.mutate(member.id)
+  }
+
+  async function handleEditFlaggedContent(item: FlaggedContentItem) {
+    if (item.contentType === 'recipe') {
+      const recipe = item.content as Recipe
+      const updatedName = window.prompt('Edit recipe name', recipe.name)
+      if (!updatedName || !updatedName.trim() || updatedName.trim() === recipe.name) return
+      await recipesApi.update({ ...recipe, name: updatedName.trim() })
+    } else {
+      const feedback = item.content as MealFeedback
+      const updatedComments = window.prompt('Edit feedback comments', feedback.comments)
+      if (!updatedComments || !updatedComments.trim() || updatedComments.trim() === feedback.comments) return
+      await feedbackApi.update({ ...feedback, comments: updatedComments.trim() })
+    }
+
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'flagged-content'] })
+    await queryClient.invalidateQueries({ queryKey: ['recipes'] })
+    await queryClient.invalidateQueries({ queryKey: ['feedback'] })
   }
 
   return (
@@ -352,6 +382,70 @@ export function TroopAdmin() {
               ))}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Flagged Content Review ({flaggedItems.length})</CardTitle>
+          <CardDescription>Review moderated submissions from FR-023</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {flaggedContentQuery.isLoading && (
+            <p className="text-sm text-muted-foreground">Loading flagged content...</p>
+          )}
+          {!flaggedContentQuery.isLoading && flaggedItems.length === 0 && (
+            <p className="text-sm text-muted-foreground">No flagged content to review.</p>
+          )}
+          {flaggedItems.length > 0 && (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Submitted By</TableHead>
+                  <TableHead>Submitted At</TableHead>
+                  <TableHead>Preview</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {flaggedItems.map((item) => (
+                  <TableRow key={`${item.contentType}:${item.id}`}>
+                    <TableCell className="capitalize">{item.contentType}</TableCell>
+                    <TableCell>{item.submittedBy}</TableCell>
+                    <TableCell>{item.submittedAt ? new Date(item.submittedAt).toLocaleString() : 'Unknown'}</TableCell>
+                    <TableCell className="max-w-lg whitespace-normal break-words">{item.preview || 'No preview available'}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => reviewFlaggedContent.mutate({ contentType: item.contentType, id: item.id, action: 'approve' })}
+                          disabled={reviewFlaggedContent.isPending}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void handleEditFlaggedContent(item)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => reviewFlaggedContent.mutate({ contentType: item.contentType, id: item.id, action: 'reject' })}
+                          disabled={reviewFlaggedContent.isPending}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

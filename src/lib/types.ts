@@ -43,6 +43,17 @@ export interface AuditInfo {
   displayName: string
 }
 
+export type ModerationStatus = 'approved' | 'flagged' | 'pending'
+
+export interface ModerationInfo {
+  status: ModerationStatus
+  flaggedFields?: string[]
+  checkedAt?: number
+  provider?: string
+  reviewedAt?: number
+  reviewedBy?: AuditInfo
+}
+
 // ── Meal Planning ──
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'other'
@@ -100,6 +111,7 @@ export interface Recipe {
   updatedAt: number
   createdBy?: AuditInfo
   updatedBy?: AuditInfo
+  moderation?: ModerationInfo
   currentVersion: number
   versions: RecipeVersion[]
 }
@@ -194,6 +206,19 @@ export interface MealFeedback {
   updatedAt?: number
   createdBy?: AuditInfo
   updatedBy?: AuditInfo
+  moderation?: ModerationInfo
+}
+
+export type FlaggedContentType = 'recipe' | 'feedback'
+
+export interface FlaggedContentItem {
+  id: string
+  contentType: FlaggedContentType
+  submittedBy: string
+  submittedByUserId?: string
+  submittedAt: number | null
+  preview: string
+  content: Recipe | MealFeedback
 }
 
 export interface ShoppingListItem {
