@@ -346,8 +346,8 @@ export function TroopAdmin() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {memberAction?.type === 'deactivate'
-                ? `${memberAction?.member.displayName} will lose access immediately, but their troop data will be retained.`
-                : `${memberAction?.member.displayName} will be removed from the troop roster and lose access immediately.`}
+                ? `${memberAction?.member.displayName} will lose access immediately and can be reactivated later. Their troop data will be retained.`
+                : `${memberAction?.member.displayName} will be permanently removed from the troop roster and lose access immediately.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

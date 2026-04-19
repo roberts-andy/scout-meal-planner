@@ -123,7 +123,8 @@ async function membersHandler(req: HttpRequest, context: InvocationContext): Pro
       }
 
       const member = members[0]
-      // Soft-delete as removed so member history is retained while access is revoked.
+      // Backward-compatible DELETE behavior: soft-delete as removed.
+      // New clients should use PATCH /api/troops/{troopId}/members/{memberId} with status=removed.
       await update(CONTAINER, id, { ...member, status: 'removed' }, auth.troopId)
       return { status: 204 }
     }

@@ -73,7 +73,7 @@ describe('TroopAdmin member status actions', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Deactivate' }))
     expect(screen.getByRole('heading', { name: 'Deactivate member?' })).toBeInTheDocument()
-    expect(screen.getByText(/will lose access immediately, but their troop data will be retained/i)).toBeInTheDocument()
+    expect(screen.getByText(/will lose access immediately and can be reactivated later/i)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Confirm Deactivate' }))
     expect(mockMembersApi.updateStatus).toHaveBeenCalledWith('troop-1', 'member-1', 'deactivated')
@@ -85,7 +85,7 @@ describe('TroopAdmin member status actions', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Remove' }))
     expect(screen.getByRole('heading', { name: 'Remove member?' })).toBeInTheDocument()
-    expect(screen.getByText(/will be removed from the troop roster and lose access immediately/i)).toBeInTheDocument()
+    expect(screen.getByText(/will be permanently removed from the troop roster and lose access immediately/i)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Confirm Remove' }))
     expect(mockMembersApi.updateStatus).toHaveBeenCalledWith('troop-1', 'member-1', 'removed')
