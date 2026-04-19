@@ -5,6 +5,7 @@ import {
   createEventSchema,
   createRecipeSchema,
   createFeedbackSchema,
+  sendShoppingListEmailSchema,
   updateMemberSchema,
   validationError,
 } from './schemas.js'
@@ -214,6 +215,26 @@ describe('createFeedbackSchema', () => {
   it('rejects missing rating fields', () => {
     const bad = { ...valid, rating: { taste: 4 } }
     expect(createFeedbackSchema.safeParse(bad).success).toBe(false)
+  })
+})
+
+describe('sendShoppingListEmailSchema', () => {
+  const valid = {
+    recipientEmail: 'parent@example.com',
+    eventName: 'Campout',
+    items: [{ name: 'Flour', quantity: 2, unit: 'cup' }],
+  }
+
+  it('accepts valid email shopping list payload', () => {
+    expect(sendShoppingListEmailSchema.safeParse(valid).success).toBe(true)
+  })
+
+  it('rejects invalid recipient email', () => {
+    expect(sendShoppingListEmailSchema.safeParse({ ...valid, recipientEmail: 'bad-email' }).success).toBe(false)
+  })
+
+  it('rejects empty items list', () => {
+    expect(sendShoppingListEmailSchema.safeParse({ ...valid, items: [] }).success).toBe(false)
   })
 })
 

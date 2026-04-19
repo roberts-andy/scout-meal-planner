@@ -138,6 +138,18 @@ export const createMemberSchema = z.object({
   role: troopRole,
 })
 
+const shoppingListEmailItemSchema = z.object({
+  name: z.string().min(1),
+  quantity: z.number().min(0),
+  unit: ingredientUnit,
+})
+
+export const sendShoppingListEmailSchema = z.object({
+  recipientEmail: z.string().email(),
+  eventName: z.string().min(1).max(200),
+  items: z.array(shoppingListEmailItemSchema).min(1),
+})
+
 /** Format a ZodError into an HTTP 400 response */
 export function validationError(error: ZodError) {
   return {
