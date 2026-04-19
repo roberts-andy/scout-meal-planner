@@ -56,4 +56,24 @@ describe('RecipeDetailDialog', () => {
 
     expect(printSpy).toHaveBeenCalledTimes(1)
   })
+
+  it('renders print-only recipe details and marks interactive UI as no-print', () => {
+    const { container } = render(
+      <RecipeDetailDialog
+        recipe={recipe}
+        open
+        onOpenChange={onOpenChange}
+        onUpdateRecipe={onUpdateRecipe}
+      />
+    )
+
+    const printOnlySection = document.body.querySelector('.print-only')
+    expect(printOnlySection).not.toBeNull()
+    expect(printOnlySection).toHaveTextContent('Instructions')
+    expect(printOnlySection).toHaveTextContent('Equipment Needed')
+    expect(printOnlySection).toHaveTextContent('Heat pot')
+    expect(printOnlySection).toHaveTextContent('Pot')
+
+    expect(document.body.querySelector('.no-print')).not.toBeNull()
+  })
 })
