@@ -11,6 +11,7 @@ import { EventEquipment } from './EventEquipment'
 import { EventFeedback } from './EventFeedback'
 import { EditEventDialog } from './EditEventDialog'
 import { toast } from 'sonner'
+import { canSubmitEventFeedback } from '@/lib/helpers'
 
 interface EventDetailProps {
   event: Event
@@ -38,6 +39,7 @@ export function EventDetail({
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [isSharing, setIsSharing] = useState(false)
+  const feedbackEnabled = canSubmitEventFeedback(event)
 
   const buildShareUrl = (token?: string) => token ? `${window.location.origin}/share/${token}` : null
 
@@ -203,7 +205,7 @@ export function EventDetail({
             <TabsTrigger value="schedule">Schedule</TabsTrigger>
             <TabsTrigger value="shopping">Shopping List</TabsTrigger>
             <TabsTrigger value="equipment">Equipment</TabsTrigger>
-            <TabsTrigger value="feedback">Feedback</TabsTrigger>
+            <TabsTrigger value="feedback" disabled={!feedbackEnabled}>Feedback</TabsTrigger>
           </TabsList>
 
           <TabsContent value="schedule" className="mt-0">
