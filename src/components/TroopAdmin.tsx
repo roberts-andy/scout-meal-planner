@@ -84,10 +84,24 @@ export function TroopAdmin() {
   const members = (membersQuery.data || []) as TroopMember[]
   const pendingMembers = members.filter((m) => m.status === 'pending')
   const activeMembers = members.filter((m) => m.status === 'active')
+  const appOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+  const inviteLink = appOrigin && troop?.inviteCode
+    ? `${appOrigin}/join?code=${encodeURIComponent(troop.inviteCode)}`
+    : ''
 
   function copyInviteCode() {
-    if (troop?.inviteCode) {
-      navigator.clipboard.writeText(troop.inviteCode)
+    if (troop?.inviteCode && typeof navigator !== 'undefined' && navigator.clipboard) {
+      void navigator.clipboard.writeText(troop.inviteCode).catch(() => {
+        console.warn('Failed to copy invite code to clipboard')
+      })
+    }
+  }
+
+  function copyInviteLink() {
+    if (inviteLink && typeof navigator !== 'undefined' && navigator.clipboard) {
+      void navigator.clipboard.writeText(inviteLink).catch(() => {
+        console.warn('Failed to copy invite link to clipboard')
+      })
     }
   }
 
@@ -126,6 +140,15 @@ export function TroopAdmin() {
                 {troop?.inviteCode || '...'}
               </code>
               <Button variant="ghost" size="icon" onClick={copyInviteCode} title="Copy invite code">
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">Invite Link:</span>
+              <code className="rounded bg-muted px-2 py-1 text-sm font-mono break-all">
+                {inviteLink || '...'}
+              </code>
+              <Button variant="ghost" size="icon" onClick={copyInviteLink} title="Copy invite link">
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
@@ -207,7 +230,7 @@ export function TroopAdmin() {
             </Dialog>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
-            Share this code with troop members so they can join.
+            Share this code or invite link with troop members so they can join.
           </p>
         </CardContent>
       </Card>
