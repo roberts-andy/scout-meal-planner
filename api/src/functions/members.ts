@@ -34,7 +34,7 @@ async function membersHandler(req: HttpRequest, context: InvocationContext): Pro
     if (method === 'GET' && !id) {
       const members = await queryItems(
         CONTAINER,
-        'SELECT * FROM c WHERE c.troopId = @troopId',
+        'SELECT * FROM c WHERE c.troopId = @troopId AND (NOT IS_DEFINED(c.status) OR c.status != "removed")',
         [{ name: '@troopId', value: auth.troopId }]
       )
       return { jsonBody: members }
@@ -157,6 +157,64 @@ async function membersHandler(req: HttpRequest, context: InvocationContext): Pro
     return { status: 405, jsonBody: { error: 'Method not allowed' } }
   } catch (err) {
     context.error(`${method} /api/members${id ? '/' + id : ''} failed:`, err)
+    return { status: 500, jsonBody: { error: 'Internal server error' } }
+  }
+}
+
+async function troopMemberStatusHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  const troopId = req.params.troopId
+  const memberId = req.params.memberId
+  context.log(`PATCH /api/troops/${troopId}/members/${memberId}`)
+
+  const auth = await getTroopContext(req, context)
+  if (!auth) return unauthorized()
+  if (!checkPermission(auth.role, 'manageMembers')) return forbidden()
+  if (auth.troopId !== troopId) return forbidden()
+
+  try {
+    const parsed = updateMemberSchema.safeParse(await req.json())
+    if (!parsed.success) return validationError(parsed.error)
+    const status = parsed.data.status
+    if (!status || (status !== 'deactivated' && status !== 'removed')) {
+      return { status: 400, jsonBody: { error: 'Status must be deactivated or removed' } }
+    }
+
+    const members = await queryItems<any>(
+      CONTAINER,
+      'SELECT * FROM c WHERE c.id = @id AND c.troopId = @troopId',
+      [
+        { name: '@id', value: memberId },
+        { name: '@troopId', value: troopId },
+      ]
+    )
+
+    if (members.length === 0) {
+      return { status: 404, jsonBody: { error: 'Member not found' } }
+    }
+
+    const member = members[0]
+
+    if (member.role === 'troopAdmin') {
+      const activeAdmins = await queryItems<any>(
+        CONTAINER,
+        'SELECT * FROM c WHERE c.troopId = @troopId AND c.role = "troopAdmin" AND c.status = "active"',
+        [{ name: '@troopId', value: troopId }]
+      )
+      if (member.status === 'active' && activeAdmins.length <= 1) {
+        return { status: 400, jsonBody: { error: 'Cannot deactivate or remove the last active troop admin' } }
+      }
+    }
+
+    const updated = await update(
+      CONTAINER,
+      memberId,
+      { ...member, status },
+      troopId
+    )
+
+    return { jsonBody: updated }
+  } catch (err) {
+    context.error(`PATCH /api/troops/${troopId}/members/${memberId} failed:`, err)
     return { status: 500, jsonBody: { error: 'Internal server error' } }
   }
 }
@@ -292,4 +350,11 @@ app.http('memberDataDeletion', {
   authLevel: 'anonymous',
   route: 'members/{id}/data',
   handler: memberDataDeletionHandler,
+})
+
+app.http('troopMemberStatus', {
+  methods: ['PATCH'],
+  authLevel: 'anonymous',
+  route: 'troops/{troopId}/members/{memberId}',
+  handler: troopMemberStatusHandler,
 })

@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Copy, UserCircleMinus, CheckCircle } from '@phosphor-icons/react'
+import { Copy, CheckCircle } from '@phosphor-icons/react'
 import type { TroopMember, TroopRole } from '@/lib/types'
 
 const roleLabels: Record<TroopRole, string> = {
@@ -49,7 +49,12 @@ export function TroopAdmin() {
   })
 
   const removeMember = useMutation({
-    mutationFn: (id: string) => membersApi.remove(id),
+    mutationFn: ({ troopId, memberId }: { troopId: string; memberId: string }) => membersApi.updateStatus(troopId, memberId, 'removed'),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members'] }),
+  })
+
+  const deactivateMember = useMutation({
+    mutationFn: ({ troopId, memberId }: { troopId: string; memberId: string }) => membersApi.updateStatus(troopId, memberId, 'deactivated'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members'] }),
   })
 
@@ -122,6 +127,18 @@ export function TroopAdmin() {
     const confirmed = window.confirm(`Delete all data for ${member.displayName}? This cannot be undone.`)
     if (!confirmed) return
     deleteMemberData.mutate(member.id)
+  }
+
+  function handleDeactivateMember(member: TroopMember) {
+    const confirmed = window.confirm(`Deactivate ${member.displayName}? They will lose access to this troop until reactivated.`)
+    if (!confirmed) return
+    deactivateMember.mutate({ troopId: member.troopId, memberId: member.id })
+  }
+
+  function handleRemoveMember(member: TroopMember) {
+    const confirmed = window.confirm(`Remove ${member.displayName} from this troop? Their member status will be set to removed.`)
+    if (!confirmed) return
+    removeMember.mutate({ troopId: member.troopId, memberId: member.id })
   }
 
   return (
@@ -268,7 +285,7 @@ export function TroopAdmin() {
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => removeMember.mutate(member.id)}
+                          onClick={() => removeMember.mutate({ troopId: member.troopId, memberId: member.id })}
                           disabled={removeMember.isPending}
                         >
                           Decline
@@ -339,11 +356,19 @@ export function TroopAdmin() {
                         </Button>
                         <Button
                           size="sm"
+                          variant="outline"
+                          onClick={() => handleDeactivateMember(member)}
+                          disabled={deactivateMember.isPending}
+                        >
+                          Deactivate
+                        </Button>
+                        <Button
+                          size="sm"
                           variant="ghost"
-                          onClick={() => removeMember.mutate(member.id)}
+                          onClick={() => handleRemoveMember(member)}
                           disabled={removeMember.isPending}
                         >
-                          <UserCircleMinus className="h-4 w-4 text-destructive" />
+                          Remove
                         </Button>
                       </div>
                     )}

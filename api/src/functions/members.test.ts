@@ -33,6 +33,7 @@ import './members.js'
 
 const handler = registeredHandlers.members as (req: HttpRequest, ctx: any) => Promise<any>
 const deleteDataHandler = registeredHandlers.memberDataDeletion as (req: HttpRequest, ctx: any) => Promise<any>
+const troopMemberStatusHandler = registeredHandlers.troopMemberStatus as (req: HttpRequest, ctx: any) => Promise<any>
 
 function makeReq(opts: {
   method: string
@@ -229,5 +230,88 @@ describe('memberDataDeletion handler — DELETE /members/{id}/data', () => {
       updatedBy: { userId: 'deleted-member', displayName: 'Deleted Member' },
     })
     expect(cosmos.remove).toHaveBeenCalledWith('members', 'member-1', 'troop-42')
+  })
+})
+
+describe('troopMemberStatus handler — PATCH /troops/{troopId}/members/{memberId}', () => {
+  it('returns 403 when caller lacks manageMembers permission', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(scoutAuth)
+
+    const result = await troopMemberStatusHandler(makeReq({
+      method: 'PATCH',
+      params: { troopId: 'troop-42', memberId: 'member-1' },
+      body: { status: 'deactivated' },
+    }), ctx)
+
+    expect(result.status).toBe(403)
+  })
+
+  it('returns 400 when status is not deactivated or removed', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+
+    const result = await troopMemberStatusHandler(makeReq({
+      method: 'PATCH',
+      params: { troopId: 'troop-42', memberId: 'member-1' },
+      body: { status: 'active' },
+    }), ctx)
+
+    expect(result.status).toBe(400)
+    expect(cosmos.update).not.toHaveBeenCalled()
+  })
+
+  it('updates member status to deactivated', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+    vi.mocked(cosmos.queryItems).mockResolvedValueOnce([{
+      id: 'member-1',
+      troopId: 'troop-42',
+      role: 'scout',
+      status: 'active',
+    }])
+    vi.mocked(cosmos.update).mockResolvedValueOnce({
+      id: 'member-1',
+      troopId: 'troop-42',
+      role: 'scout',
+      status: 'deactivated',
+    } as any)
+
+    const result = await troopMemberStatusHandler(makeReq({
+      method: 'PATCH',
+      params: { troopId: 'troop-42', memberId: 'member-1' },
+      body: { status: 'deactivated' },
+    }), ctx)
+
+    expect(result.status).toBeUndefined()
+    expect(cosmos.update).toHaveBeenCalledWith(
+      'members',
+      'member-1',
+      expect.objectContaining({ status: 'deactivated' }),
+      'troop-42',
+    )
+  })
+
+  it('prevents removing the last active troop admin', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+    vi.mocked(cosmos.queryItems)
+      .mockResolvedValueOnce([{
+        id: 'member-1',
+        troopId: 'troop-42',
+        role: 'troopAdmin',
+        status: 'active',
+      }])
+      .mockResolvedValueOnce([{
+        id: 'member-1',
+        troopId: 'troop-42',
+        role: 'troopAdmin',
+        status: 'active',
+      }])
+
+    const result = await troopMemberStatusHandler(makeReq({
+      method: 'PATCH',
+      params: { troopId: 'troop-42', memberId: 'member-1' },
+      body: { status: 'removed' },
+    }), ctx)
+
+    expect(result.status).toBe(400)
+    expect(cosmos.update).not.toHaveBeenCalled()
   })
 })

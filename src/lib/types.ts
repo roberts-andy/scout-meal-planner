@@ -1,7 +1,7 @@
 // ── Auth & Multi-tenancy ──
 
 export type TroopRole = 'troopAdmin' | 'adultLeader' | 'seniorPatrolLeader' | 'patrolLeader' | 'scout'
-export type MemberStatus = 'active' | 'pending'
+export type MemberStatus = 'active' | 'pending' | 'deactivated' | 'removed'
 
 export interface Troop {
   id: string

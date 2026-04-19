@@ -14,6 +14,7 @@ const { useAuthContextMock, membersApiMock, troopsApiMock } = vi.hoisted(() => (
     getMe: vi.fn(),
     create: vi.fn(),
     updateRole: vi.fn(),
+    updateStatus: vi.fn(),
     approve: vi.fn(),
     remove: vi.fn(),
     deleteData: vi.fn(),
@@ -54,9 +55,10 @@ describe('TroopAdmin member data deletion', () => {
     vi.clearAllMocks()
     troopsApiMock.get.mockResolvedValue({ id: 'troop-1', name: 'Troop 1', inviteCode: 'INVITE' })
     membersApiMock.getAll.mockResolvedValue([
-      { id: 'member-1', userId: 'member-user', displayName: 'Scout User', email: 'scout@example.com', role: 'scout', status: 'active' },
+      { id: 'member-1', troopId: 'troop-1', userId: 'member-user', displayName: 'Scout User', email: 'scout@example.com', role: 'scout', status: 'active' },
     ])
     membersApiMock.deleteData.mockResolvedValue(undefined)
+    membersApiMock.updateStatus.mockResolvedValue(undefined)
   })
 
   it('asks for confirmation before deleting all member data', async () => {
@@ -82,5 +84,41 @@ describe('TroopAdmin member data deletion', () => {
     await user.click(screen.getByRole('button', { name: 'Delete All Data' }))
 
     await waitFor(() => expect(membersApiMock.deleteData).toHaveBeenCalledWith('member-1'))
+  })
+
+  it('deactivates a member only after confirmation', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const user = userEvent.setup()
+
+    renderTroopAdmin()
+
+    await waitFor(() => expect(screen.getByText('Scout User')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Deactivate' }))
+
+    expect(confirmSpy).toHaveBeenCalled()
+    expect(membersApiMock.updateStatus).not.toHaveBeenCalled()
+
+    confirmSpy.mockReturnValue(true)
+    await user.click(screen.getByRole('button', { name: 'Deactivate' }))
+
+    await waitFor(() => expect(membersApiMock.updateStatus).toHaveBeenCalledWith('troop-1', 'member-1', 'deactivated'))
+  })
+
+  it('removes a member only after confirmation', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const user = userEvent.setup()
+
+    renderTroopAdmin()
+
+    await waitFor(() => expect(screen.getByText('Scout User')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+
+    expect(confirmSpy).toHaveBeenCalled()
+    expect(membersApiMock.updateStatus).not.toHaveBeenCalled()
+
+    confirmSpy.mockReturnValue(true)
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+
+    await waitFor(() => expect(membersApiMock.updateStatus).toHaveBeenCalledWith('troop-1', 'member-1', 'removed'))
   })
 })
