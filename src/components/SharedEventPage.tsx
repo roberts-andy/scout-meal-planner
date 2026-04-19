@@ -13,6 +13,10 @@ interface SharedEventPageProps {
   token: string
 }
 
+// Shared view reuses existing Event/Recipe display components that expect these fields.
+const SHARED_EVENT_PLACEHOLDER_TROOP_ID = 'shared'
+const SHARED_EVENT_PLACEHOLDER_RECIPE_VERSION = 1
+
 export function SharedEventPage({ token }: SharedEventPageProps) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['shared-event', token],
@@ -23,7 +27,7 @@ export function SharedEventPage({ token }: SharedEventPageProps) {
     if (!data) return null
     return {
       ...data.event,
-      troopId: 'shared',
+      troopId: SHARED_EVENT_PLACEHOLDER_TROOP_ID,
       createdAt: 0,
       updatedAt: 0,
     }
@@ -33,10 +37,10 @@ export function SharedEventPage({ token }: SharedEventPageProps) {
     if (!data) return []
     return data.recipes.map((recipe) => ({
       ...recipe,
-      troopId: 'shared',
+      troopId: SHARED_EVENT_PLACEHOLDER_TROOP_ID,
       createdAt: 0,
       updatedAt: 0,
-      currentVersion: 1,
+      currentVersion: SHARED_EVENT_PLACEHOLDER_RECIPE_VERSION,
       versions: [],
       variations: recipe.variations.map((variation) => ({
         id: variation.id,

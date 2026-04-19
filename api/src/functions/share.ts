@@ -5,9 +5,11 @@ import { checkPermission } from '../middleware/roles.js'
 
 const EVENTS_CONTAINER = 'events'
 const RECIPES_CONTAINER = 'recipes'
+const SHARE_TOKEN_SEGMENTS = 2
+// 2 UUIDs (~256 bits before formatting) keeps tokens practically unguessable for public URLs.
 
 function generateShareToken() {
-  return `${crypto.randomUUID().replace(/-/g, '')}${crypto.randomUUID().replace(/-/g, '')}`
+  return Array.from({ length: SHARE_TOKEN_SEGMENTS }, () => crypto.randomUUID().replace(/-/g, '')).join('')
 }
 
 function getShareUrl(req: HttpRequest, token: string) {
@@ -57,9 +59,11 @@ async function eventShareHandler(req: HttpRequest, context: InvocationContext): 
     }
 
     if (method === 'DELETE') {
-      const { shareToken: _shareToken, shareTokenUpdatedAt: _shareTokenUpdatedAt, ...rest } = existing
+      const nextEvent = { ...existing }
+      delete nextEvent.shareToken
+      delete nextEvent.shareTokenUpdatedAt
       await update(EVENTS_CONTAINER, eventId, {
-        ...rest,
+        ...nextEvent,
         updatedAt: Date.now(),
         updatedBy: { userId: auth.userId, displayName: auth.displayName },
       }, auth.troopId)

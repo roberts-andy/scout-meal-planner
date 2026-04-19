@@ -39,13 +39,25 @@ export function EventDetail({
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [isSharing, setIsSharing] = useState(false)
 
+  const buildShareUrl = (token?: string) => token ? `${window.location.origin}/share/${token}` : null
+
   useEffect(() => {
-    if (event.shareToken) {
-      setShareUrl(`${window.location.origin}/share/${event.shareToken}`)
-      return
+    let cancelled = false
+    eventsApi.getShare(event.id)
+      .then((share) => {
+        if (!cancelled) {
+          setShareUrl(share.shareUrl)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setShareUrl(buildShareUrl(event.shareToken))
+        }
+      })
+    return () => {
+      cancelled = true
     }
-    setShareUrl(null)
-  }, [event.shareToken])
+  }, [event.id, event.shareToken])
 
   const copyToClipboard = async (value: string) => {
     try {
@@ -59,8 +71,9 @@ export function EventDetail({
   const handleCopyShareLink = async () => {
     setIsSharing(true)
     try {
-      const next = shareUrl
-        ? { shareUrl }
+      const current = await eventsApi.getShare(event.id)
+      const next = current.shareUrl
+        ? { shareUrl: current.shareUrl }
         : await eventsApi.regenerateShare(event.id)
       setShareUrl(next.shareUrl)
       const copied = await copyToClipboard(next.shareUrl)
