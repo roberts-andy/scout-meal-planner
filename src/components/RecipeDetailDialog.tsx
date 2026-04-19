@@ -26,6 +26,10 @@ interface RecipeDetailDialogProps {
   onUpdateRecipe: (recipe: Recipe) => void
 }
 
+function getOverallRating(rating: { taste: number; difficulty: number; portionSize: number }) {
+  return (rating.taste + rating.difficulty + rating.portionSize) / 3
+}
+
 export function RecipeDetailDialog({ recipe, recipes, open, onOpenChange, onUpdateRecipe }: RecipeDetailDialogProps) {
   const [showVersionHistory, setShowVersionHistory] = useState(false)
   const { data: recipeFeedback = [] } = useRecipeFeedback(recipe.id, open)
@@ -178,7 +182,7 @@ export function RecipeDetailDialog({ recipe, recipes, open, onOpenChange, onUpda
                             </p>
                           </div>
                           <span className="text-xs text-muted-foreground">
-                            {((entry.rating.taste + entry.rating.difficulty + entry.rating.portionSize) / 3).toFixed(1)} / 5
+                            {getOverallRating(entry.rating).toFixed(1)} / 5
                           </span>
                         </div>
                         {entry.comments && <p className="text-sm">{entry.comments}</p>}
