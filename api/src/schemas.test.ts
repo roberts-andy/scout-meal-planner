@@ -115,8 +115,8 @@ describe('createEventSchema', () => {
     expect(createEventSchema.safeParse(bad).success).toBe(false)
   })
 
-  it('rejects purchasedItems arrays containing only non-strings', () => {
-    const bad = { ...valid, purchasedItems: [123, 456] }
+  it('rejects purchasedItems when null is provided', () => {
+    const bad = { ...valid, purchasedItems: null }
     expect(createEventSchema.safeParse(bad).success).toBe(false)
   })
 
