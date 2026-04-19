@@ -11,7 +11,7 @@ import { EventEquipment } from './EventEquipment'
 import { EventFeedback } from './EventFeedback'
 import { EditEventDialog } from './EditEventDialog'
 import { toast } from 'sonner'
-import { format } from 'date-fns'
+import { canSubmitEventFeedback } from '@/lib/helpers'
 
 interface EventDetailProps {
   event: Event
@@ -39,7 +39,7 @@ export function EventDetail({
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [isSharing, setIsSharing] = useState(false)
-  const feedbackEnabled = event.endDate <= format(new Date(), 'yyyy-MM-dd')
+  const feedbackEnabled = canSubmitEventFeedback(event)
 
   const buildShareUrl = (token?: string) => token ? `${window.location.origin}/share/${token}` : null
 
@@ -231,18 +231,16 @@ export function EventDetail({
             />
           </TabsContent>
 
-          {feedbackEnabled && (
-            <TabsContent value="feedback" className="mt-0">
-              <EventFeedback
-                event={event}
-                recipes={recipes}
-                feedback={feedback}
-                onAddFeedback={onAddFeedback}
-                onUpdateFeedback={onUpdateFeedback}
-                onDeleteFeedback={onDeleteFeedback}
-              />
-            </TabsContent>
-          )}
+          <TabsContent value="feedback" className="mt-0">
+            <EventFeedback
+              event={event}
+              recipes={recipes}
+              feedback={feedback}
+              onAddFeedback={onAddFeedback}
+              onUpdateFeedback={onUpdateFeedback}
+              onDeleteFeedback={onDeleteFeedback}
+            />
+          </TabsContent>
         </Tabs>
       </main>
 

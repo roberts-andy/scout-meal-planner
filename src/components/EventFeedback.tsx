@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { StarRating } from '@/components/StarRating'
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
+import { canSubmitEventFeedback } from '@/lib/helpers'
 
 interface EventFeedbackProps {
   event: Event
@@ -66,7 +67,7 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
         recipe: recipes.find(r => r.id === meal.recipeId)
       }))
   )
-  const feedbackEnabled = event.endDate <= format(new Date(), 'yyyy-MM-dd')
+  const feedbackEnabled = canSubmitEventFeedback(event)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -89,8 +90,6 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
   }
 
   const handleOpenDialog = (feedbackToEdit?: MealFeedback) => {
-    if (!feedbackEnabled) return
-
     if (feedbackToEdit) {
       setEditingFeedback(feedbackToEdit)
       setSelectedMealId(feedbackToEdit.mealId)
@@ -126,8 +125,6 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
   }
 
   const handleSubmit = () => {
-    if (!feedbackEnabled) return
-
     const meal = allMeals.find(m => m.meal.id === selectedMealId)
     if (!meal || !meal.meal.recipeId) return
 
@@ -166,8 +163,6 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
   }
 
   const handleDelete = (feedbackId: string) => {
-    if (!feedbackEnabled) return
-
     onDeleteFeedback(feedbackId)
     setDeleteConfirmId(null)
   }

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   scaleIngredient,
   scaleRecipe,
@@ -9,6 +9,7 @@ import {
   migrateRecipeToVersioning,
   isRecipeInEvent,
   isEventActive,
+  canSubmitEventFeedback,
   getRecipeEventVersion,
   shouldCreateNewVersion,
   calculateRecipeRatings,
@@ -389,6 +390,31 @@ describe('isEventActive', () => {
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T00:00:00`
     const event = makeEvent({ endDate: today })
     expect(isEventActive(event)).toBe(true)
+  })
+})
+
+describe('canSubmitEventFeedback', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('returns false for future events', () => {
+    vi.setSystemTime(new Date('2026-06-30T12:00:00Z'))
+    expect(canSubmitEventFeedback(makeEvent({ endDate: '2026-07-01' }))).toBe(false)
+  })
+
+  it('returns true for events ending today', () => {
+    vi.setSystemTime(new Date('2026-07-01T12:00:00Z'))
+    expect(canSubmitEventFeedback(makeEvent({ endDate: '2026-07-01' }))).toBe(true)
+  })
+
+  it('returns true for past events', () => {
+    vi.setSystemTime(new Date('2026-07-02T12:00:00Z'))
+    expect(canSubmitEventFeedback(makeEvent({ endDate: '2026-07-01' }))).toBe(true)
   })
 })
 

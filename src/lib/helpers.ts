@@ -213,6 +213,19 @@ export function isEventActive(event: Event): boolean {
   return today <= endDate
 }
 
+export function canSubmitEventFeedback(event: Event): boolean {
+  const [year, month, day] = event.endDate.slice(0, 10).split('-').map(Number)
+  const endDateStart = Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day)
+    ? new Date(year, month - 1, day)
+    : (() => {
+        const parsed = new Date(event.endDate)
+        parsed.setHours(0, 0, 0, 0)
+        return parsed
+      })()
+
+  return Date.now() >= endDateStart.getTime()
+}
+
 export function getRecipeEventVersion(recipe: Recipe, eventId: string): RecipeVersion | undefined {
   return recipe.versions.find(v => v.eventId === eventId)
 }
