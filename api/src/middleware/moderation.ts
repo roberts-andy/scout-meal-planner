@@ -98,7 +98,10 @@ export async function moderateTextFields(
       provider: 'azure-content-safety',
     }
   } catch (error) {
-    context.warn('Content moderation check failed; storing with pending moderation status.', error)
+    context.warn(
+      'Content moderation check failed; content will be stored with pending status and hidden from non-admin users until manually reviewed.',
+      error,
+    )
     return {
       status: 'pending',
       flaggedFields: [],
