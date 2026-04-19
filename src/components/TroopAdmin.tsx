@@ -90,7 +90,7 @@ export function TroopAdmin() {
   const troop = troopQuery.data
   const members = (membersQuery.data || []) as TroopMember[]
   const pendingMembers = members.filter((m) => m.status === 'pending')
-  const activeMembers = members.filter((m) => m.status !== 'pending')
+  const nonPendingMembers = members.filter((m) => m.status !== 'pending')
   const appOrigin = typeof window !== 'undefined' ? window.location.origin : ''
   const inviteLink = appOrigin && troop?.inviteCode
     ? `${appOrigin}/join?code=${encodeURIComponent(troop.inviteCode)}`
@@ -293,7 +293,7 @@ export function TroopAdmin() {
       {/* Active Members */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Members ({activeMembers.length})</CardTitle>
+          <CardTitle className="text-lg">Members ({nonPendingMembers.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -307,7 +307,7 @@ export function TroopAdmin() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {activeMembers.map((member) => (
+              {nonPendingMembers.map((member) => (
                 <TableRow key={member.id}>
                   <TableCell>
                     {member.displayName}
