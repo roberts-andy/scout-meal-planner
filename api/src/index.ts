@@ -1,4 +1,5 @@
 import './functions/events.js'
+import './functions/eventPacked.js'
 import './functions/recipes.js'
 import './functions/feedback.js'
 import './functions/troops.js'

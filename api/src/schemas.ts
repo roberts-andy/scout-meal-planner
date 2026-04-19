@@ -88,6 +88,7 @@ export const createEventSchema = z.object({
   startDate: z.string().min(1),
   endDate: z.string().min(1),
   days: z.array(eventDaySchema),
+  packedItems: z.array(z.string()).optional(),
   notes: z.string().optional(),
   hike: z.boolean().optional(),
   highAltitude: z.boolean().optional(),
@@ -98,6 +99,11 @@ export const createEventSchema = z.object({
 })
 
 export const updateEventSchema = createEventSchema
+
+export const togglePackedItemSchema = z.object({
+  item: z.string().min(1),
+  packed: z.boolean(),
+})
 
 export const createRecipeSchema = z.object({
   name: z.string().min(1).max(200),

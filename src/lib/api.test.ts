@@ -72,6 +72,15 @@ describe('eventsApi', () => {
     }))
   })
 
+  it('togglePackedItem patches /events/{id}/packed', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ id: '1', packedItems: ['Skillet'] }))
+    await eventsApi.togglePackedItem('1', 'Skillet', true)
+    expect(mockFetch).toHaveBeenCalledWith('/api/events/1/packed', expect.objectContaining({
+      method: 'PATCH',
+      body: JSON.stringify({ item: 'Skillet', packed: true }),
+    }))
+  })
+
   it('throws on non-ok response', async () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({ error: 'Not found' }, 404))
     await expect(eventsApi.getById('bad')).rejects.toThrow('Not found')

@@ -5,6 +5,7 @@ import {
   createEventSchema,
   createRecipeSchema,
   createFeedbackSchema,
+  togglePackedItemSchema,
   updateMemberSchema,
   validationError,
 } from './schemas.js'
@@ -81,6 +82,14 @@ describe('createEventSchema', () => {
       tentCamping: false,
       notes: 'Bring raincoats',
       description: 'Annual summer camp',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts optional packedItems', () => {
+    const result = createEventSchema.safeParse({
+      ...valid,
+      packedItems: ['Skillet', 'Dutch Oven'],
     })
     expect(result.success).toBe(true)
   })
@@ -238,6 +247,20 @@ describe('updateMemberSchema', () => {
 
   it('rejects invalid status', () => {
     expect(updateMemberSchema.safeParse({ status: 'banned' }).success).toBe(false)
+  })
+})
+
+describe('togglePackedItemSchema', () => {
+  it('accepts valid payload', () => {
+    expect(togglePackedItemSchema.safeParse({ item: 'Skillet', packed: true }).success).toBe(true)
+  })
+
+  it('rejects empty item', () => {
+    expect(togglePackedItemSchema.safeParse({ item: '', packed: true }).success).toBe(false)
+  })
+
+  it('rejects non-boolean packed flag', () => {
+    expect(togglePackedItemSchema.safeParse({ item: 'Skillet', packed: 'yes' }).success).toBe(false)
   })
 })
 
