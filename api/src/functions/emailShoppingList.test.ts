@@ -57,7 +57,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   process.env.SENDGRID_API_KEY = 'test-key'
   process.env.SENDGRID_FROM_EMAIL = 'from@example.com'
-  vi.mocked(cosmos.getById).mockResolvedValue({ id: 'event-1', troopId: 'troop-42' } as any)
+  vi.mocked(cosmos.getById).mockResolvedValue({ id: 'event-1', troopId: 'troop-42', name: 'Campout' } as any)
 })
 
 afterEach(() => {

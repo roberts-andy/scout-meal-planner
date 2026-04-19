@@ -17,7 +17,7 @@ function escapeHtml(value: string): string {
 }
 
 function formatQuantity(quantity: number): string {
-  return Number.isInteger(quantity) ? String(quantity) : String(quantity)
+  return String(quantity)
 }
 
 async function emailShoppingListHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
@@ -43,10 +43,10 @@ async function emailShoppingListHandler(req: HttpRequest, context: InvocationCon
       return { status: 500, jsonBody: { error: 'Email service not configured' } }
     }
 
-    const { recipientEmail, eventName, items } = parsed.data
+    const { recipientEmail, items } = parsed.data
     const resolvedEventName = typeof existingEvent.name === 'string' && existingEvent.name.length > 0
       ? existingEvent.name
-      : eventName
+      : 'Unnamed Event'
     const textRows = items.map((item) => `- ${item.name}: ${formatQuantity(item.quantity)} ${item.unit}`).join('\n')
     const htmlRows = items
       .map((item) => {
