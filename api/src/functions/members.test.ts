@@ -202,11 +202,11 @@ describe('memberDataDeletion handler — DELETE /members/{id}/data', () => {
     expect(feedbackUpdate?.[2]).toMatchObject({
       createdBy: { userId: 'deleted-member', displayName: 'Deleted Member' },
       scoutName: 'Deleted Member',
-      updatedBy: { userId: 'user-1', displayName: 'Admin' },
+      updatedBy: { userId: 'deleted-member', displayName: 'Deleted Member' },
     })
     expect(eventUpdate?.[2]).toMatchObject({
       createdBy: { userId: 'deleted-member', displayName: 'Deleted Member' },
-      updatedBy: { userId: 'user-1', displayName: 'Admin' },
+      updatedBy: { userId: 'deleted-member', displayName: 'Deleted Member' },
     })
     expect(cosmos.remove).toHaveBeenCalledWith('members', 'member-1', 'troop-42')
   })

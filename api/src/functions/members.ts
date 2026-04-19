@@ -9,6 +9,14 @@ const FEEDBACK_CONTAINER = 'feedback'
 const EVENTS_CONTAINER = 'events'
 const DELETED_MEMBER_AUDIT = { userId: 'deleted-member', displayName: 'Deleted Member' }
 
+function isAssociatedWithMember(item: any, memberId: string, userId: string): boolean {
+  return item.memberId === memberId || (userId.length > 0 && (item.createdBy?.userId === userId || item.updatedBy?.userId === userId))
+}
+
+function shouldAnonymizeAuditField(item: any, field: 'createdBy' | 'updatedBy', memberId: string, userId: string): boolean {
+  return item.memberId === memberId || (userId.length > 0 && item[field]?.userId === userId)
+}
+
 async function membersHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const id = req.params.id
   const method = req.method
@@ -202,16 +210,13 @@ async function memberDataDeletionHandler(req: HttpRequest, context: InvocationCo
 
     const feedbackRecords = await queryItems<any>(FEEDBACK_CONTAINER, feedbackQuery, feedbackParams)
     for (const feedback of feedbackRecords) {
-      const fromTargetMember = feedback.memberId === memberId
-        || (hasUserId && (feedback.createdBy?.userId === userId || feedback.updatedBy?.userId === userId))
-      const anonymizedFeedback = {
+      const { memberId: _feedbackMemberId, ...anonymizedFeedback } = {
         ...feedback,
-        createdBy: fromTargetMember ? DELETED_MEMBER_AUDIT : feedback.createdBy,
-        scoutName: fromTargetMember ? 'Deleted Member' : feedback.scoutName,
+        createdBy: shouldAnonymizeAuditField(feedback, 'createdBy', memberId, userId) ? DELETED_MEMBER_AUDIT : feedback.createdBy,
+        updatedBy: shouldAnonymizeAuditField(feedback, 'updatedBy', memberId, userId) ? DELETED_MEMBER_AUDIT : feedback.updatedBy,
+        scoutName: isAssociatedWithMember(feedback, memberId, userId) ? DELETED_MEMBER_AUDIT.displayName : feedback.scoutName,
         updatedAt: Date.now(),
-        updatedBy: { userId: auth.userId, displayName: auth.displayName },
       }
-      delete anonymizedFeedback.memberId
       await update(FEEDBACK_CONTAINER, feedback.id, anonymizedFeedback, auth.troopId)
     }
 
@@ -231,16 +236,14 @@ async function memberDataDeletionHandler(req: HttpRequest, context: InvocationCo
 
     const events = await queryItems<any>(EVENTS_CONTAINER, eventQuery, eventParams)
     for (const event of events) {
-      const anonymizedEvent = { ...event }
-      if ((anonymizedEvent.createdBy?.userId === userId && hasUserId) || event.memberId === memberId) {
+      const { memberId: _eventMemberId, ...anonymizedEvent } = { ...event }
+      if (shouldAnonymizeAuditField(event, 'createdBy', memberId, userId)) {
         anonymizedEvent.createdBy = DELETED_MEMBER_AUDIT
       }
-      if ((anonymizedEvent.updatedBy?.userId === userId && hasUserId) || event.memberId === memberId) {
+      if (shouldAnonymizeAuditField(event, 'updatedBy', memberId, userId)) {
         anonymizedEvent.updatedBy = DELETED_MEMBER_AUDIT
       }
-      delete anonymizedEvent.memberId
       anonymizedEvent.updatedAt = Date.now()
-      anonymizedEvent.updatedBy = { userId: auth.userId, displayName: auth.displayName }
       await update(EVENTS_CONTAINER, event.id, anonymizedEvent, auth.troopId)
     }
 
