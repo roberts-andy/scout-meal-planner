@@ -117,6 +117,8 @@ export const membersApi = {
     request<TroopMember>(`/members/${id}`, { method: 'PUT', body: JSON.stringify({ status: 'active' }) }),
   remove: (id: string) =>
     request<void>(`/members/${id}`, { method: 'DELETE' }),
+  deleteData: (id: string) =>
+    request<void>(`/members/${id}/data`, { method: 'DELETE' }),
 }
 
 export const shareApi = {

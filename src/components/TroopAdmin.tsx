@@ -53,6 +53,15 @@ export function TroopAdmin() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members'] }),
   })
 
+  const deleteMemberData = useMutation({
+    mutationFn: (id: string) => membersApi.deleteData(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['members'] })
+      queryClient.invalidateQueries({ queryKey: ['events'] })
+      queryClient.invalidateQueries({ queryKey: ['feedback'] })
+    },
+  })
+
   const createMember = useMutation({
     mutationFn: (member: { displayName: string; email: string; role: string }) => membersApi.create(member),
     onSuccess: () => {
@@ -93,6 +102,12 @@ export function TroopAdmin() {
     } catch (err) {
       setAddMemberError(err instanceof Error ? err.message : 'An unexpected error occurred while adding member')
     }
+  }
+
+  function handleDeleteMemberData(member: TroopMember) {
+    const confirmed = window.confirm(`Delete all data for ${member.displayName}? This cannot be undone.`)
+    if (!confirmed) return
+    deleteMemberData.mutate(member.id)
   }
 
   return (
@@ -290,14 +305,24 @@ export function TroopAdmin() {
                   </TableCell>
                   <TableCell>
                     {member.userId !== user?.userId && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => removeMember.mutate(member.id)}
-                        disabled={removeMember.isPending}
-                      >
-                        <UserCircleMinus className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeleteMemberData(member)}
+                          disabled={deleteMemberData.isPending}
+                        >
+                          Delete All Data
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeMember.mutate(member.id)}
+                          disabled={removeMember.isPending}
+                        >
+                          <UserCircleMinus className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     )}
                   </TableCell>
                 </TableRow>

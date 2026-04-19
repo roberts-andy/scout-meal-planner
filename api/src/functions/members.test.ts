@@ -32,6 +32,7 @@ import { getTroopContext } from '../middleware/auth.js'
 import './members.js'
 
 const handler = registeredHandlers.members as (req: HttpRequest, ctx: any) => Promise<any>
+const deleteDataHandler = registeredHandlers.memberDataDeletion as (req: HttpRequest, ctx: any) => Promise<any>
 
 function makeReq(opts: {
   method: string
@@ -147,5 +148,86 @@ describe('members handler — POST', () => {
     expect(created.userId).toBe('')
     expect(created.joinedAt).toEqual(expect.any(Number))
     expect(created.role).toBe('adultLeader')
+  })
+})
+
+describe('memberDataDeletion handler — DELETE /members/{id}/data', () => {
+  it('returns 401 when caller is unauthenticated', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(null)
+
+    const result = await deleteDataHandler(makeReq({ method: 'DELETE', params: { id: 'member-1' } }), ctx)
+
+    expect(result.status).toBe(401)
+  })
+
+  it('returns 403 when caller lacks manageTroop permission', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(scoutAuth)
+
+    const result = await deleteDataHandler(makeReq({ method: 'DELETE', params: { id: 'member-1' } }), ctx)
+
+    expect(result.status).toBe(403)
+    expect(cosmos.remove).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 when target member does not exist in troop', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+    vi.mocked(cosmos.queryItems).mockResolvedValueOnce([])
+
+    const result = await deleteDataHandler(makeReq({ method: 'DELETE', params: { id: 'member-1' } }), ctx)
+
+    expect(result.status).toBe(404)
+    expect(cosmos.remove).not.toHaveBeenCalled()
+  })
+
+  it('anonymizes feedback and event audit fields, then removes member document', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+    vi.mocked(cosmos.queryItems)
+      .mockResolvedValueOnce([{ id: 'member-1', troopId: 'troop-42', userId: 'user-2' }])
+      .mockResolvedValueOnce([{
+        id: 'feedback-1',
+        troopId: 'troop-42',
+        memberId: 'member-1',
+        scoutName: 'Scout',
+        createdBy: { userId: 'user-2', displayName: 'Scout' },
+        updatedBy: { userId: 'user-2', displayName: 'Scout' },
+      }])
+      .mockResolvedValueOnce([{
+        id: 'event-1',
+        troopId: 'troop-42',
+        createdBy: { userId: 'user-2', displayName: 'Scout' },
+        updatedBy: { userId: 'user-2', displayName: 'Scout' },
+        updatedAt: 1,
+      }])
+
+    const result = await deleteDataHandler(makeReq({ method: 'DELETE', params: { id: 'member-1' } }), ctx)
+
+    expect(result.status).toBe(204)
+    expect(cosmos.queryItems).toHaveBeenCalledTimes(3)
+    expect(cosmos.queryItems).toHaveBeenNthCalledWith(
+      2,
+      'feedback',
+      expect.stringContaining('c.memberId = @memberId'),
+      expect.arrayContaining([
+        { name: '@troopId', value: 'troop-42' },
+        { name: '@memberId', value: 'member-1' },
+        { name: '@userId', value: 'user-2' },
+      ]),
+    )
+
+    const feedbackUpdate = vi.mocked(cosmos.update).mock.calls.find(([container]) => container === 'feedback')
+    const eventUpdate = vi.mocked(cosmos.update).mock.calls.find(([container]) => container === 'events')
+    expect(feedbackUpdate).toBeDefined()
+    expect(eventUpdate).toBeDefined()
+    expect((feedbackUpdate?.[2] as any).memberId).toBeUndefined()
+    expect(feedbackUpdate?.[2]).toMatchObject({
+      createdBy: { userId: 'deleted-member', displayName: 'Deleted Member' },
+      scoutName: 'Deleted Member',
+      updatedBy: { userId: 'deleted-member', displayName: 'Deleted Member' },
+    })
+    expect(eventUpdate?.[2]).toMatchObject({
+      createdBy: { userId: 'deleted-member', displayName: 'Deleted Member' },
+      updatedBy: { userId: 'deleted-member', displayName: 'Deleted Member' },
+    })
+    expect(cosmos.remove).toHaveBeenCalledWith('members', 'member-1', 'troop-42')
   })
 })
