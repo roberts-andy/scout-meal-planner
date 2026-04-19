@@ -16,6 +16,12 @@ export function EventShoppingList({ event, recipes }: EventShoppingListProps) {
 
   const shoppingList = generateShoppingList(event, recipes, checkedItems)
   const categorized = categorizeIngredients(shoppingList)
+  const totalEstimatedCost = shoppingList.reduce((sum, item) => sum + (item.ingredient.estimatedPrice ?? 0), 0)
+
+  const formatPrice = (price?: number) => {
+    if (price === undefined) return '—'
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price)
+  }
 
   const toggleItem = (key: string) => {
     const newChecked = new Set(checkedItems)
@@ -58,6 +64,11 @@ export function EventShoppingList({ event, recipes }: EventShoppingListProps) {
               <Card>
                 <CardContent className="pt-6">
                   <div className="space-y-3">
+                    <div className="grid grid-cols-[1fr_auto_auto] items-center px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <span>Item</span>
+                      <span className="text-right">Quantity</span>
+                      <span className="w-20 text-right">Price</span>
+                    </div>
                     {items.map((item) => {
                       const key = `${item.ingredient.name.toLowerCase()}-${item.ingredient.unit}`
                       const isChecked = checkedItems.has(key)
@@ -65,7 +76,7 @@ export function EventShoppingList({ event, recipes }: EventShoppingListProps) {
                       return (
                         <div
                           key={key}
-                          className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                          className="grid grid-cols-[auto_1fr_auto_auto] items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
                         >
                           <Checkbox
                             id={key}
@@ -82,15 +93,13 @@ export function EventShoppingList({ event, recipes }: EventShoppingListProps) {
                             >
                               {item.ingredient.name}
                             </label>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <span>
-                                {formatQuantity(item.totalQuantity, item.ingredient.unit)}{' '}
-                                {item.ingredient.unit !== 'to-taste' && item.ingredient.unit}
-                              </span>
-                              <span>•</span>
-                              <span className="text-xs">{item.recipes.join(', ')}</span>
-                            </div>
+                            <div className="text-xs text-muted-foreground">{item.recipes.join(', ')}</div>
                           </div>
+                          <span className="text-sm text-muted-foreground text-right">
+                            {formatQuantity(item.totalQuantity, item.ingredient.unit)}{' '}
+                            {item.ingredient.unit !== 'to-taste' && item.ingredient.unit}
+                          </span>
+                          <span className="w-20 text-sm text-right">{formatPrice(item.ingredient.estimatedPrice)}</span>
                         </div>
                       )
                     })}
@@ -101,6 +110,15 @@ export function EventShoppingList({ event, recipes }: EventShoppingListProps) {
           </AccordionItem>
         ))}
       </Accordion>
+
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between text-sm font-medium">
+            <span>Total Estimated Cost</span>
+            <span>{formatPrice(totalEstimatedCost)}</span>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

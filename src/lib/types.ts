@@ -57,6 +57,7 @@ export interface Ingredient {
   name: string
   quantity: number
   unit: IngredientUnit
+  estimatedPrice?: number
   category?: string
   notes?: string
 }

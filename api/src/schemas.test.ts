@@ -195,6 +195,16 @@ describe('createRecipeSchema', () => {
     const bad = { ...valid, ingredients: [{ id: 'i1', name: 'Flour', quantity: 2, unit: 'gallon' }] }
     expect(createRecipeSchema.safeParse(bad).success).toBe(false)
   })
+
+  it('accepts optional ingredient estimatedPrice', () => {
+    const withPrice = { ...valid, ingredients: [{ id: 'i1', name: 'Flour', quantity: 2, unit: 'cup', estimatedPrice: 4.99 }] }
+    expect(createRecipeSchema.safeParse(withPrice).success).toBe(true)
+  })
+
+  it('rejects negative ingredient estimatedPrice', () => {
+    const bad = { ...valid, ingredients: [{ id: 'i1', name: 'Flour', quantity: 2, unit: 'cup', estimatedPrice: -1 }] }
+    expect(createRecipeSchema.safeParse(bad).success).toBe(false)
+  })
 })
 
 // ── createFeedbackSchema ──

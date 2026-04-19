@@ -16,6 +16,7 @@ const ingredientSchema = z.object({
   name: z.string().min(1),
   quantity: z.number().min(0),
   unit: ingredientUnit,
+  estimatedPrice: z.number().min(0).optional(),
   category: z.string().optional(),
   notes: z.string().optional(),
 })

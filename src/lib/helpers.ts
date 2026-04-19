@@ -6,7 +6,10 @@ export function scaleIngredient(ingredient: Ingredient, originalServings: number
   
   return {
     ...ingredient,
-    quantity: roundToFraction(scaledQuantity)
+    quantity: roundToFraction(scaledQuantity),
+    estimatedPrice: ingredient.estimatedPrice !== undefined
+      ? Math.round(ingredient.estimatedPrice * scaleFactor * 100) / 100
+      : undefined
   }
 }
 
@@ -101,6 +104,11 @@ export function generateShoppingList(
         if (ingredientMap.has(key)) {
           const existing = ingredientMap.get(key)!
           existing.totalQuantity += ingredient.quantity
+          if (ingredient.estimatedPrice !== undefined) {
+            existing.ingredient.estimatedPrice = Math.round(
+              ((existing.ingredient.estimatedPrice ?? 0) + ingredient.estimatedPrice) * 100
+            ) / 100
+          }
           if (!existing.recipes.includes(recipe.name)) {
             existing.recipes.push(recipe.name)
           }
