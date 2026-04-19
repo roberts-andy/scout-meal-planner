@@ -7,6 +7,7 @@ import { Backpack } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { eventsApi } from '@/lib/api'
+import { cn } from '@/lib/utils'
 
 interface EventEquipmentProps {
   event: Event
@@ -56,6 +57,7 @@ export function EventEquipment({ event, recipes }: EventEquipmentProps) {
       queryClient.setQueryData<Event[]>(['events'], (old) =>
         (old || []).map((existing) => (existing.id === updatedEvent.id ? updatedEvent : existing))
       )
+      queryClient.setQueryData<Event>(['events', updatedEvent.id], updatedEvent)
     },
   })
 
@@ -100,7 +102,10 @@ export function EventEquipment({ event, recipes }: EventEquipmentProps) {
                     />
                     <label
                       htmlFor={itemId}
-                      className={`font-medium cursor-pointer ${packedItems.has(item) ? 'line-through text-muted-foreground' : ''}`}
+                      className={cn(
+                        'font-medium cursor-pointer',
+                        packedItems.has(item) && 'line-through text-muted-foreground'
+                      )}
                     >
                       {item}
                     </label>
