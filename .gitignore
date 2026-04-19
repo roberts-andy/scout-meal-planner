@@ -34,3 +34,5 @@ pids
 api/local.settings.json
 api/dist/
 api/node_modules/
+
+.squad/
