@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TroopAdmin } from './TroopAdmin'
 
-const { useAuthContextMock, membersApiMock, troopsApiMock } = vi.hoisted(() => ({
+const { useAuthContextMock, membersApiMock, troopsApiMock, adminApiMock } = vi.hoisted(() => ({
   useAuthContextMock: vi.fn(() => ({
     user: { userId: 'admin-user', email: 'admin@example.com', displayName: 'Admin' },
     role: 'troopAdmin',
@@ -24,6 +24,10 @@ const { useAuthContextMock, membersApiMock, troopsApiMock } = vi.hoisted(() => (
     update: vi.fn(),
     join: vi.fn(),
   },
+  adminApiMock: {
+    getFlaggedContent: vi.fn(),
+    reviewFlaggedContent: vi.fn(),
+  },
 }))
 
 vi.mock('./AuthProvider', () => ({
@@ -33,6 +37,7 @@ vi.mock('./AuthProvider', () => ({
 vi.mock('@/lib/api', () => ({
   membersApi: membersApiMock,
   troopsApi: troopsApiMock,
+  adminApi: adminApiMock,
 }))
 
 function renderTroopAdmin() {
@@ -58,6 +63,8 @@ describe('TroopAdmin member data deletion', () => {
       { id: 'member-2', userId: 'member-user-2', displayName: 'Inactive User', email: 'inactive@example.com', role: 'adultLeader', status: 'deactivated' },
     ])
     membersApiMock.deleteData.mockResolvedValue(undefined)
+    adminApiMock.getFlaggedContent.mockResolvedValue([])
+    adminApiMock.reviewFlaggedContent.mockResolvedValue({})
   })
 
   it('asks for confirmation before deleting all member data', async () => {
@@ -92,5 +99,61 @@ describe('TroopAdmin member data deletion', () => {
     expect(screen.getByText('Inactive User')).toBeInTheDocument()
     expect(screen.getByText('Active')).toBeInTheDocument()
     expect(screen.getByText('Deactivated')).toBeInTheDocument()
+  })
+
+  it('shows flagged content and allows approving it', async () => {
+    const user = userEvent.setup()
+    adminApiMock.getFlaggedContent.mockResolvedValueOnce([
+      {
+        id: 'feedback:f1',
+        contentId: 'f1',
+        contentType: 'feedback',
+        flagReason: 'Flagged fields: comments',
+        flaggedAt: 1700000000000,
+        context: { comments: 'Original comment' },
+      },
+    ])
+
+    renderTroopAdmin()
+
+    await waitFor(() => expect(screen.getByText('Flagged Content Review')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Flagged fields: comments')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: 'Approve' }))
+
+    await waitFor(() =>
+      expect(adminApiMock.reviewFlaggedContent).toHaveBeenCalledWith('feedback:f1', { action: 'approve', edits: undefined })
+    )
+  })
+
+  it('allows editing flagged content and submitting edit action', async () => {
+    const user = userEvent.setup()
+    adminApiMock.getFlaggedContent.mockResolvedValueOnce([
+      {
+        id: 'recipe:r1',
+        contentId: 'r1',
+        contentType: 'recipe',
+        flagReason: 'Flagged fields: name',
+        flaggedAt: 1700000000000,
+        context: { name: 'Bad Recipe Name' },
+      },
+    ])
+
+    renderTroopAdmin()
+
+    await waitFor(() => expect(screen.getByText('Recipe: Bad Recipe Name')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+
+    const input = await screen.findByLabelText('Edit flagged content recipe:r1')
+    await user.clear(input)
+    await user.type(input, 'Updated Recipe Name')
+    await user.click(screen.getByRole('button', { name: 'Save Edit' }))
+
+    await waitFor(() =>
+      expect(adminApiMock.reviewFlaggedContent).toHaveBeenCalledWith('recipe:r1', {
+        action: 'edit',
+        edits: { name: 'Updated Recipe Name' },
+      })
+    )
   })
 })
