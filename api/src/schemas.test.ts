@@ -115,6 +115,11 @@ describe('createEventSchema', () => {
     expect(createEventSchema.safeParse(bad).success).toBe(false)
   })
 
+  it('rejects purchasedItems arrays containing only non-strings', () => {
+    const bad = { ...valid, purchasedItems: [123, 456] }
+    expect(createEventSchema.safeParse(bad).success).toBe(false)
+  })
+
   it('rejects negative scoutCount', () => {
     const bad = { ...valid, days: [{ date: '2026-07-01', meals: [{ id: 'm1', type: 'breakfast', scoutCount: -1 }] }] }
     expect(createEventSchema.safeParse(bad).success).toBe(false)

@@ -16,8 +16,17 @@ export function EventShoppingList({ event, recipes, onUpdateEvent }: EventShoppi
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set(event.purchasedItems || []))
 
   useEffect(() => {
-    setCheckedItems(new Set(event.purchasedItems || []))
-  }, [event.id])
+    const nextChecked = new Set(event.purchasedItems || [])
+    setCheckedItems((prevChecked) => {
+      if (
+        prevChecked.size === nextChecked.size &&
+        Array.from(nextChecked).every((item) => prevChecked.has(item))
+      ) {
+        return prevChecked
+      }
+      return nextChecked
+    })
+  }, [event.id, event.purchasedItems])
 
   const shoppingList = generateShoppingList(event, recipes, checkedItems)
   const categorized = categorizeIngredients(shoppingList)
