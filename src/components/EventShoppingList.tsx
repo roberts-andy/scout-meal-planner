@@ -5,6 +5,20 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { generateShoppingList, categorizeIngredients, formatQuantity } from '@/lib/helpers'
 import { ShoppingCart } from '@phosphor-icons/react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { eventsApi } from '@/lib/api'
+import { toast } from 'sonner'
 
 interface EventShoppingListProps {
   event: Event
@@ -13,6 +27,9 @@ interface EventShoppingListProps {
 
 export function EventShoppingList({ event, recipes }: EventShoppingListProps) {
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
+  const [recipientEmail, setRecipientEmail] = useState('')
+  const [isSendingEmail, setIsSendingEmail] = useState(false)
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
 
   const shoppingList = generateShoppingList(event, recipes, checkedItems)
   const categorized = categorizeIngredients(shoppingList)
@@ -33,6 +50,35 @@ export function EventShoppingList({ event, recipes }: EventShoppingListProps) {
     setCheckedItems(newChecked)
   }
 
+  const handleSendEmail = async () => {
+    const email = recipientEmail.trim()
+    if (!email) {
+      toast.error('Recipient email is required')
+      return
+    }
+
+    setIsSendingEmail(true)
+    try {
+      await eventsApi.emailShoppingList(event.id, {
+        recipientEmail: email,
+        items: shoppingList.map((item) => ({
+          name: item.ingredient.name,
+          quantity: item.totalQuantity,
+          unit: item.ingredient.unit,
+        })),
+      })
+      toast.success('Shopping list emailed')
+      setIsEmailDialogOpen(false)
+      setRecipientEmail('')
+    } catch (err) {
+      toast.error('Failed to email shopping list', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      })
+    } finally {
+      setIsSendingEmail(false)
+    }
+  }
+
   if (shoppingList.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-6">
@@ -48,10 +94,43 @@ export function EventShoppingList({ event, recipes }: EventShoppingListProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold mb-2">Shopping List</h2>
-        <p className="text-muted-foreground">
-          {checkedItems.size} of {shoppingList.length} items checked
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-semibold mb-2">Shopping List</h2>
+            <p className="text-muted-foreground">
+              {checkedItems.size} of {shoppingList.length} items checked
+            </p>
+          </div>
+          <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">Email List</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Email shopping list</DialogTitle>
+                <DialogDescription>
+                  Send this shopping list to anyone by entering their email address.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2">
+                <Label htmlFor="shopping-list-recipient-email">Recipient email</Label>
+                <Input
+                  id="shopping-list-recipient-email"
+                  type="email"
+                  placeholder="name@example.com"
+                  value={recipientEmail}
+                  onChange={(e) => setRecipientEmail(e.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsEmailDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleSendEmail} disabled={isSendingEmail}>
+                  {isSendingEmail ? 'Sending…' : 'Send Email'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Accordion type="multiple" defaultValue={Array.from(categorized.keys())} className="w-full">

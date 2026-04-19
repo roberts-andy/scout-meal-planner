@@ -107,6 +107,17 @@ export const togglePackedItemSchema = z.object({
   packed: z.boolean(),
 })
 
+const shoppingListEmailItemSchema = z.object({
+  name: z.string().min(1).max(200),
+  quantity: z.number().min(0),
+  unit: z.string().min(1).max(50),
+})
+
+export const emailShoppingListSchema = z.object({
+  recipientEmail: z.string().email(),
+  items: z.array(shoppingListEmailItemSchema).min(1),
+})
+
 export const createRecipeSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().optional(),
