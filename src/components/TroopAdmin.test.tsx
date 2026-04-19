@@ -93,6 +93,7 @@ describe('TroopAdmin member data deletion', () => {
     await waitFor(() => expect(screen.getByText('Scout User')).toBeInTheDocument())
     expect(screen.queryByText('Inactive User')).not.toBeInTheDocument()
     expect(screen.getByText('Active')).toBeInTheDocument()
+    expect(screen.queryByText('Deactivated')).not.toBeInTheDocument()
   })
 
   it('shows deactivate confirmation dialog and does not call API on cancel', async () => {
