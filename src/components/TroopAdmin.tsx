@@ -53,6 +53,11 @@ export function TroopAdmin() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members'] }),
   })
 
+  const declineMember = useMutation({
+    mutationFn: (id: string) => membersApi.remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members'] }),
+  })
+
   const deactivateMember = useMutation({
     mutationFn: ({ troopId, memberId }: { troopId: string; memberId: string }) => membersApi.updateStatus(troopId, memberId, 'deactivated'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members'] }),
@@ -285,8 +290,8 @@ export function TroopAdmin() {
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => removeMember.mutate({ troopId: member.troopId, memberId: member.id })}
-                          disabled={removeMember.isPending}
+                          onClick={() => declineMember.mutate(member.id)}
+                          disabled={declineMember.isPending}
                         >
                           Decline
                         </Button>

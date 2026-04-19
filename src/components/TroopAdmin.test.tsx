@@ -58,7 +58,15 @@ describe('TroopAdmin member data deletion', () => {
       { id: 'member-1', troopId: 'troop-1', userId: 'member-user', displayName: 'Scout User', email: 'scout@example.com', role: 'scout', status: 'active' },
     ])
     membersApiMock.deleteData.mockResolvedValue(undefined)
-    membersApiMock.updateStatus.mockResolvedValue(undefined)
+    membersApiMock.updateStatus.mockResolvedValue({
+      id: 'member-1',
+      troopId: 'troop-1',
+      userId: 'member-user',
+      displayName: 'Scout User',
+      email: 'scout@example.com',
+      role: 'scout',
+      status: 'active',
+    })
   })
 
   it('asks for confirmation before deleting all member data', async () => {

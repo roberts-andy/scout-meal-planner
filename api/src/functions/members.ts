@@ -34,7 +34,8 @@ async function membersHandler(req: HttpRequest, context: InvocationContext): Pro
     if (method === 'GET' && !id) {
       const members = await queryItems(
         CONTAINER,
-        'SELECT * FROM c WHERE c.troopId = @troopId AND (NOT IS_DEFINED(c.status) OR c.status != "removed")',
+        // Keep legacy members with missing status visible while excluding explicitly removed records.
+        'SELECT * FROM c WHERE c.troopId = @troopId AND (NOT IS_DEFINED(c.status) OR c.status IN ("active", "pending", "deactivated"))',
         [{ name: '@troopId', value: auth.troopId }]
       )
       return { jsonBody: members }
