@@ -131,6 +131,31 @@ describe('TroopAdmin member data deletion', () => {
     })
   })
 
+  it('shows flagged content count badge when items are flagged', async () => {
+    adminApiMock.getFlaggedContent.mockResolvedValueOnce([
+      {
+        id: 'feedback:f1',
+        contentId: 'f1',
+        contentType: 'feedback',
+        flagReason: 'Flagged fields: comments',
+        flaggedAt: 1700000000000,
+        context: { comments: 'Bad comment' },
+      },
+      {
+        id: 'recipe:r1',
+        contentId: 'r1',
+        contentType: 'recipe',
+        flagReason: 'Flagged fields: name',
+        flaggedAt: 1700000000000,
+        context: { name: 'Bad name' },
+      },
+    ])
+
+    renderTroopAdmin()
+
+    await waitFor(() => expect(screen.getByText('2')).toBeInTheDocument())
+  })
+
   it('shows flagged content and allows approving it', async () => {
     const user = userEvent.setup()
     adminApiMock.getFlaggedContent.mockResolvedValueOnce([

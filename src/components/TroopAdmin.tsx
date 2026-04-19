@@ -461,7 +461,12 @@ export function TroopAdmin() {
       {/* Flagged Content Review */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Flagged Content Review</CardTitle>
+          <CardTitle className="text-lg">
+            Flagged Content Review
+            {(flaggedContentQuery.data || []).length > 0 && (
+              <Badge variant="destructive" className="ml-2">{flaggedContentQuery.data!.length}</Badge>
+            )}
+          </CardTitle>
           <CardDescription>Review content flagged by moderation</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
