@@ -54,6 +54,11 @@ export const eventsApi = {
     request<Event>('/events', { method: 'POST', body: JSON.stringify(event) }),
   update: (event: Event) =>
     request<Event>(`/events/${event.id}`, { method: 'PUT', body: JSON.stringify(event) }),
+  togglePackedItem: (eventId: string, item: string, packed: boolean) =>
+    request<Event>(`/events/${eventId}/packed`, {
+      method: 'PATCH',
+      body: JSON.stringify({ item, packed }),
+    }),
   delete: (id: string) =>
     request<void>(`/events/${id}`, { method: 'DELETE' }),
 }
