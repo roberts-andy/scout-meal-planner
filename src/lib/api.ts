@@ -67,6 +67,18 @@ export const eventsApi = {
     request<{ shareToken: string; shareUrl: string }>(`/events/${id}/share`, { method: 'POST' }),
   revokeShare: (id: string) =>
     request<void>(`/events/${id}/share`, { method: 'DELETE' }),
+  emailShoppingList: (
+    id: string,
+    payload: {
+      recipientEmail: string
+      eventName: string
+      items: Array<{ name: string; quantity: number; unit: string }>
+    }
+  ) =>
+    request<{ message: string }>(`/events/${id}/shopping-list/email`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 }
 
 // Recipes

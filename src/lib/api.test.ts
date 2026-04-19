@@ -101,6 +101,20 @@ describe('eventsApi', () => {
       method: 'DELETE',
     }))
   })
+
+  it('emailShoppingList posts to /events/{id}/shopping-list/email', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ message: 'sent' }, 202))
+    const payload = {
+      recipientEmail: 'parent@example.com',
+      eventName: 'Campout',
+      items: [{ name: 'Beans', quantity: 2, unit: 'can' }],
+    }
+    await eventsApi.emailShoppingList('1', payload)
+    expect(mockFetch).toHaveBeenCalledWith('/api/events/1/shopping-list/email', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }))
+  })
 })
 
 // ── Recipes API ──
