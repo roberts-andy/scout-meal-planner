@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Copy, UserCircleMinus, CheckCircle } from '@phosphor-icons/react'
-import type { TroopMember, TroopRole } from '@/lib/types'
+import type { MemberStatus, TroopMember, TroopRole } from '@/lib/types'
 
 const roleLabels: Record<TroopRole, string> = {
   troopAdmin: 'Troop Admin',
@@ -19,6 +19,13 @@ const roleLabels: Record<TroopRole, string> = {
   seniorPatrolLeader: 'Sr. Patrol Leader',
   patrolLeader: 'Patrol Leader',
   scout: 'Scout',
+}
+
+const memberStatusLabels: Record<MemberStatus, string> = {
+  active: 'Active',
+  pending: 'Pending',
+  deactivated: 'Deactivated',
+  removed: 'Removed',
 }
 
 const allRoles: TroopRole[] = ['troopAdmin', 'adultLeader', 'seniorPatrolLeader', 'patrolLeader', 'scout']
@@ -83,7 +90,7 @@ export function TroopAdmin() {
   const troop = troopQuery.data
   const members = (membersQuery.data || []) as TroopMember[]
   const pendingMembers = members.filter((m) => m.status === 'pending')
-  const activeMembers = members.filter((m) => m.status === 'active')
+  const activeMembers = members.filter((m) => m.status !== 'pending')
   const appOrigin = typeof window !== 'undefined' ? window.location.origin : ''
   const inviteLink = appOrigin && troop?.inviteCode
     ? `${appOrigin}/join?code=${encodeURIComponent(troop.inviteCode)}`
@@ -295,6 +302,7 @@ export function TroopAdmin() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -325,6 +333,11 @@ export function TroopAdmin() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={member.status === 'active' ? 'default' : 'secondary'}>
+                      {memberStatusLabels[member.status]}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     {member.userId !== user?.userId && (

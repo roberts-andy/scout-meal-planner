@@ -111,6 +111,11 @@ describe('getTroopContext', () => {
     vi.mocked(queryItems).mockResolvedValueOnce([])
     const result = await getTroopContext(makeRequest('Bearer valid'), ctx)
     expect(result).toBeNull()
+    expect(queryItems).toHaveBeenCalledWith(
+      'members',
+      'SELECT * FROM c WHERE c.userId = @userId AND c.status = "active"',
+      [{ name: '@userId', value: 'user-1' }],
+    )
   })
 
   it('returns troop context when membership exists', async () => {
@@ -130,6 +135,25 @@ describe('getTroopContext', () => {
       troopId: 'troop-42',
       role: 'troopAdmin',
     })
+  })
+
+  it('returns null for deactivated/removed members because only active status is queried', async () => {
+    vi.mocked(jwtVerify).mockResolvedValueOnce({
+      payload: { sub: 'user-1', name: 'Alice', preferred_username: 'alice@example.com' },
+      protectedHeader: {} as any,
+      key: {} as any,
+    })
+    vi.mocked(queryItems).mockResolvedValue([])
+
+    const result = await getTroopContext(makeRequest('Bearer valid'), ctx)
+
+    expect(result).toBeNull()
+    expect(queryItems).toHaveBeenNthCalledWith(
+      1,
+      'members',
+      'SELECT * FROM c WHERE c.userId = @userId AND c.status = "active"',
+      [{ name: '@userId', value: 'user-1' }],
+    )
   })
 })
 
