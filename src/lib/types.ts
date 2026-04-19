@@ -107,6 +107,7 @@ export interface Meal {
   id: string
   type: MealType
   course?: MealCourse
+  dietaryNotes?: string
   name?: string
   recipeId?: string
   scoutCount: number

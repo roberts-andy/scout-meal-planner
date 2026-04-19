@@ -48,6 +48,7 @@ const mealSchema = z.object({
   id: z.string(),
   type: mealType,
   course: mealCourse.optional(),
+  dietaryNotes: z.string().optional(),
   name: z.string().optional(),
   recipeId: z.string().optional(),
   scoutCount: z.number().int().min(0),

@@ -43,6 +43,11 @@ describe('EventSchedule meal flags', () => {
     await user.click(timeConstrained)
     expect(trailside).toHaveAttribute('aria-checked', 'true')
     expect(timeConstrained).toHaveAttribute('aria-checked', 'true')
+    await user.type(screen.getByLabelText(/dietary notes \(optional\)/i), 'Nut allergy - avoid peanuts')
+
+    expect(
+      screen.getByText('Dietary notes for recipe selection: Nut allergy - avoid peanuts')
+    ).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /^add meal$/i }))
 
@@ -51,10 +56,11 @@ describe('EventSchedule meal flags', () => {
     expect(updatedEvent.days[0].meals[0]).toMatchObject({
       isTrailside: true,
       isTimeConstrained: true,
+      dietaryNotes: 'Nut allergy - avoid peanuts',
     })
   })
 
-  it('shows meal parameter badges in schedule view', () => {
+  it('shows meal parameter badges and dietary notes in schedule view', () => {
     const eventWithFlags = {
       ...baseEvent,
       days: [{
@@ -65,6 +71,7 @@ describe('EventSchedule meal flags', () => {
           scoutCount: 8,
           isTrailside: true,
           isTimeConstrained: true,
+          dietaryNotes: 'Vegetarian option needed',
         }],
       }],
     }
@@ -80,5 +87,7 @@ describe('EventSchedule meal flags', () => {
 
     expect(screen.getByText('Trailside')).toBeInTheDocument()
     expect(screen.getByText('Time-Constrained')).toBeInTheDocument()
+    expect(screen.getByText('Dietary Notes')).toBeInTheDocument()
+    expect(screen.getByText('Vegetarian option needed')).toBeInTheDocument()
   })
 })
