@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { membersApi, troopsApi } from '@/lib/api'
+import { adminApi, membersApi, troopsApi } from '@/lib/api'
 import { useAuthContext } from './AuthProvider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,8 +10,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Copy, UserCircleMinus, CheckCircle } from '@phosphor-icons/react'
-import type { TroopMember, TroopRole } from '@/lib/types'
+import { Copy, UserCircleMinus, CheckCircle, PencilSimple } from '@phosphor-icons/react'
+import type { FlaggedContentItem, TroopMember, TroopRole } from '@/lib/types'
 
 const roleLabels: Record<TroopRole, string> = {
   troopAdmin: 'Troop Admin',
@@ -34,9 +34,12 @@ export function TroopAdmin() {
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false)
   const [addMemberError, setAddMemberError] = useState('')
   const [memberForm, setMemberForm] = useState<{ displayName: string; email: string; role: TroopRole }>(DEFAULT_MEMBER_FORM)
+  const [editingItem, setEditingItem] = useState<FlaggedContentItem | null>(null)
+  const [editText, setEditText] = useState('')
 
   const troopQuery = useQuery({ queryKey: ['troop'], queryFn: troopsApi.get })
   const membersQuery = useQuery({ queryKey: ['members'], queryFn: membersApi.getAll })
+  const flaggedContentQuery = useQuery({ queryKey: ['flagged-content'], queryFn: adminApi.getFlaggedContent })
 
   const updateRole = useMutation({
     mutationFn: ({ id, role }: { id: string; role: string }) => membersApi.updateRole(id, role),
@@ -63,6 +66,19 @@ export function TroopAdmin() {
     },
   })
 
+  const reviewFlaggedContent = useMutation({
+    mutationFn: ({
+      item,
+      action,
+      updates,
+    }: {
+      item: FlaggedContentItem
+      action: 'approve' | 'reject' | 'edit'
+      updates?: Record<string, unknown>
+    }) => adminApi.reviewFlaggedContent(item.contentType, item.id, action, updates),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['flagged-content'] }),
+  })
+
   if (role !== 'troopAdmin') {
     return (
       <div className="p-6 text-center text-muted-foreground">
@@ -75,6 +91,7 @@ export function TroopAdmin() {
   const members = (membersQuery.data || []) as TroopMember[]
   const pendingMembers = members.filter((m) => m.status === 'pending')
   const activeMembers = members.filter((m) => m.status === 'active')
+  const flaggedItems = (flaggedContentQuery.data || []) as FlaggedContentItem[]
 
   function copyInviteCode() {
     if (troop?.inviteCode) {
@@ -93,6 +110,29 @@ export function TroopAdmin() {
     } catch (err) {
       setAddMemberError(err instanceof Error ? err.message : 'An unexpected error occurred while adding member')
     }
+  }
+
+  function openEditDialog(item: FlaggedContentItem) {
+    setEditingItem(item)
+    setEditText(item.preview)
+  }
+
+  async function handleApprove(item: FlaggedContentItem) {
+    await reviewFlaggedContent.mutateAsync({ item, action: 'approve' })
+  }
+
+  async function handleReject(item: FlaggedContentItem) {
+    await reviewFlaggedContent.mutateAsync({ item, action: 'reject' })
+  }
+
+  async function handleEditAndApprove() {
+    if (!editingItem) return
+    const updates = editingItem.contentType === 'recipe'
+      ? { description: editText.trim() }
+      : { comments: editText.trim() }
+    await reviewFlaggedContent.mutateAsync({ item: editingItem, action: 'edit', updates })
+    setEditingItem(null)
+    setEditText('')
   }
 
   return (
@@ -306,6 +346,109 @@ export function TroopAdmin() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Flagged Content Review */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">
+            Flagged Content Review
+            <Badge variant="secondary" className="ml-2">{flaggedItems.length}</Badge>
+          </CardTitle>
+          <CardDescription>
+            Review flagged submissions from content moderation.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {flaggedItems.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No flagged content to review.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Submitted By</TableHead>
+                  <TableHead>Submitted</TableHead>
+                  <TableHead>Preview</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {flaggedItems.map((item) => (
+                  <TableRow key={`${item.contentType}-${item.id}`}>
+                    <TableCell className="capitalize">{item.contentType}</TableCell>
+                    <TableCell>{item.submittedBy?.displayName || 'Unknown'}</TableCell>
+                    <TableCell>
+                      {item.submittedAt ? new Date(item.submittedAt).toLocaleString() : 'Unknown'}
+                    </TableCell>
+                    <TableCell className="max-w-96 truncate">
+                      {item.preview || 'No preview available'}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleApprove(item)}
+                          disabled={reviewFlaggedContent.isPending}
+                        >
+                          <CheckCircle className="mr-1 h-4 w-4" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openEditDialog(item)}
+                          disabled={reviewFlaggedContent.isPending}
+                        >
+                          <PencilSimple className="mr-1 h-4 w-4" />
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleReject(item)}
+                          disabled={reviewFlaggedContent.isPending}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit flagged content</DialogTitle>
+            <DialogDescription>
+              Update the content preview, then approve it for visibility.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="flagged-edit">Edited content</Label>
+            <Input
+              id="flagged-edit"
+              value={editText}
+              onChange={(event) => setEditText(event.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingItem(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEditAndApprove}
+              disabled={reviewFlaggedContent.isPending || !editText.trim()}
+            >
+              Save & Approve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

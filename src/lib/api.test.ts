@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { eventsApi, recipesApi, feedbackApi, membersApi } from './api'
+import { adminApi, eventsApi, recipesApi, feedbackApi, membersApi } from './api'
 
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
@@ -143,5 +143,26 @@ describe('membersApi', () => {
       method: 'POST',
       body: JSON.stringify(member),
     }))
+  })
+})
+
+describe('adminApi', () => {
+  it('getFlaggedContent fetches /admin/flagged-content', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse([]))
+    const result = await adminApi.getFlaggedContent()
+    expect(result).toEqual([])
+    expect(mockFetch).toHaveBeenCalledWith('/api/admin/flagged-content', expect.anything())
+  })
+
+  it('reviewFlaggedContent sends review action payload', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ id: 'r1' }))
+    await adminApi.reviewFlaggedContent('recipe', 'r1', 'edit', { description: 'edited' })
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/admin/flagged-content/recipe/r1',
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ action: 'edit', updates: { description: 'edited' } }),
+      }),
+    )
   })
 })
