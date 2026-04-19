@@ -1,11 +1,28 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
+import { EmailClient } from '@azure/communication-email'
+import { DefaultAzureCredential } from '@azure/identity'
 import { getById } from '../cosmosdb.js'
 import { getTroopContext, unauthorized, forbidden } from '../middleware/auth.js'
 import { checkPermission } from '../middleware/roles.js'
 import { emailShoppingListSchema, validationError } from '../schemas.js'
 
 const EVENTS_CONTAINER = 'events'
-const SENDGRID_API_URL = 'https://api.sendgrid.com/v3/mail/send'
+
+let emailClient: EmailClient | undefined
+
+function getEmailClient(): EmailClient {
+  if (!emailClient) {
+    const endpoint = process.env.ACS_ENDPOINT
+    if (!endpoint) throw new Error('ACS_ENDPOINT is not configured')
+    emailClient = new EmailClient(`https://${endpoint}`, new DefaultAzureCredential())
+  }
+  return emailClient
+}
+
+/** @internal Exposed for testing only */
+export function _setEmailClient(client: EmailClient | undefined) {
+  emailClient = client
+}
 
 function escapeHtml(value: string): string {
   return value
@@ -31,11 +48,17 @@ async function emailShoppingListHandler(req: HttpRequest, context: InvocationCon
     const existingEvent = await getById<any>(EVENTS_CONTAINER, eventId, auth.troopId)
     if (!existingEvent) return { status: 404, jsonBody: { error: 'Event not found' } }
 
-    const sendGridApiKey = process.env.SENDGRID_API_KEY
-    const fromEmail = process.env.SENDGRID_FROM_EMAIL
+    const fromEmail = process.env.ACS_FROM_EMAIL
+    if (!fromEmail) {
+      context.error('Missing ACS_FROM_EMAIL')
+      return { status: 500, jsonBody: { error: 'Email service not configured' } }
+    }
 
-    if (!sendGridApiKey || !fromEmail) {
-      context.error('Missing SENDGRID_API_KEY or SENDGRID_FROM_EMAIL')
+    let client: EmailClient
+    try {
+      client = getEmailClient()
+    } catch {
+      context.error('Missing ACS_ENDPOINT')
       return { status: 500, jsonBody: { error: 'Email service not configured' } }
     }
 
@@ -53,32 +76,21 @@ async function emailShoppingListHandler(req: HttpRequest, context: InvocationCon
       })
       .join('')
 
-    const response = await fetch(SENDGRID_API_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${sendGridApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        personalizations: [{ to: [{ email: recipientEmail }] }],
-        from: { email: fromEmail },
+    const message = {
+      senderAddress: fromEmail,
+      recipients: { to: [{ address: recipientEmail }] },
+      content: {
         subject: `Shopping List: ${resolvedEventName}`,
-        content: [
-          {
-            type: 'text/plain',
-            value: `Shopping list for ${resolvedEventName}\n\n${textRows}`,
-          },
-          {
-            type: 'text/html',
-            value: `<h2>Shopping list for ${escapeHtml(resolvedEventName)}</h2><table style="border-collapse:collapse;"><thead><tr><th style="padding:4px 8px;text-align:left;">Item</th><th style="padding:4px 8px;text-align:right;">Quantity</th><th style="padding:4px 8px;text-align:left;">Unit</th></tr></thead><tbody>${htmlRows}</tbody></table>`,
-          },
-        ],
-      }),
-    })
+        plainText: `Shopping list for ${resolvedEventName}\n\n${textRows}`,
+        html: `<h2>Shopping list for ${escapeHtml(resolvedEventName)}</h2><table style="border-collapse:collapse;"><thead><tr><th style="padding:4px 8px;text-align:left;">Item</th><th style="padding:4px 8px;text-align:right;">Quantity</th><th style="padding:4px 8px;text-align:left;">Unit</th></tr></thead><tbody>${htmlRows}</tbody></table>`,
+      },
+    }
 
-    if (!response.ok) {
-      const sendGridError = await response.text()
-      context.error('SendGrid request failed:', sendGridError)
+    const poller = await client.beginSend(message)
+    const result = await poller.pollUntilDone()
+
+    if (result.status !== 'Succeeded') {
+      context.error('ACS email send failed:', result.error)
       return { status: 502, jsonBody: { error: 'Failed to send email' } }
     }
 

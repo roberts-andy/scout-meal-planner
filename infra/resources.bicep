@@ -1,5 +1,3 @@
-extension 'br:mcr.microsoft.com/bicep/extensions/microsoftgraph/v1.0:0.1.8-preview'
-
 @description('Azure region for all resources')
 param location string
 
@@ -27,8 +25,8 @@ param storageAccountName string
 @description('Object ID of the GitHub Actions service principal for deployment')
 param deployerPrincipalId string = ''
 
-@description('Display name for the MSA sign-in app registration')
-param msaAppDisplayName string = 'ScoutMealPlanner'
+@description('Client ID of the pre-created Entra app registration for MSAL sign-in')
+param entraClientId string
 
 @description('Maximum instance count for Flex Consumption scaling')
 param maximumInstanceCount int = 100
@@ -42,6 +40,9 @@ param contentSafetyAccountName string
 
 @description('Name of the Azure Communication Services resource')
 param communicationServiceName string
+
+@description('Sender address for ACS Email (must be from a verified domain)')
+param acsFromEmail string = ''
 
 // Cosmos DB Account — Serverless
 resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
@@ -233,9 +234,10 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'AzureWebJobsStorage__tableServiceUri', value: 'https://${storageAccount.name}.table.${environment().suffixes.storage}' }
         { name: 'COSMOS_ENDPOINT', value: cosmosAccount.properties.documentEndpoint }
         { name: 'COSMOS_DATABASE', value: cosmosDatabaseName }
-        { name: 'ENTRA_CLIENT_ID', value: msaApp.appId }
+        { name: 'ENTRA_CLIENT_ID', value: entraClientId }
         { name: 'CONTENT_SAFETY_ENDPOINT', value: contentSafety.properties.endpoint }
         { name: 'ACS_ENDPOINT', value: communicationService.properties.hostName }
+        { name: 'ACS_FROM_EMAIL', value: acsFromEmail }
       ]
     }
     httpsOnly: true
@@ -340,19 +342,6 @@ resource swaBackend 'Microsoft.Web/staticSites/linkedBackends@2023-12-01' = {
   }
 }
 
-// ── App Registration: MSA sign-in (Personal Microsoft Accounts only) ──
-resource msaApp 'Microsoft.Graph/applications@v1.0' = {
-  uniqueName: msaAppDisplayName
-  displayName: msaAppDisplayName
-  signInAudience: 'PersonalMicrosoftAccount'
-  spa: {
-    redirectUris: [
-      'http://localhost:5000'
-      'https://${staticWebApp.properties.defaultHostname}'
-    ]
-  }
-}
-
 // ── Azure AI Content Safety ──
 resource contentSafety 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   name: contentSafetyAccountName
@@ -401,6 +390,6 @@ resource acsRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' 
 output staticWebAppUrl string = staticWebApp.properties.defaultHostname
 output cosmosAccountEndpoint string = cosmosAccount.properties.documentEndpoint
 output functionAppName string = functionApp.name
-output msaAppClientId string = msaApp.appId
+output entraClientId string = entraClientId
 output contentSafetyEndpoint string = contentSafety.properties.endpoint
 output acsEndpoint string = communicationService.properties.hostName
