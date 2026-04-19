@@ -23,13 +23,19 @@ interface AnalyzeResponse {
 }
 
 const API_VERSION = '2024-09-01'
-const REQUEST_TIMEOUT_MS = 1500
+const DEFAULT_REQUEST_TIMEOUT_MS = 3000
 const DEFAULT_BLOCK_SEVERITY = 4
 
 function getBlockSeverityThreshold(): number {
   const configured = Number(process.env.CONTENT_SAFETY_BLOCK_SEVERITY)
   if (Number.isFinite(configured) && configured >= 0) return configured
   return DEFAULT_BLOCK_SEVERITY
+}
+
+function getRequestTimeoutMs(): number {
+  const configured = Number(process.env.CONTENT_SAFETY_TIMEOUT_MS)
+  if (Number.isFinite(configured) && configured >= 250) return configured
+  return DEFAULT_REQUEST_TIMEOUT_MS
 }
 
 function getMaxSeverity(result: AnalyzeResponse): number {
@@ -53,7 +59,7 @@ async function analyzeText(text: string): Promise<AnalyzeResponse> {
       'Ocp-Apim-Subscription-Key': key,
     },
     body: JSON.stringify({ text }),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    signal: AbortSignal.timeout(getRequestTimeoutMs()),
   })
 
   if (!response.ok) {
@@ -98,9 +104,10 @@ export async function moderateTextFields(
       provider: 'azure-content-safety',
     }
   } catch (error) {
+    const fields = entries.map((entry) => entry.field).join(', ')
+    const reason = error instanceof Error ? error.message : String(error)
     context.warn(
-      'Content moderation check failed; content will be stored with pending status and hidden from non-admin users until manually reviewed.',
-      error,
+      `Content moderation check failed for fields [${fields}] (${reason}); content will be stored with pending status and hidden from non-admin users until manually reviewed.`,
     )
     return {
       status: 'pending',
