@@ -17,7 +17,7 @@ export function EventShoppingList({ event, recipes, onUpdateEvent }: EventShoppi
 
   useEffect(() => {
     setCheckedItems(new Set(event.purchasedItems || []))
-  }, [event.id, event.purchasedItems])
+  }, [event.id])
 
   const shoppingList = generateShoppingList(event, recipes, checkedItems)
   const categorized = categorizeIngredients(shoppingList)
