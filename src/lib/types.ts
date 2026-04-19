@@ -199,6 +199,33 @@ export interface MealFeedback {
   updatedBy?: AuditInfo
 }
 
+export type FlaggedContentType = 'recipe' | 'feedback'
+export type FlaggedContentAction = 'approve' | 'edit' | 'reject'
+
+export interface FlaggedContentItem {
+  id: string
+  contentId: string
+  contentType: FlaggedContentType
+  flagReason: string
+  flaggedAt: number
+  moderation?: {
+    status?: string
+    flaggedFields?: string[]
+    checkedAt?: number
+  }
+  context: {
+    name?: string
+    description?: string
+    servings?: number
+    eventId?: string
+    recipeId?: string
+    comments?: string
+    whatWorked?: string
+    whatToChange?: string
+    rating?: FeedbackRating
+  }
+}
+
 export interface ShoppingListItem {
   ingredient: Ingredient
   recipes: string[]

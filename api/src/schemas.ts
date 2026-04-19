@@ -171,6 +171,28 @@ export const createMemberSchema = z.object({
   }
 })
 
+const flaggedContentEditsSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  description: z.string().optional(),
+  comments: z.string().optional(),
+  whatWorked: z.string().optional(),
+  whatToChange: z.string().optional(),
+}).refine(
+  (data) => Object.values(data).some((value) => typeof value === 'string'),
+  {
+  message: 'At least one editable field is required',
+  },
+)
+
+export const reviewFlaggedContentSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('approve') }),
+  z.object({ action: z.literal('reject') }),
+  z.object({
+    action: z.literal('edit'),
+    edits: flaggedContentEditsSchema,
+  }),
+])
+
 /** Format a ZodError into an HTTP 400 response */
 export function validationError(error: ZodError) {
   return {
