@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { membersApi, troopsApi } from '@/lib/api'
+import { adminApi, membersApi, troopsApi } from '@/lib/api'
 import { useAuthContext } from './AuthProvider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Copy, UserCircleMinus, CheckCircle, UserCircle } from '@phosphor-icons/react'
-import type { MemberStatus, TroopMember, TroopRole } from '@/lib/types'
+import type { FlaggedContentAction, FlaggedContentItem, MemberStatus, TroopMember, TroopRole } from '@/lib/types'
 
 const roleLabels: Record<TroopRole, string> = {
   troopAdmin: 'Troop Admin',
@@ -36,6 +36,14 @@ const DEFAULT_MEMBER_FORM: { displayName: string; email: string; role: TroopRole
   role: 'scout',
 }
 
+type FlaggedContentEdits = {
+  name?: string
+  description?: string
+  comments?: string
+  whatWorked?: string
+  whatToChange?: string
+}
+
 export function TroopAdmin() {
   const { user, role } = useAuthContext()
   const queryClient = useQueryClient()
@@ -43,9 +51,12 @@ export function TroopAdmin() {
   const [addMemberError, setAddMemberError] = useState('')
   const [memberForm, setMemberForm] = useState<{ displayName: string; email: string; role: TroopRole }>(DEFAULT_MEMBER_FORM)
   const [statusAction, setStatusAction] = useState<{ member: TroopMember; status: 'deactivated' | 'removed' } | null>(null)
+  const [editDrafts, setEditDrafts] = useState<Record<string, string>>({})
+  const [editingIds, setEditingIds] = useState<Record<string, boolean>>({})
 
   const troopQuery = useQuery({ queryKey: ['troop'], queryFn: troopsApi.get })
   const membersQuery = useQuery({ queryKey: ['members'], queryFn: membersApi.getAll })
+  const flaggedContentQuery = useQuery({ queryKey: ['adminFlaggedContent'], queryFn: adminApi.getFlaggedContent })
 
   const updateRole = useMutation({
     mutationFn: ({ id, role }: { id: string; role: string }) => membersApi.updateRole(id, role),
@@ -87,6 +98,14 @@ export function TroopAdmin() {
       setIsAddMemberDialogOpen(false)
       setAddMemberError('')
       setMemberForm(DEFAULT_MEMBER_FORM)
+    },
+  })
+
+  const reviewFlaggedContent = useMutation({
+    mutationFn: ({ id, action, edits }: { id: string; action: FlaggedContentAction; edits?: FlaggedContentEdits }) =>
+      adminApi.reviewFlaggedContent(id, { action, edits }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminFlaggedContent'] })
     },
   })
 
@@ -153,6 +172,22 @@ export function TroopAdmin() {
       id: statusAction.member.id,
       status: statusAction.status,
     })
+  }
+
+  function getDefaultEditText(item: FlaggedContentItem): string {
+    return item.contentType === 'recipe'
+      ? (item.context.name || '')
+      : (item.context.comments || '')
+  }
+
+  async function handleEditReview(item: FlaggedContentItem) {
+    const draft = (editDrafts[item.id] ?? '').trim()
+    if (!draft) return
+    const edits = item.contentType === 'recipe'
+      ? { name: draft }
+      : { comments: draft }
+    await reviewFlaggedContent.mutateAsync({ id: item.id, action: 'edit', edits })
+    setEditingIds((prev) => ({ ...prev, [item.id]: false }))
   }
 
   return (
@@ -422,6 +457,86 @@ export function TroopAdmin() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Flagged Content Review */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Flagged Content Review</CardTitle>
+          <CardDescription>Review content flagged by moderation</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {(flaggedContentQuery.data || []).length === 0 && (
+            <p className="text-sm text-muted-foreground">No flagged content to review.</p>
+          )}
+
+          {(flaggedContentQuery.data || []).map((item) => (
+            <div key={item.id} className="rounded-md border p-3 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="font-medium">
+                    {item.contentType === 'recipe' ? `Recipe: ${item.context.name || item.contentId}` : `Feedback: ${item.contentId}`}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{item.flagReason}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Flagged {new Date(item.flaggedAt).toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => reviewFlaggedContent.mutate({ id: item.id, action: 'approve' })}
+                    disabled={reviewFlaggedContent.isPending}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => reviewFlaggedContent.mutate({ id: item.id, action: 'reject' })}
+                    disabled={reviewFlaggedContent.isPending}
+                  >
+                    Reject
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setEditingIds((prev) => ({ ...prev, [item.id]: !prev[item.id] }))
+                      setEditDrafts((prev) => ({ ...prev, [item.id]: prev[item.id] ?? getDefaultEditText(item) }))
+                    }}
+                    disabled={reviewFlaggedContent.isPending}
+                  >
+                    Edit
+                  </Button>
+                </div>
+              </div>
+
+              {editingIds[item.id] && (
+                <div className="flex gap-2">
+                  <Input
+                    aria-label={`Edit flagged content ${item.id}`}
+                    value={editDrafts[item.id] ?? ''}
+                    onChange={(e) => setEditDrafts((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => void handleEditReview(item)}
+                    disabled={reviewFlaggedContent.isPending || !(editDrafts[item.id] ?? '').trim()}
+                  >
+                    Save Edit
+                  </Button>
+                </div>
+              )}
+
+              {item.contentType === 'feedback' && (
+                <p className="text-sm">
+                  <span className="font-medium">Comment:</span> {item.context.comments || '—'}
+                </p>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   )
 }
