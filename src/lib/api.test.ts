@@ -106,7 +106,6 @@ describe('eventsApi', () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({ message: 'sent' }, 202))
     const payload = {
       recipientEmail: 'parent@example.com',
-      eventName: 'Campout',
       items: [{ name: 'Beans', quantity: 2, unit: 'can' }],
     }
     await eventsApi.emailShoppingList('1', payload)

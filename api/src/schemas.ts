@@ -115,7 +115,6 @@ const shoppingListEmailItemSchema = z.object({
 
 export const emailShoppingListSchema = z.object({
   recipientEmail: z.string().email(),
-  eventName: z.string().min(1).max(200),
   items: z.array(shoppingListEmailItemSchema).min(1),
 })
 

@@ -91,7 +91,6 @@ describe('EventShoppingList estimated prices', () => {
         'event-1',
         expect.objectContaining({
           recipientEmail: 'parent@example.com',
-          eventName: 'Campout',
           items: expect.arrayContaining([
             expect.objectContaining({ name: 'Beans', quantity: 2, unit: 'can' }),
             expect.objectContaining({ name: 'Salt', quantity: 1, unit: 'tsp' }),

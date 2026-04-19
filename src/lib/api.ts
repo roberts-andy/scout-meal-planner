@@ -71,7 +71,6 @@ export const eventsApi = {
     id: string,
     payload: {
       recipientEmail: string
-      eventName: string
       items: Array<{ name: string; quantity: number; unit: string }>
     }
   ) =>

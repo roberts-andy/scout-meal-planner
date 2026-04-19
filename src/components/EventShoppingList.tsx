@@ -61,7 +61,6 @@ export function EventShoppingList({ event, recipes }: EventShoppingListProps) {
     try {
       await eventsApi.emailShoppingList(event.id, {
         recipientEmail: email,
-        eventName: event.name,
         items: shoppingList.map((item) => ({
           name: item.ingredient.name,
           quantity: item.totalQuantity,
@@ -124,7 +123,7 @@ export function EventShoppingList({ event, recipes }: EventShoppingListProps) {
                 />
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>Cancel</Button>
+                <Button type="button" variant="outline" onClick={() => setIsEmailDialogOpen(false)}>Cancel</Button>
                 <Button onClick={handleSendEmail} disabled={isSendingEmail}>
                   {isSendingEmail ? 'Sending…' : 'Send Email'}
                 </Button>

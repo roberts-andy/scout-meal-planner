@@ -292,7 +292,6 @@ describe('emailShoppingListSchema', () => {
   it('accepts valid payload', () => {
     const result = emailShoppingListSchema.safeParse({
       recipientEmail: 'parent@example.com',
-      eventName: 'Campout',
       items: [{ name: 'Beans', quantity: 2, unit: 'can' }],
     })
     expect(result.success).toBe(true)
@@ -301,7 +300,6 @@ describe('emailShoppingListSchema', () => {
   it('rejects invalid recipient email', () => {
     const result = emailShoppingListSchema.safeParse({
       recipientEmail: 'not-an-email',
-      eventName: 'Campout',
       items: [{ name: 'Beans', quantity: 2, unit: 'can' }],
     })
     expect(result.success).toBe(false)
@@ -310,7 +308,6 @@ describe('emailShoppingListSchema', () => {
   it('rejects empty items list', () => {
     const result = emailShoppingListSchema.safeParse({
       recipientEmail: 'parent@example.com',
-      eventName: 'Campout',
       items: [],
     })
     expect(result.success).toBe(false)

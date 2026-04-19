@@ -83,7 +83,6 @@ describe('email shopping list handler', () => {
     vi.mocked(cosmos.getById).mockResolvedValueOnce(undefined)
     const result = await handler(makeReq({
       recipientEmail: 'parent@example.com',
-      eventName: 'Campout',
       items: [{ name: 'Beans', quantity: 2, unit: 'can' }],
     }), ctx)
     expect(result.status).toBe(404)
@@ -95,7 +94,6 @@ describe('email shopping list handler', () => {
     delete process.env.SENDGRID_API_KEY
     const result = await handler(makeReq({
       recipientEmail: 'parent@example.com',
-      eventName: 'Campout',
       items: [{ name: 'Beans', quantity: 2, unit: 'can' }],
     }), ctx)
     expect(result.status).toBe(500)
@@ -108,7 +106,6 @@ describe('email shopping list handler', () => {
 
     const result = await handler(makeReq({
       recipientEmail: 'parent@example.com',
-      eventName: 'Campout',
       items: [
         { name: 'Beans', quantity: 2, unit: 'can' },
         { name: 'Salt', quantity: 1.5, unit: 'tsp' },
@@ -139,7 +136,6 @@ describe('email shopping list handler', () => {
 
     const result = await handler(makeReq({
       recipientEmail: 'parent@example.com',
-      eventName: 'Campout',
       items: [{ name: 'Beans', quantity: 2, unit: 'can' }],
     }), ctx)
 
