@@ -157,6 +157,10 @@ export const updateMemberSchema = z.object({
   status: memberStatus.optional(),
 })
 
+export const updateTroopMemberStatusSchema = z.object({
+  status: z.enum(['deactivated', 'removed']),
+})
+
 export const createMemberSchema = z.object({
   displayName: z.string().min(1).max(100),
   email: z.string().email().optional(),
