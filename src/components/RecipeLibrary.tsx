@@ -482,7 +482,6 @@ export function RecipeLibrary({ recipes, feedback, onCreateRecipe, onUpdateRecip
         <RecipeDetailDialog
           recipe={selectedRecipe}
           recipes={recipes}
-          feedback={feedback}
           open={!!selectedRecipe}
           onOpenChange={(open) => !open && setSelectedRecipe(null)}
           onUpdateRecipe={onUpdateRecipe}

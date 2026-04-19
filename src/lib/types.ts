@@ -166,6 +166,11 @@ export interface MealFeedback {
   updatedBy?: AuditInfo
 }
 
+export interface RecipeFeedback extends MealFeedback {
+  eventName?: string
+  eventDate?: string
+}
+
 export interface ShoppingListItem {
   ingredient: Ingredient
   recipes: string[]

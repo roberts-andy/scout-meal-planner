@@ -1,11 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { feedbackApi } from '@/lib/api'
-import { MealFeedback } from '@/lib/types'
+import { MealFeedback, RecipeFeedback } from '@/lib/types'
 
 export function useFeedback() {
   return useQuery({
     queryKey: ['feedback'],
     queryFn: feedbackApi.getAll,
+  })
+}
+
+export function useRecipeFeedback(recipeId: string, enabled = true) {
+  return useQuery<RecipeFeedback[]>({
+    queryKey: ['feedback', 'recipe', recipeId],
+    queryFn: () => feedbackApi.getByRecipe(recipeId),
+    enabled: enabled && !!recipeId,
   })
 }
 

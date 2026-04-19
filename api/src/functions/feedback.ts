@@ -91,6 +91,46 @@ async function feedbackByEventHandler(req: HttpRequest, context: InvocationConte
   }
 }
 
+async function feedbackByRecipeHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  const recipeId = req.params.recipeId
+  context.log(`GET /api/feedback/recipe/${recipeId}`)
+
+  const auth = await getTroopContext(req, context)
+  if (!auth) return unauthorized()
+
+  try {
+    const feedback = await queryItems<{ eventId: string } & Record<string, unknown>>(
+      CONTAINER,
+      'SELECT * FROM c WHERE c.recipeId = @recipeId AND c.troopId = @troopId ORDER BY c.createdAt DESC',
+      [
+        { name: '@recipeId', value: recipeId },
+        { name: '@troopId', value: auth.troopId },
+      ]
+    )
+
+    if (feedback.length === 0) {
+      return { jsonBody: [] }
+    }
+
+    const events = await getAllByTroop<{ id: string; name?: string; startDate?: string }>('events', auth.troopId)
+    const eventById = new Map(events.map((event) => [event.id, event]))
+
+    const feedbackWithEventContext = feedback.map((entry) => {
+      const event = eventById.get(entry.eventId)
+      return {
+        ...entry,
+        eventName: event?.name ?? 'Unknown event',
+        eventDate: event?.startDate,
+      }
+    })
+
+    return { jsonBody: feedbackWithEventContext }
+  } catch (err) {
+    context.error(`GET /api/feedback/recipe/${recipeId} failed:`, err)
+    return { status: 500, jsonBody: { error: 'Internal server error' } }
+  }
+}
+
 app.http('feedback', {
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   authLevel: 'anonymous',
@@ -103,4 +143,11 @@ app.http('feedbackByEvent', {
   authLevel: 'anonymous',
   route: 'feedback/event/{eventId}',
   handler: feedbackByEventHandler,
+})
+
+app.http('feedbackByRecipe', {
+  methods: ['GET'],
+  authLevel: 'anonymous',
+  route: 'feedback/recipe/{recipeId}',
+  handler: feedbackByRecipeHandler,
 })

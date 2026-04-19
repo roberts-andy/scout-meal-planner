@@ -115,6 +115,13 @@ describe('feedbackApi', () => {
     expect(mockFetch).toHaveBeenCalledWith('/api/feedback/event/ev-1', expect.anything())
   })
 
+  it('getByRecipe fetches /feedback/recipe/{recipeId}', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse([]))
+    const result = await feedbackApi.getByRecipe('recipe-1')
+    expect(result).toEqual([])
+    expect(mockFetch).toHaveBeenCalledWith('/api/feedback/recipe/recipe-1', expect.anything())
+  })
+
   it('delete includes eventId as query param', async () => {
     mockFetch.mockResolvedValueOnce(emptyResponse())
     await feedbackApi.delete('fb-1', 'ev-1')

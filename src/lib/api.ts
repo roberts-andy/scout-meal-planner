@@ -1,4 +1,4 @@
-import type { Event, Recipe, MealFeedback, Troop, TroopMember } from './types'
+import type { Event, Recipe, MealFeedback, RecipeFeedback, Troop, TroopMember } from './types'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
@@ -75,6 +75,8 @@ export const feedbackApi = {
   getAll: () => request<MealFeedback[]>('/feedback'),
   getByEvent: (eventId: string) =>
     request<MealFeedback[]>(`/feedback/event/${eventId}`),
+  getByRecipe: (recipeId: string) =>
+    request<RecipeFeedback[]>(`/feedback/recipe/${recipeId}`),
   create: (feedback: MealFeedback) =>
     request<MealFeedback>('/feedback', { method: 'POST', body: JSON.stringify(feedback) }),
   update: (feedback: MealFeedback) =>

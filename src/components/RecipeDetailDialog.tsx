@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Recipe, MealFeedback } from '@/lib/types'
+import { format } from 'date-fns'
+import { Recipe } from '@/lib/types'
 import {
   Dialog,
   DialogContent,
@@ -14,22 +15,23 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Card, CardContent } from '@/components/ui/card'
 import { Users, Flame, GitBranch, ClockCounterClockwise, Star } from '@phosphor-icons/react'
 import { formatQuantity, calculateRecipeRatings, revertRecipeToVersion } from '@/lib/helpers'
+import { useRecipeFeedback } from '@/hooks/useFeedback'
 import { RecipeVersionHistory } from './RecipeVersionHistory'
 
 interface RecipeDetailDialogProps {
   recipe: Recipe
   recipes?: Recipe[]
-  feedback?: MealFeedback[]
   open: boolean
   onOpenChange: (open: boolean) => void
   onUpdateRecipe: (recipe: Recipe) => void
 }
 
-export function RecipeDetailDialog({ recipe, recipes, feedback, open, onOpenChange, onUpdateRecipe }: RecipeDetailDialogProps) {
+export function RecipeDetailDialog({ recipe, recipes, open, onOpenChange, onUpdateRecipe }: RecipeDetailDialogProps) {
   const [showVersionHistory, setShowVersionHistory] = useState(false)
+  const { data: recipeFeedback = [] } = useRecipeFeedback(recipe.id, open)
   const originalRecipe = recipe.clonedFrom && recipes?.find(r => r.id === recipe.clonedFrom)
   const hasVersionHistory = recipe.versions && recipe.versions.length > 0
-  const ratingSummary = feedback ? calculateRecipeRatings(recipe.id, recipe.name, feedback) : null
+  const ratingSummary = calculateRecipeRatings(recipe.id, recipe.name, recipeFeedback)
   
   const handleRevertVersion = (versionNumber: number) => {
     const revertedRecipe = revertRecipeToVersion(recipe, versionNumber)
@@ -157,6 +159,35 @@ export function RecipeDetailDialog({ recipe, recipes, feedback, open, onOpenChan
                 <Separator />
               </>
             )}
+
+            <div>
+              <h3 className="font-semibold mb-3">Feedback History</h3>
+              {recipeFeedback.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No feedback history yet for this recipe.</p>
+              ) : (
+                <div className="space-y-3">
+                  {recipeFeedback.map((entry) => (
+                    <Card key={entry.id}>
+                      <CardContent className="pt-4 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-medium">{entry.eventName || 'Unknown event'}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {entry.eventDate ? format(new Date(entry.eventDate), 'MMM d, yyyy') : 'Date unavailable'}
+                              {entry.scoutName ? ` • ${entry.scoutName}` : ''}
+                            </p>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {((entry.rating.taste + entry.rating.difficulty + entry.rating.portionSize) / 3).toFixed(1)} / 5
+                          </span>
+                        </div>
+                        {entry.comments && <p className="text-sm">{entry.comments}</p>}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
             
             <div className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-1">
