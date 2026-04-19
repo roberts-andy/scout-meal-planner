@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { Event, Recipe, MealFeedback, FeedbackRating } from '@/lib/types'
+import { useState } from 'react'
+import { Event, Recipe, MealFeedback } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChatCircle, Plus, Camera, X, Image as ImageIcon, User, PencilSimple, Trash, ClockCounterClockwise } from '@phosphor-icons/react'
@@ -28,7 +28,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { StarRating } from '@/components/StarRating'
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
-import { canSubmitEventFeedback } from '@/lib/helpers'
+import { canSubmitEventFeedback } from '@/lib/eventUtils'
+import { useFeedbackForm } from '@/hooks/useFeedbackForm'
 
 interface EventFeedbackProps {
   event: Event
@@ -40,127 +41,36 @@ interface EventFeedbackProps {
 }
 
 export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdateFeedback, onDeleteFeedback }: EventFeedbackProps) {
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingFeedback, setEditingFeedback] = useState<MealFeedback | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
-  const [selectedMealId, setSelectedMealId] = useState('')
-  const [scoutName, setScoutName] = useState('')
-  const [comments, setComments] = useState('')
-  const [whatWorked, setWhatWorked] = useState('')
-  const [whatToChange, setWhatToChange] = useState('')
-  const [photos, setPhotos] = useState<string[]>([])
-  const [ratings, setRatings] = useState<FeedbackRating>({
-    taste: 0,
-    difficulty: 0,
-    portionSize: 0
-  })
-  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const {
+    isDialogOpen,
+    editingFeedback,
+    handleOpenDialog,
+    handleCloseDialog,
+    handleSubmit,
+    canSubmit,
+    selectedMealId,
+    setSelectedMealId,
+    scoutName,
+    setScoutName,
+    comments,
+    setComments,
+    whatWorked,
+    setWhatWorked,
+    whatToChange,
+    setWhatToChange,
+    photos,
+    ratings,
+    setRatings,
+    fileInputRef,
+    handleFileChange,
+    handleRemovePhoto,
+    allMeals,
+  } = useFeedbackForm(event, recipes, onAddFeedback, onUpdateFeedback)
 
   const eventFeedback = feedback.filter(f => f.eventId === event.id)
-
-  const allMeals = event.days.flatMap((day, dayIndex) =>
-    day.meals
-      .filter(meal => meal.recipeId)
-      .map(meal => ({
-        meal,
-        day: dayIndex + 1,
-        recipe: recipes.find(r => r.id === meal.recipeId)
-      }))
-  )
   const feedbackEnabled = canSubmitEventFeedback(event)
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files) return
-
-    Array.from(files).forEach(file => {
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader()
-        reader.onloadend = () => {
-          const result = reader.result as string
-          setPhotos(current => [...current, result])
-        }
-        reader.readAsDataURL(file)
-      }
-    })
-  }
-
-  const handleRemovePhoto = (index: number) => {
-    setPhotos(current => current.filter((_, i) => i !== index))
-  }
-
-  const handleOpenDialog = (feedbackToEdit?: MealFeedback) => {
-    if (feedbackToEdit) {
-      setEditingFeedback(feedbackToEdit)
-      setSelectedMealId(feedbackToEdit.mealId)
-      setScoutName(feedbackToEdit.scoutName || '')
-      setComments(feedbackToEdit.comments)
-      setWhatWorked(feedbackToEdit.whatWorked)
-      setWhatToChange(feedbackToEdit.whatToChange)
-      setPhotos(feedbackToEdit.photos || [])
-      setRatings(feedbackToEdit.rating)
-    } else {
-      setEditingFeedback(null)
-      setSelectedMealId('')
-      setScoutName('')
-      setComments('')
-      setWhatWorked('')
-      setWhatToChange('')
-      setPhotos([])
-      setRatings({ taste: 0, difficulty: 0, portionSize: 0 })
-    }
-    setIsDialogOpen(true)
-  }
-
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false)
-    setEditingFeedback(null)
-    setSelectedMealId('')
-    setScoutName('')
-    setComments('')
-    setWhatWorked('')
-    setWhatToChange('')
-    setPhotos([])
-    setRatings({ taste: 0, difficulty: 0, portionSize: 0 })
-  }
-
-  const handleSubmit = () => {
-    const meal = allMeals.find(m => m.meal.id === selectedMealId)
-    if (!meal || !meal.meal.recipeId) return
-
-    if (editingFeedback) {
-      const updatedFeedback: MealFeedback = {
-        ...editingFeedback,
-        mealId: selectedMealId,
-        recipeId: meal.meal.recipeId,
-        scoutName: scoutName || undefined,
-        rating: ratings,
-        comments,
-        whatWorked,
-        whatToChange,
-        photos: photos.length > 0 ? photos : undefined,
-        updatedAt: Date.now()
-      }
-      onUpdateFeedback(updatedFeedback)
-    } else {
-      const newFeedback: MealFeedback = {
-        id: `feedback-${Date.now()}`,
-        eventId: event.id,
-        mealId: selectedMealId,
-        recipeId: meal.meal.recipeId,
-        scoutName: scoutName || undefined,
-        rating: ratings,
-        comments,
-        whatWorked,
-        whatToChange,
-        photos: photos.length > 0 ? photos : undefined,
-        createdAt: Date.now()
-      }
-      onAddFeedback(newFeedback)
-    }
-
-    handleCloseDialog()
-  }
 
   const handleDelete = (feedbackId: string) => {
     onDeleteFeedback(feedbackId)
@@ -474,7 +384,7 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
             </Button>
             <Button 
               onClick={handleSubmit} 
-              disabled={!selectedMealId || (ratings.taste === 0 && ratings.difficulty === 0 && ratings.portionSize === 0)}
+              disabled={!canSubmit}
             >
               {editingFeedback ? 'Update Feedback' : 'Submit Feedback'}
             </Button>

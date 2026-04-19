@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Event, Recipe, MealFeedback } from '@/lib/types'
 import { setTokenProvider } from '@/lib/api'
-import { migrateRecipeToVersioning } from '@/lib/helpers'
 import { useAuthContext } from '@/components/AuthProvider'
 import { SignIn } from '@/components/SignIn'
 import { TroopOnboarding } from '@/components/TroopOnboarding'
@@ -13,9 +11,7 @@ import { VersioningTest } from '@/components/VersioningTest'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Calendar, CookingPot, Flask, GearSix, SignOut } from '@phosphor-icons/react'
-import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent } from '@/hooks/useEvents'
-import { useRecipes, useCreateRecipe, useUpdateRecipe, useDeleteRecipe } from '@/hooks/useRecipes'
-import { useFeedback, useCreateFeedback, useUpdateFeedback, useDeleteFeedback } from '@/hooks/useFeedback'
+import { useAppData } from '@/hooks/useAppData'
 
 export default function App() {
   const auth = useAuthContext()
@@ -87,95 +83,40 @@ export default function App() {
 
 function AppContent() {
   const { role, user, logout } = useAuthContext()
-  const { data: events = [], isLoading: eventsLoading, error: eventsError } = useEvents()
-  const { data: recipes = [], isLoading: recipesLoading, error: recipesError } = useRecipes()
-  const { data: feedback = [], isLoading: feedbackLoading, error: feedbackError } = useFeedback()
+  const {
+    events,
+    recipes,
+    feedback,
+    selectedEvent,
+    setSelectedEventId,
+    isLoading,
+    queryError,
+    failedResources,
+    handleCreateEvent,
+    handleUpdateEvent,
+    handleDeleteEvent,
+    handleCreateRecipe,
+    handleUpdateRecipe,
+    handleDeleteRecipe,
+    handleAddFeedback,
+    handleUpdateFeedback,
+    handleDeleteFeedback,
+  } = useAppData()
 
-  const createEvent = useCreateEvent()
-  const updateEvent = useUpdateEvent()
-  const deleteEvent = useDeleteEvent()
-  const createRecipe = useCreateRecipe()
-  const updateRecipeMutation = useUpdateRecipe()
-  const deleteRecipe = useDeleteRecipe()
-  const createFeedback = useCreateFeedback()
-  const updateFeedbackMutation = useUpdateFeedback()
-  const deleteFeedback = useDeleteFeedback()
-
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'events' | 'recipes' | 'test' | 'admin'>('events')
 
-  useEffect(() => {
-    if (recipes && recipes.length > 0) {
-      const needsMigration = recipes.some(r => r.currentVersion === undefined)
-      if (needsMigration) {
-        recipes.map(migrateRecipeToVersioning).forEach(r => updateRecipeMutation.mutate(r))
-      }
-    }
-  }, [recipes.length])
-
-  const selectedEvent = events.find(e => e.id === selectedEventId)
-
-  const handleCreateEvent = (event: Event) => {
-    createEvent.mutate(event)
-    setSelectedEventId(event.id)
-  }
-
-  const handleUpdateEvent = (updatedEvent: Event) => {
-    updateEvent.mutate(updatedEvent)
-  }
-
-  const handleDeleteEvent = (eventId: string) => {
-    deleteEvent.mutate(eventId)
-    if (selectedEventId === eventId) {
-      setSelectedEventId(null)
-    }
-  }
-
-  const handleCreateRecipe = (recipe: Recipe) => {
-    createRecipe.mutate(recipe)
-  }
-
-  const handleUpdateRecipe = (updatedRecipe: Recipe) => {
-    updateRecipeMutation.mutate(updatedRecipe)
-  }
-
-  const handleDeleteRecipe = (recipeId: string) => {
-    deleteRecipe.mutate(recipeId)
-  }
-
-  const handleAddFeedback = (newFeedback: MealFeedback) => {
-    createFeedback.mutate(newFeedback)
-  }
-
-  const handleUpdateFeedback = (updatedFeedback: MealFeedback) => {
-    updateFeedbackMutation.mutate(updatedFeedback)
-  }
-
-  const handleDeleteFeedback = (feedbackId: string) => {
-    const fb = feedback.find(f => f.id === feedbackId)
-    if (fb) {
-      deleteFeedback.mutate({ id: feedbackId, eventId: fb.eventId })
-    }
-  }
-
-  const queryError = eventsError || recipesError || feedbackError
   if (queryError) {
-    const failed = [
-      eventsError && 'events',
-      recipesError && 'recipes',
-      feedbackError && 'feedback',
-    ].filter(Boolean).join(', ')
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="max-w-md text-center space-y-2">
-          <p className="text-destructive font-semibold">Failed to load {failed || 'data'}</p>
+          <p className="text-destructive font-semibold">Failed to load {failedResources || 'data'}</p>
           <p className="text-muted-foreground text-sm">{queryError.message}</p>
         </div>
       </div>
     )
   }
 
-  if (eventsLoading || recipesLoading || feedbackLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
