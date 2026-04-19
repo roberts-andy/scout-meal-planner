@@ -66,6 +66,7 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
         recipe: recipes.find(r => r.id === meal.recipeId)
       }))
   )
+  const feedbackEnabled = event.endDate <= format(new Date(), 'yyyy-MM-dd')
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -88,6 +89,8 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
   }
 
   const handleOpenDialog = (feedbackToEdit?: MealFeedback) => {
+    if (!feedbackEnabled) return
+
     if (feedbackToEdit) {
       setEditingFeedback(feedbackToEdit)
       setSelectedMealId(feedbackToEdit.mealId)
@@ -123,6 +126,8 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
   }
 
   const handleSubmit = () => {
+    if (!feedbackEnabled) return
+
     const meal = allMeals.find(m => m.meal.id === selectedMealId)
     if (!meal || !meal.meal.recipeId) return
 
@@ -161,8 +166,22 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
   }
 
   const handleDelete = (feedbackId: string) => {
+    if (!feedbackEnabled) return
+
     onDeleteFeedback(feedbackId)
     setDeleteConfirmId(null)
+  }
+
+  if (!feedbackEnabled) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-6">
+        <ChatCircle size={64} weight="duotone" className="text-muted-foreground mb-4" />
+        <h2 className="text-2xl font-semibold mb-2">Feedback not yet available</h2>
+        <p className="text-muted-foreground text-center max-w-md">
+          Feedback can be submitted after this event ends on {format(new Date(event.endDate), 'MMM d, yyyy')}.
+        </p>
+      </div>
+    )
   }
 
   if (allMeals.length === 0) {
