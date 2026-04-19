@@ -6,6 +6,10 @@ import { createMemberSchema, updateMemberSchema, validationError } from '../sche
 
 const CONTAINER = 'members'
 
+function toFirstName(displayName: string): string {
+  return displayName.trim().split(/\s+/)[0] || ''
+}
+
 async function membersHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const id = req.params.id
   const method = req.method
@@ -32,28 +36,41 @@ async function membersHandler(req: HttpRequest, context: InvocationContext): Pro
       const parsed = createMemberSchema.safeParse(await req.json())
       if (!parsed.success) return validationError(parsed.error)
 
-      const existingMembers = await queryItems<{ id: string }>(
-        CONTAINER,
-        'SELECT * FROM c WHERE c.troopId = @troopId AND c.email = @email',
-        [
-          { name: '@troopId', value: auth.troopId },
-          { name: '@email', value: parsed.data.email },
-        ]
-      )
-      if (existingMembers.length > 0) {
-        return { status: 409, jsonBody: { error: 'Member with this email already exists' } }
+      if (parsed.data.role !== 'scout') {
+        const existingMembers = await queryItems<{ id: string }>(
+          CONTAINER,
+          'SELECT * FROM c WHERE c.troopId = @troopId AND c.email = @email',
+          [
+            { name: '@troopId', value: auth.troopId },
+            { name: '@email', value: parsed.data.email! },
+          ]
+        )
+        if (existingMembers.length > 0) {
+          return { status: 409, jsonBody: { error: 'Member with this email already exists' } }
+        }
       }
 
-      const member = await create(CONTAINER, {
+      const baseMember = {
         id: crypto.randomUUID(),
         troopId: auth.troopId,
-        // This starts empty for admin-added members and is backfilled by auth middleware
-        // when the same email signs in for the first time.
-        userId: '',
         status: 'active',
-        joinedAt: Date.now(),
-        ...parsed.data,
-      })
+      }
+      const member = await create(CONTAINER, parsed.data.role === 'scout'
+        ? {
+            ...baseMember,
+            displayName: toFirstName(parsed.data.displayName),
+            role: parsed.data.role,
+          }
+        : {
+            ...baseMember,
+            // This starts empty for admin-added members and is backfilled by auth middleware
+            // when the same email signs in for the first time.
+            userId: '',
+            joinedAt: Date.now(),
+            displayName: parsed.data.displayName,
+            email: parsed.data.email!,
+            role: parsed.data.role,
+          })
 
       return { status: 201, jsonBody: member }
     }
