@@ -10,6 +10,7 @@ const CONTAINERS: Record<ContentType, string> = {
   recipe: 'recipes',
   feedback: 'feedback',
 }
+const anonymousSubmitter = { userId: 'anonymous', displayName: 'Unknown' }
 
 function getContentType(value?: string): ContentType | null {
   if (value === 'recipe' || value === 'feedback') return value
@@ -25,7 +26,7 @@ function toFlaggedItem(type: ContentType, item: any) {
   return {
     id: item.id,
     contentType: type,
-    submittedBy: item.createdBy || { userId: '', displayName: item.scoutName || 'Unknown' },
+    submittedBy: item.createdBy || { ...anonymousSubmitter, displayName: item.scoutName || anonymousSubmitter.displayName },
     submittedAt: item.createdAt ?? null,
     preview: makePreview(type, item),
     moderation: item.moderation || { status: 'flagged' },
@@ -78,8 +79,6 @@ async function flaggedContentActionHandler(req: HttpRequest, context: Invocation
   const container = CONTAINERS[contentType]
 
   try {
-    if (method !== 'PUT') return { status: 405, jsonBody: { error: 'Method not allowed' } }
-
     const body = await req.json() as { action?: string; updates?: Record<string, unknown> }
     const action = body.action
     if (!action || !['approve', 'reject', 'edit'].includes(action)) {

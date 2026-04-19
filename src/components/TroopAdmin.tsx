@@ -28,6 +28,31 @@ const DEFAULT_MEMBER_FORM: { displayName: string; email: string; role: TroopRole
   role: 'scout',
 }
 
+function getEditableFieldAndText(item: FlaggedContentItem): {
+  field: 'description' | 'name' | 'comments' | 'whatWorked' | 'whatToChange'
+  text: string
+} {
+  if (item.contentType === 'recipe') {
+    const description = item.content.description?.trim()
+    if (description) return { field: 'description', text: description }
+    const name = item.content.name?.trim()
+    if (name) return { field: 'name', text: name }
+    return { field: 'description', text: item.preview || '' }
+  }
+
+  const feedbackCandidates: Array<{
+    field: 'comments' | 'whatWorked' | 'whatToChange'
+    text: string | undefined
+  }> = [
+    { field: 'comments', text: item.content.comments },
+    { field: 'whatWorked', text: item.content.whatWorked },
+    { field: 'whatToChange', text: item.content.whatToChange },
+  ]
+  const selected = feedbackCandidates.find((candidate) => candidate.text?.trim())
+  if (selected) return { field: selected.field, text: selected.text || '' }
+  return { field: 'comments', text: item.preview || '' }
+}
+
 export function TroopAdmin() {
   const { user, role } = useAuthContext()
   const queryClient = useQueryClient()
@@ -35,6 +60,7 @@ export function TroopAdmin() {
   const [addMemberError, setAddMemberError] = useState('')
   const [memberForm, setMemberForm] = useState<{ displayName: string; email: string; role: TroopRole }>(DEFAULT_MEMBER_FORM)
   const [editingItem, setEditingItem] = useState<FlaggedContentItem | null>(null)
+  const [editingField, setEditingField] = useState<'description' | 'name' | 'comments' | 'whatWorked' | 'whatToChange'>('description')
   const [editText, setEditText] = useState('')
 
   const troopQuery = useQuery({ queryKey: ['troop'], queryFn: troopsApi.get })
@@ -114,7 +140,9 @@ export function TroopAdmin() {
 
   function openEditDialog(item: FlaggedContentItem) {
     setEditingItem(item)
-    setEditText(item.preview)
+    const editable = getEditableFieldAndText(item)
+    setEditingField(editable.field)
+    setEditText(editable.text)
   }
 
   async function handleApprove(item: FlaggedContentItem) {
@@ -127,11 +155,10 @@ export function TroopAdmin() {
 
   async function handleEditAndApprove() {
     if (!editingItem) return
-    const updates = editingItem.contentType === 'recipe'
-      ? { description: editText.trim() }
-      : { comments: editText.trim() }
+    const updates = { [editingField]: editText.trim() }
     await reviewFlaggedContent.mutateAsync({ item: editingItem, action: 'edit', updates })
     setEditingItem(null)
+    setEditingField('description')
     setEditText('')
   }
 
@@ -420,7 +447,16 @@ export function TroopAdmin() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
+      <Dialog
+        open={!!editingItem}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingItem(null)
+            setEditingField('description')
+            setEditText('')
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit flagged content</DialogTitle>
