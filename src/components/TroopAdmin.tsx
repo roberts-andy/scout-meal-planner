@@ -22,6 +22,12 @@ const roleLabels: Record<TroopRole, string> = {
 }
 
 const allRoles: TroopRole[] = ['troopAdmin', 'adultLeader', 'seniorPatrolLeader', 'patrolLeader', 'scout']
+const memberStatusLabels: Record<TroopMember['status'], string> = {
+  active: 'Active',
+  pending: 'Pending',
+  deactivated: 'Deactivated',
+  removed: 'Removed',
+}
 const DEFAULT_MEMBER_FORM: { displayName: string; email: string; role: TroopRole } = {
   displayName: '',
   email: '',
@@ -74,7 +80,7 @@ export function TroopAdmin() {
   const troop = troopQuery.data
   const members = (membersQuery.data || []) as TroopMember[]
   const pendingMembers = members.filter((m) => m.status === 'pending')
-  const activeMembers = members.filter((m) => m.status === 'active')
+  const managedMembers = members.filter((m) => m.status !== 'pending')
 
   function copyInviteCode() {
     if (troop?.inviteCode) {
@@ -209,6 +215,7 @@ export function TroopAdmin() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -217,6 +224,9 @@ export function TroopAdmin() {
                   <TableRow key={member.id}>
                     <TableCell>{member.displayName}</TableCell>
                     <TableCell>{member.email}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{memberStatusLabels[member.status]}</Badge>
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
@@ -246,22 +256,23 @@ export function TroopAdmin() {
       )}
 
       {/* Active Members */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Members ({activeMembers.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Members ({managedMembers.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {activeMembers.map((member) => (
+              {managedMembers.map((member) => (
                 <TableRow key={member.id}>
                   <TableCell>
                     {member.displayName}
@@ -287,6 +298,9 @@ export function TroopAdmin() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{memberStatusLabels[member.status]}</Badge>
                   </TableCell>
                   <TableCell>
                     {member.userId !== user?.userId && (

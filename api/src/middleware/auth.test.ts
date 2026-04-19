@@ -10,6 +10,7 @@ vi.mock('jose', () => ({
 // ── Mock cosmosdb for membership lookups ──
 vi.mock('../cosmosdb.js', () => ({
   queryItems: vi.fn(),
+  update: vi.fn(),
 }))
 
 import { jwtVerify } from 'jose'
@@ -130,6 +131,11 @@ describe('getTroopContext', () => {
       troopId: 'troop-42',
       role: 'troopAdmin',
     })
+    expect(queryItems).toHaveBeenCalledWith(
+      'members',
+      'SELECT * FROM c WHERE c.userId = @userId AND c.status = "active"',
+      [{ name: '@userId', value: 'user-1' }]
+    )
   })
 })
 

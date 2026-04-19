@@ -226,6 +226,8 @@ describe('updateMemberSchema', () => {
 
   it('accepts a valid status', () => {
     expect(updateMemberSchema.safeParse({ status: 'active' }).success).toBe(true)
+    expect(updateMemberSchema.safeParse({ status: 'deactivated' }).success).toBe(true)
+    expect(updateMemberSchema.safeParse({ status: 'removed' }).success).toBe(true)
   })
 
   it('accepts an empty body', () => {
