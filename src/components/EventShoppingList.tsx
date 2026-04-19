@@ -14,19 +14,11 @@ interface EventShoppingListProps {
 
 export function EventShoppingList({ event, recipes, onUpdateEvent }: EventShoppingListProps) {
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set(event.purchasedItems || []))
+  const purchasedItemsKey = (event.purchasedItems || []).join('\u0000')
 
   useEffect(() => {
-    const nextChecked = new Set(event.purchasedItems || [])
-    setCheckedItems((prevChecked) => {
-      if (
-        prevChecked.size === nextChecked.size &&
-        Array.from(nextChecked).every((item) => prevChecked.has(item))
-      ) {
-        return prevChecked
-      }
-      return nextChecked
-    })
-  }, [event.id, event.purchasedItems])
+    setCheckedItems(new Set(event.purchasedItems || []))
+  }, [event.id, purchasedItemsKey])
 
   const shoppingList = generateShoppingList(event, recipes, checkedItems)
   const categorized = categorizeIngredients(shoppingList)

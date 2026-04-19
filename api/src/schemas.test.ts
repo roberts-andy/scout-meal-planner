@@ -93,6 +93,14 @@ describe('createEventSchema', () => {
     expect(result.success).toBe(true)
   })
 
+  it('accepts empty purchasedItems array', () => {
+    const result = createEventSchema.safeParse({
+      ...valid,
+      purchasedItems: [],
+    })
+    expect(result.success).toBe(true)
+  })
+
   it('accepts optional meal course labels', () => {
     const withCourse = {
       ...valid,
