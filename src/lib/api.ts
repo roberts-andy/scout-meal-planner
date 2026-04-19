@@ -97,6 +97,8 @@ export const feedbackApi = {
   getAll: () => request<MealFeedback[]>('/feedback'),
   getByEvent: (eventId: string) =>
     request<MealFeedback[]>(`/feedback/event/${eventId}`),
+  getByRecipe: (recipeId: string) =>
+    request<MealFeedback[]>(`/feedback/recipe/${recipeId}`),
   create: (feedback: MealFeedback) =>
     request<MealFeedback>('/feedback', { method: 'POST', body: JSON.stringify(feedback) }),
   update: (feedback: MealFeedback) =>

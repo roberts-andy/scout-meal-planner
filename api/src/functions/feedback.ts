@@ -6,6 +6,7 @@ import { createFeedbackSchema, updateFeedbackSchema, validationError } from '../
 import { canViewModeratedContent, moderateTextFields } from '../middleware/moderation.js'
 
 const CONTAINER = 'feedback'
+const EVENTS_CONTAINER = 'events'
 
 async function feedbackHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const id = req.params.id
@@ -104,6 +105,43 @@ async function feedbackByEventHandler(req: HttpRequest, context: InvocationConte
   }
 }
 
+async function feedbackByRecipeHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  const recipeId = req.params.recipeId
+  context.log(`GET /api/feedback/recipe/${recipeId}`)
+
+  const auth = await getTroopContext(req, context)
+  if (!auth) return unauthorized()
+
+  try {
+    const feedback = await queryItems(
+      CONTAINER,
+      'SELECT * FROM c WHERE c.recipeId = @recipeId AND c.troopId = @troopId',
+      [
+        { name: '@recipeId', value: recipeId },
+        { name: '@troopId', value: auth.troopId },
+      ]
+    )
+
+    const visibleFeedback = feedback.filter((entry: any) => canViewModeratedContent(auth.role, entry.moderation))
+    const events = await getAllByTroop<{ id: string; name?: string; startDate?: string }>(EVENTS_CONTAINER, auth.troopId)
+    const eventsById = new Map(events.map((event) => [event.id, event]))
+
+    return {
+      jsonBody: visibleFeedback.map((entry: any) => {
+        const event = eventsById.get(entry.eventId)
+        return {
+          ...entry,
+          eventName: event?.name,
+          eventDate: event?.startDate,
+        }
+      }),
+    }
+  } catch (err) {
+    context.error(`GET /api/feedback/recipe/${recipeId} failed:`, err)
+    return { status: 500, jsonBody: { error: 'Internal server error' } }
+  }
+}
+
 app.http('feedback', {
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   authLevel: 'anonymous',
@@ -116,4 +154,11 @@ app.http('feedbackByEvent', {
   authLevel: 'anonymous',
   route: 'feedback/event/{eventId}',
   handler: feedbackByEventHandler,
+})
+
+app.http('feedbackByRecipe', {
+  methods: ['GET'],
+  authLevel: 'anonymous',
+  route: 'feedback/recipe/{recipeId}',
+  handler: feedbackByRecipeHandler,
 })

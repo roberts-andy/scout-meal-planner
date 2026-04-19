@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Recipe, MealFeedback } from '@/lib/types'
+import { Recipe } from '@/lib/types'
 import {
   Dialog,
   DialogContent,
@@ -15,21 +15,29 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Users, Flame, GitBranch, ClockCounterClockwise, Star, Printer } from '@phosphor-icons/react'
 import { formatQuantity, calculateRecipeRatings, revertRecipeToVersion } from '@/lib/helpers'
 import { RecipeVersionHistory } from './RecipeVersionHistory'
+import { useRecipeFeedback } from '@/hooks/useFeedback'
 
 interface RecipeDetailDialogProps {
   recipe: Recipe
   recipes?: Recipe[]
-  feedback?: MealFeedback[]
   open: boolean
   onOpenChange: (open: boolean) => void
   onUpdateRecipe: (recipe: Recipe) => void
 }
 
-export function RecipeDetailDialog({ recipe, recipes, feedback, open, onOpenChange, onUpdateRecipe }: RecipeDetailDialogProps) {
+function formatEventDate(date?: string): string {
+  if (!date) return 'Unknown date'
+  const parsed = new Date(date)
+  if (Number.isNaN(parsed.getTime())) return date
+  return parsed.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+export function RecipeDetailDialog({ recipe, recipes, open, onOpenChange, onUpdateRecipe }: RecipeDetailDialogProps) {
   const [showVersionHistory, setShowVersionHistory] = useState(false)
+  const { data: feedback = [], isLoading: isFeedbackLoading } = useRecipeFeedback(recipe.id, open)
   const originalRecipe = recipe.clonedFrom && recipes?.find(r => r.id === recipe.clonedFrom)
   const hasVersionHistory = recipe.versions && recipe.versions.length > 0
-  const ratingSummary = feedback ? calculateRecipeRatings(recipe.id, recipe.name, feedback) : null
+  const ratingSummary = calculateRecipeRatings(recipe.id, recipe.name, feedback)
   
   const handleRevertVersion = (versionNumber: number) => {
     const revertedRecipe = revertRecipeToVersion(recipe, versionNumber)
@@ -172,7 +180,36 @@ export function RecipeDetailDialog({ recipe, recipes, feedback, open, onOpenChan
                 <Separator />
               </>
             )}
-            
+
+            <div className="space-y-3 no-print">
+              <h3 className="font-semibold">Past Feedback</h3>
+              {isFeedbackLoading ? (
+                <p className="text-sm text-muted-foreground">Loading feedback history...</p>
+              ) : feedback.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No feedback history yet for this recipe.</p>
+              ) : (
+                <div className="space-y-3">
+                  {feedback.map((entry) => (
+                    <Card key={entry.id}>
+                      <CardContent className="pt-4 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2 text-sm">
+                          <span className="font-medium">{entry.eventName || 'Unknown event'}</span>
+                          <span className="text-muted-foreground">•</span>
+                          <span className="text-muted-foreground">{formatEventDate(entry.eventDate)}</span>
+                        </div>
+                        {entry.comments && (
+                          <p className="text-sm">{entry.comments}</p>
+                        )}
+                        {!entry.comments && (
+                          <p className="text-sm text-muted-foreground">No comment provided.</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+             
             <div className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-1">
                 <Users size={16} />
