@@ -21,7 +21,7 @@ async function eventPackedHandler(req: HttpRequest, context: InvocationContext):
     const existing = await getById(CONTAINER, id, auth.troopId)
     if (!existing) return { status: 404, jsonBody: { error: 'Event not found' } }
 
-    const packedItems = new Set<string>(Array.isArray(existing.packedItems) ? existing.packedItems : [])
+    const packedItems = new Set<string>(existing.packedItems ?? [])
     if (parsed.data.packed) {
       packedItems.add(parsed.data.item)
     } else {

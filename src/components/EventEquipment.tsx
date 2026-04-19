@@ -13,6 +13,10 @@ interface EventEquipmentProps {
   recipes: Recipe[]
 }
 
+function getEquipmentItemId(item: string): string {
+  return `equipment-${item.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+}
+
 export function EventEquipment({ event, recipes }: EventEquipmentProps) {
   const queryClient = useQueryClient()
   const equipmentMap = getEquipmentList(event, recipes)
@@ -79,31 +83,34 @@ export function EventEquipment({ event, recipes }: EventEquipmentProps) {
       <Card>
         <CardContent className="pt-6">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from(equipmentMap.entries()).map(([item, count]) => (
-              <div key={item} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    id={`equipment-${item.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                    checked={packedItems.has(item)}
-                    onCheckedChange={() =>
-                      togglePackedMutation.mutate({
-                        item,
-                        packed: !packedItems.has(item),
-                      })
-                    }
-                  />
-                  <label
-                    htmlFor={`equipment-${item.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                    className={`font-medium cursor-pointer ${packedItems.has(item) ? 'line-through text-muted-foreground' : ''}`}
-                  >
-                    {item}
-                  </label>
+            {Array.from(equipmentMap.entries()).map(([item, count]) => {
+              const itemId = getEquipmentItemId(item)
+              return (
+                <div key={item} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id={itemId}
+                      checked={packedItems.has(item)}
+                      onCheckedChange={() =>
+                        togglePackedMutation.mutate({
+                          item,
+                          packed: !packedItems.has(item),
+                        })
+                      }
+                    />
+                    <label
+                      htmlFor={itemId}
+                      className={`font-medium cursor-pointer ${packedItems.has(item) ? 'line-through text-muted-foreground' : ''}`}
+                    >
+                      {item}
+                    </label>
+                  </div>
+                  {count > 1 && (
+                    <Badge variant="secondary">×{count}</Badge>
+                  )}
                 </div>
-                {count > 1 && (
-                  <Badge variant="secondary">×{count}</Badge>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
         </CardContent>
       </Card>
