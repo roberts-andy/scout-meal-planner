@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Event, Recipe } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { generateShoppingList, categorizeIngredients, formatQuantity } from '@/lib/helpers'
 import { ShoppingCart } from '@phosphor-icons/react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { eventsApi } from '@/lib/api'
 
 interface EventShoppingListProps {
   event: Event
@@ -12,7 +14,12 @@ interface EventShoppingListProps {
 }
 
 export function EventShoppingList({ event, recipes }: EventShoppingListProps) {
-  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
+  const queryClient = useQueryClient()
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set(event.purchasedItems ?? []))
+
+  useEffect(() => {
+    setCheckedItems(new Set(event.purchasedItems ?? []))
+  }, [event.purchasedItems])
 
   const shoppingList = generateShoppingList(event, recipes, checkedItems)
   const categorized = categorizeIngredients(shoppingList)
@@ -23,15 +30,39 @@ export function EventShoppingList({ event, recipes }: EventShoppingListProps) {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price)
   }
 
-  const toggleItem = (key: string) => {
-    const newChecked = new Set(checkedItems)
-    if (newChecked.has(key)) {
-      newChecked.delete(key)
-    } else {
-      newChecked.add(key)
-    }
-    setCheckedItems(newChecked)
-  }
+  const togglePurchasedMutation = useMutation({
+    mutationFn: ({ item, purchased }: { item: string; purchased: boolean }) =>
+      eventsApi.togglePurchasedItem(event.id, item, purchased),
+    onMutate: ({ item, purchased }) => {
+      setCheckedItems((prev) => {
+        const next = new Set(prev)
+        if (purchased) {
+          next.add(item)
+        } else {
+          next.delete(item)
+        }
+        return next
+      })
+    },
+    onError: (_error, { item, purchased }) => {
+      setCheckedItems((prev) => {
+        const next = new Set(prev)
+        if (purchased) {
+          next.delete(item)
+        } else {
+          next.add(item)
+        }
+        return next
+      })
+    },
+    onSuccess: (updatedEvent) => {
+      setCheckedItems(new Set(updatedEvent.purchasedItems ?? []))
+      queryClient.setQueryData<Event[]>(['events'], (old) =>
+        (old || []).map((existing) => (existing.id === updatedEvent.id ? updatedEvent : existing))
+      )
+      queryClient.setQueryData<Event>(['events', updatedEvent.id], updatedEvent)
+    },
+  })
 
   if (shoppingList.length === 0) {
     return (
@@ -81,7 +112,12 @@ export function EventShoppingList({ event, recipes }: EventShoppingListProps) {
                           <Checkbox
                             id={key}
                             checked={isChecked}
-                            onCheckedChange={() => toggleItem(key)}
+                            onCheckedChange={() =>
+                              togglePurchasedMutation.mutate({
+                                item: key,
+                                purchased: !isChecked,
+                              })
+                            }
                             className="mt-0.5"
                           />
                           <div className="flex-1 space-y-1">

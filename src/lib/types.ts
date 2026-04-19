@@ -132,6 +132,7 @@ export interface Event {
   endDate: string
   days: EventDay[]
   packedItems?: string[]
+  purchasedItems?: string[]
   notes?: string
   hike?: boolean
   highAltitude?: boolean

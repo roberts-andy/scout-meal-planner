@@ -81,6 +81,15 @@ describe('eventsApi', () => {
     }))
   })
 
+  it('togglePurchasedItem patches /events/{id}/purchased', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ id: '1', purchasedItems: ['beans-can'] }))
+    await eventsApi.togglePurchasedItem('1', 'beans-can', true)
+    expect(mockFetch).toHaveBeenCalledWith('/api/events/1/purchased', expect.objectContaining({
+      method: 'PATCH',
+      body: JSON.stringify({ item: 'beans-can', purchased: true }),
+    }))
+  })
+
   it('throws on non-ok response', async () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({ error: 'Not found' }, 404))
     await expect(eventsApi.getById('bad')).rejects.toThrow('Not found')
