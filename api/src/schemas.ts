@@ -171,9 +171,12 @@ const flaggedContentEditsSchema = z.object({
   comments: z.string().optional(),
   whatWorked: z.string().optional(),
   whatToChange: z.string().optional(),
-}).refine((data) => Object.keys(data).length > 0, {
+}).refine(
+  (data) => Object.values(data).some((value) => typeof value === 'string'),
+  {
   message: 'At least one editable field is required',
-})
+  },
+)
 
 export const reviewFlaggedContentSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('approve') }),

@@ -221,6 +221,7 @@ export interface FlaggedContentItem {
     comments?: string
     whatWorked?: string
     whatToChange?: string
+    rating?: unknown
   }
 }
 

@@ -204,4 +204,17 @@ describe('admin flagged content handler', () => {
       'troop-42'
     )
   })
+
+  it('returns 400 for edit action without any editable values', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+
+    const result = await handler(makeReq({
+      method: 'PUT',
+      params: { id: 'feedback:feedback-1' },
+      body: { action: 'edit', edits: {} },
+    }), ctx)
+
+    expect(result.status).toBe(400)
+    expect(cosmos.update).not.toHaveBeenCalled()
+  })
 })

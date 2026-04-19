@@ -35,6 +35,14 @@ const DEFAULT_MEMBER_FORM: { displayName: string; email: string; role: TroopRole
   role: 'scout',
 }
 
+type FlaggedContentEdits = {
+  name?: string
+  description?: string
+  comments?: string
+  whatWorked?: string
+  whatToChange?: string
+}
+
 export function TroopAdmin() {
   const { user, role } = useAuthContext()
   const queryClient = useQueryClient()
@@ -83,7 +91,7 @@ export function TroopAdmin() {
   })
 
   const reviewFlaggedContent = useMutation({
-    mutationFn: ({ id, action, edits }: { id: string; action: FlaggedContentAction; edits?: Record<string, string> }) =>
+    mutationFn: ({ id, action, edits }: { id: string; action: FlaggedContentAction; edits?: FlaggedContentEdits }) =>
       adminApi.reviewFlaggedContent(id, { action, edits }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminFlaggedContent'] })
