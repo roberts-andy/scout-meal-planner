@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { EventShoppingList } from './EventShoppingList'
 
 describe('EventShoppingList estimated prices', () => {
@@ -36,9 +36,19 @@ describe('EventShoppingList estimated prices', () => {
 
     render(<EventShoppingList event={event} recipes={recipes} />)
 
-    expect(screen.getAllByText('Price').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('$4.00').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Price')[0]).toBeInTheDocument()
     expect(screen.getByText('Total Estimated Cost')).toBeInTheDocument()
-    expect(screen.getByText('—')).toBeInTheDocument()
+
+    const beansRow = screen.getByText('Beans').closest('div.grid')
+    expect(beansRow).not.toBeNull()
+    expect(within(beansRow as HTMLElement).getByText('$4.00')).toBeInTheDocument()
+
+    const saltRow = screen.getByText('Salt').closest('div.grid')
+    expect(saltRow).not.toBeNull()
+    expect(within(saltRow as HTMLElement).getByText('—')).toBeInTheDocument()
+
+    const totalRow = screen.getByText('Total Estimated Cost').closest('div.flex')
+    expect(totalRow).not.toBeNull()
+    expect(within(totalRow as HTMLElement).getByText('$4.00')).toBeInTheDocument()
   })
 })

@@ -131,6 +131,12 @@ describe('scaleIngredient', () => {
     const result = scaleIngredient(ing, 4, 10)
     expect(result.estimatedPrice).toBe(5)
   })
+
+  it('rounds scaled estimatedPrice to 2 decimals', () => {
+    const ing = makeIngredient({ estimatedPrice: 1.99 })
+    const result = scaleIngredient(ing, 3, 4)
+    expect(result.estimatedPrice).toBe(2.65)
+  })
 })
 
 // ── scaleRecipe ──
@@ -255,6 +261,7 @@ describe('generateShoppingList', () => {
     const event = makeEvent()
     const list = generateShoppingList(event, recipes)
     const flour = list.find(item => item.ingredient.name === 'Flour')
+    // Price scales with servings per meal: $2 * (8/4) + $2 * (10/4) = $4 + $5 = $9
     expect(flour?.ingredient.estimatedPrice).toBe(9)
   })
 
