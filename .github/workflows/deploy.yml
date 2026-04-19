@@ -126,6 +126,7 @@ jobs:
           az storage account update \
             --name stscoutmealplanner \
             --resource-group rg-scout-meal-planner \
+            --public-network-access Enabled \
             --default-action Allow
           sleep 30
 
@@ -145,7 +146,8 @@ jobs:
           az storage account update \
             --name stscoutmealplanner \
             --resource-group rg-scout-meal-planner \
-            --default-action Deny
+            --default-action Deny \
+            --public-network-access Disabled
 
       - name: Trigger function app deployment sync
         run: |
