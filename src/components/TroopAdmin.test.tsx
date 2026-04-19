@@ -55,6 +55,7 @@ describe('TroopAdmin member data deletion', () => {
     troopsApiMock.get.mockResolvedValue({ id: 'troop-1', name: 'Troop 1', inviteCode: 'INVITE' })
     membersApiMock.getAll.mockResolvedValue([
       { id: 'member-1', userId: 'member-user', displayName: 'Scout User', email: 'scout@example.com', role: 'scout', status: 'active' },
+      { id: 'member-2', userId: 'member-user-2', displayName: 'Inactive User', email: 'inactive@example.com', role: 'adultLeader', status: 'deactivated' },
     ])
     membersApiMock.deleteData.mockResolvedValue(undefined)
   })
@@ -66,7 +67,7 @@ describe('TroopAdmin member data deletion', () => {
     renderTroopAdmin()
 
     await waitFor(() => expect(screen.getByText('Scout User')).toBeInTheDocument())
-    await user.click(screen.getByRole('button', { name: 'Delete All Data' }))
+    await user.click(screen.getAllByRole('button', { name: 'Delete All Data' })[0])
 
     expect(confirmSpy).toHaveBeenCalled()
     expect(membersApiMock.deleteData).not.toHaveBeenCalled()
@@ -79,8 +80,17 @@ describe('TroopAdmin member data deletion', () => {
     renderTroopAdmin()
 
     await waitFor(() => expect(screen.getByText('Scout User')).toBeInTheDocument())
-    await user.click(screen.getByRole('button', { name: 'Delete All Data' }))
+    await user.click(screen.getAllByRole('button', { name: 'Delete All Data' })[0])
 
     await waitFor(() => expect(membersApiMock.deleteData).toHaveBeenCalledWith('member-1'))
+  })
+
+  it('shows current member status in the members table', async () => {
+    renderTroopAdmin()
+
+    await waitFor(() => expect(screen.getByText('Scout User')).toBeInTheDocument())
+    expect(screen.getByText('Inactive User')).toBeInTheDocument()
+    expect(screen.getByText('Active')).toBeInTheDocument()
+    expect(screen.getByText('Deactivated')).toBeInTheDocument()
   })
 })
