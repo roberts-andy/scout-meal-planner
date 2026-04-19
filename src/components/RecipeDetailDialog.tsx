@@ -208,7 +208,7 @@ export function RecipeDetailDialog({ recipe, recipes, feedback, open, onOpenChan
                     <AccordionTrigger>
                       <div className="flex items-center gap-2">
                         <Flame size={16} />
-                        <span className="capitalize">{variation.cookingMethod.replace('-', ' ')}</span>
+                          <span className="capitalize">{variation.cookingMethod.replaceAll('-', ' ')}</span>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent>
@@ -242,7 +242,7 @@ export function RecipeDetailDialog({ recipe, recipes, feedback, open, onOpenChan
               <div className="print-only space-y-4">
                 {recipe.variations.map((variation) => (
                   <div key={variation.id} className="recipe-print-section space-y-3">
-                    <h4 className="text-sm font-semibold capitalize">{variation.cookingMethod.replace('-', ' ')}</h4>
+                    <h4 className="text-sm font-semibold capitalize">{variation.cookingMethod.replaceAll('-', ' ')}</h4>
                     {variation.instructions.length > 0 && (
                       <div>
                         <h5 className="text-sm font-medium mb-1">Instructions</h5>
