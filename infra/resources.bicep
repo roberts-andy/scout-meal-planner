@@ -41,6 +41,9 @@ param contentSafetyAccountName string
 @description('Name of the Azure Communication Services resource')
 param communicationServiceName string
 
+@description('Sender address for ACS Email (must be from a verified domain)')
+param acsFromEmail string = ''
+
 // Cosmos DB Account — Serverless
 resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   name: cosmosAccountName
@@ -234,6 +237,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'ENTRA_CLIENT_ID', value: entraClientId }
         { name: 'CONTENT_SAFETY_ENDPOINT', value: contentSafety.properties.endpoint }
         { name: 'ACS_ENDPOINT', value: communicationService.properties.hostName }
+        { name: 'ACS_FROM_EMAIL', value: acsFromEmail }
       ]
     }
     httpsOnly: true

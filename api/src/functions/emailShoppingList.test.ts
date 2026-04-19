@@ -25,13 +25,19 @@ vi.mock('../middleware/auth.js', async () => {
   }
 })
 
+vi.mock('@azure/communication-email', () => ({
+  EmailClient: vi.fn(),
+}))
+
+vi.mock('@azure/identity', () => ({
+  DefaultAzureCredential: vi.fn(),
+}))
+
 import * as cosmos from '../cosmosdb.js'
 import { getTroopContext } from '../middleware/auth.js'
-import './emailShoppingList.js'
+import { _setEmailClient } from './emailShoppingList.js'
 
 const handler = registeredHandlers['emailShoppingList'] as (req: HttpRequest, ctx: any) => Promise<any>
-const fetchMock = vi.fn()
-vi.stubGlobal('fetch', fetchMock)
 
 function makeReq(body: any, id = 'event-1'): HttpRequest {
   return {
@@ -53,15 +59,23 @@ const scoutAuth = {
 
 const originalEnv = { ...process.env }
 
+const mockPollUntilDone = vi.fn()
+const mockBeginSend = vi.fn()
+const mockEmailClient = { beginSend: mockBeginSend } as any
+
 beforeEach(() => {
   vi.clearAllMocks()
-  process.env.SENDGRID_API_KEY = 'test-key'
-  process.env.SENDGRID_FROM_EMAIL = 'from@example.com'
+  process.env.ACS_ENDPOINT = 'acs-scout-meal-planner.unitedstates.communication.azure.com'
+  process.env.ACS_FROM_EMAIL = 'DoNotReply@acs-scout-meal-planner.azurecomm.net'
+  _setEmailClient(mockEmailClient)
+  mockBeginSend.mockResolvedValue({ pollUntilDone: mockPollUntilDone })
+  mockPollUntilDone.mockResolvedValue({ status: 'Succeeded' })
   vi.mocked(cosmos.getById).mockResolvedValue({ id: 'event-1', troopId: 'troop-42', name: 'Campout' } as any)
 })
 
 afterEach(() => {
   process.env = { ...originalEnv }
+  _setEmailClient(undefined)
 })
 
 describe('email shopping list handler', () => {
@@ -75,7 +89,7 @@ describe('email shopping list handler', () => {
     vi.mocked(getTroopContext).mockResolvedValueOnce(scoutAuth)
     const result = await handler(makeReq({ recipientEmail: 'bad' }), ctx)
     expect(result.status).toBe(400)
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(mockBeginSend).not.toHaveBeenCalled()
   })
 
   it('returns 404 when event is not found', async () => {
@@ -86,12 +100,12 @@ describe('email shopping list handler', () => {
       items: [{ name: 'Beans', quantity: 2, unit: 'can' }],
     }), ctx)
     expect(result.status).toBe(404)
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(mockBeginSend).not.toHaveBeenCalled()
   })
 
   it('returns 500 when email service env vars are missing', async () => {
     vi.mocked(getTroopContext).mockResolvedValueOnce(scoutAuth)
-    delete process.env.SENDGRID_API_KEY
+    delete process.env.ACS_FROM_EMAIL
     const result = await handler(makeReq({
       recipientEmail: 'parent@example.com',
       items: [{ name: 'Beans', quantity: 2, unit: 'can' }],
@@ -100,9 +114,8 @@ describe('email shopping list handler', () => {
     expect(result.jsonBody.error).toBe('Email service not configured')
   })
 
-  it('sends a formatted shopping list email', async () => {
+  it('sends a formatted shopping list email via ACS', async () => {
     vi.mocked(getTroopContext).mockResolvedValueOnce(scoutAuth)
-    fetchMock.mockResolvedValueOnce({ ok: true, status: 202 })
 
     const result = await handler(makeReq({
       recipientEmail: 'parent@example.com',
@@ -113,26 +126,19 @@ describe('email shopping list handler', () => {
     }), ctx)
 
     expect(result.status).toBe(202)
-    expect(fetchMock).toHaveBeenCalledWith(
-      'https://api.sendgrid.com/v3/mail/send',
-      expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({
-          Authorization: 'Bearer test-key',
-        }),
-      })
-    )
+    expect(mockBeginSend).toHaveBeenCalledOnce()
 
-    const payload = JSON.parse(fetchMock.mock.calls[0][1].body)
-    expect(payload.personalizations[0].to[0].email).toBe('parent@example.com')
-    expect(payload.subject).toBe('Shopping List: Campout')
-    expect(payload.content[0].value).toContain('Beans: 2 can')
-    expect(payload.content[0].value).toContain('Salt: 1.5 tsp')
+    const message = mockBeginSend.mock.calls[0][0]
+    expect(message.senderAddress).toBe('DoNotReply@acs-scout-meal-planner.azurecomm.net')
+    expect(message.recipients.to[0].address).toBe('parent@example.com')
+    expect(message.content.subject).toBe('Shopping List: Campout')
+    expect(message.content.plainText).toContain('Beans: 2 can')
+    expect(message.content.plainText).toContain('Salt: 1.5 tsp')
   })
 
-  it('returns 502 when SendGrid returns an error', async () => {
+  it('returns 502 when ACS returns an error status', async () => {
     vi.mocked(getTroopContext).mockResolvedValueOnce(scoutAuth)
-    fetchMock.mockResolvedValueOnce({ ok: false, text: () => Promise.resolve('bad request') })
+    mockPollUntilDone.mockResolvedValueOnce({ status: 'Failed', error: { message: 'bad request' } })
 
     const result = await handler(makeReq({
       recipientEmail: 'parent@example.com',
