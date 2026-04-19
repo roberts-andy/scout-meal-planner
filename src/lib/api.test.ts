@@ -144,4 +144,12 @@ describe('membersApi', () => {
       body: JSON.stringify(member),
     }))
   })
+
+  it('deleteData sends DELETE to /members/{id}/data', async () => {
+    mockFetch.mockResolvedValueOnce(emptyResponse())
+    await membersApi.deleteData('member-1')
+    expect(mockFetch).toHaveBeenCalledWith('/api/members/member-1/data', expect.objectContaining({
+      method: 'DELETE',
+    }))
+  })
 })

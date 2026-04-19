@@ -5,6 +5,9 @@ import { checkPermission } from '../middleware/roles.js'
 import { createMemberSchema, updateMemberSchema, validationError } from '../schemas.js'
 
 const CONTAINER = 'members'
+const FEEDBACK_CONTAINER = 'feedback'
+const EVENTS_CONTAINER = 'events'
+const DELETED_MEMBER_AUDIT = { userId: 'deleted-member', displayName: 'Deleted Member' }
 
 async function membersHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const id = req.params.id
@@ -157,6 +160,99 @@ async function memberMeHandler(req: HttpRequest, context: InvocationContext): Pr
   }
 }
 
+async function memberDataDeletionHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  const memberId = req.params.id
+  context.log(`DELETE /api/members/${memberId}/data`)
+
+  const auth = await getTroopContext(req, context)
+  if (!auth) return unauthorized()
+  if (!checkPermission(auth.role, 'manageTroop')) return forbidden()
+
+  try {
+    const members = await queryItems<any>(
+      CONTAINER,
+      'SELECT * FROM c WHERE c.id = @id AND c.troopId = @troopId',
+      [
+        { name: '@id', value: memberId },
+        { name: '@troopId', value: auth.troopId },
+      ]
+    )
+
+    if (members.length === 0) {
+      return { status: 404, jsonBody: { error: 'Member not found' } }
+    }
+
+    const member = members[0] as { id: string; userId?: string }
+    const userId = typeof member.userId === 'string' ? member.userId : ''
+    const hasUserId = userId.length > 0
+
+    const feedbackQuery = hasUserId
+      ? 'SELECT * FROM c WHERE c.troopId = @troopId AND (c.memberId = @memberId OR c.createdBy.userId = @userId OR c.updatedBy.userId = @userId)'
+      : 'SELECT * FROM c WHERE c.troopId = @troopId AND c.memberId = @memberId'
+    const feedbackParams = hasUserId
+      ? [
+          { name: '@troopId', value: auth.troopId },
+          { name: '@memberId', value: memberId },
+          { name: '@userId', value: userId },
+        ]
+      : [
+          { name: '@troopId', value: auth.troopId },
+          { name: '@memberId', value: memberId },
+        ]
+
+    const feedbackRecords = await queryItems<any>(FEEDBACK_CONTAINER, feedbackQuery, feedbackParams)
+    for (const feedback of feedbackRecords) {
+      const fromTargetMember = feedback.memberId === memberId
+        || (hasUserId && (feedback.createdBy?.userId === userId || feedback.updatedBy?.userId === userId))
+      const anonymizedFeedback = {
+        ...feedback,
+        createdBy: fromTargetMember ? DELETED_MEMBER_AUDIT : feedback.createdBy,
+        scoutName: fromTargetMember ? 'Deleted Member' : feedback.scoutName,
+        updatedAt: Date.now(),
+        updatedBy: { userId: auth.userId, displayName: auth.displayName },
+      }
+      delete anonymizedFeedback.memberId
+      await update(FEEDBACK_CONTAINER, feedback.id, anonymizedFeedback, auth.troopId)
+    }
+
+    const eventQuery = hasUserId
+      ? 'SELECT * FROM c WHERE c.troopId = @troopId AND (c.memberId = @memberId OR c.createdBy.userId = @userId OR c.updatedBy.userId = @userId)'
+      : 'SELECT * FROM c WHERE c.troopId = @troopId AND c.memberId = @memberId'
+    const eventParams = hasUserId
+      ? [
+          { name: '@troopId', value: auth.troopId },
+          { name: '@memberId', value: memberId },
+          { name: '@userId', value: userId },
+        ]
+      : [
+          { name: '@troopId', value: auth.troopId },
+          { name: '@memberId', value: memberId },
+        ]
+
+    const events = await queryItems<any>(EVENTS_CONTAINER, eventQuery, eventParams)
+    for (const event of events) {
+      const anonymizedEvent = { ...event }
+      if ((anonymizedEvent.createdBy?.userId === userId && hasUserId) || event.memberId === memberId) {
+        anonymizedEvent.createdBy = DELETED_MEMBER_AUDIT
+      }
+      if ((anonymizedEvent.updatedBy?.userId === userId && hasUserId) || event.memberId === memberId) {
+        anonymizedEvent.updatedBy = DELETED_MEMBER_AUDIT
+      }
+      delete anonymizedEvent.memberId
+      anonymizedEvent.updatedAt = Date.now()
+      anonymizedEvent.updatedBy = { userId: auth.userId, displayName: auth.displayName }
+      await update(EVENTS_CONTAINER, event.id, anonymizedEvent, auth.troopId)
+    }
+
+    await remove(CONTAINER, memberId, auth.troopId)
+    context.log(`Deleted all troop data for member ${memberId} in troop ${auth.troopId}`)
+    return { status: 204 }
+  } catch (err) {
+    context.error(`DELETE /api/members/${memberId}/data failed:`, err)
+    return { status: 500, jsonBody: { error: 'Internal server error' } }
+  }
+}
+
 app.http('members', {
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   authLevel: 'anonymous',
@@ -169,4 +265,11 @@ app.http('memberMe', {
   authLevel: 'anonymous',
   route: 'members/me',
   handler: memberMeHandler,
+})
+
+app.http('memberDataDeletion', {
+  methods: ['DELETE'],
+  authLevel: 'anonymous',
+  route: 'members/{id}/data',
+  handler: memberDataDeletionHandler,
 })
