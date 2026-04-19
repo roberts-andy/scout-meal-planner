@@ -59,6 +59,11 @@ export const eventsApi = {
       method: 'PATCH',
       body: JSON.stringify({ item, packed }),
     }),
+  togglePurchasedItem: (eventId: string, item: string, purchased: boolean) =>
+    request<Event>(`/events/${eventId}/purchased`, {
+      method: 'PATCH',
+      body: JSON.stringify({ item, purchased }),
+    }),
   delete: (id: string) =>
     request<void>(`/events/${id}`, { method: 'DELETE' }),
   getShare: (id: string) =>
