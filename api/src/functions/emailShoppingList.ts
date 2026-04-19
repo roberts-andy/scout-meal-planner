@@ -16,10 +16,6 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;')
 }
 
-function formatQuantity(quantity: number): string {
-  return String(quantity)
-}
-
 async function emailShoppingListHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const eventId = req.params.id
   context.log(`POST /api/events/${eventId}/shopping-list/email`)
@@ -47,11 +43,11 @@ async function emailShoppingListHandler(req: HttpRequest, context: InvocationCon
     const resolvedEventName = typeof existingEvent.name === 'string' && existingEvent.name.length > 0
       ? existingEvent.name
       : 'Unnamed Event'
-    const textRows = items.map((item) => `- ${item.name}: ${formatQuantity(item.quantity)} ${item.unit}`).join('\n')
+    const textRows = items.map((item) => `- ${item.name}: ${item.quantity} ${item.unit}`).join('\n')
     const htmlRows = items
       .map((item) => {
         const safeName = escapeHtml(item.name)
-        const safeQuantity = escapeHtml(formatQuantity(item.quantity))
+        const safeQuantity = escapeHtml(String(item.quantity))
         const safeUnit = escapeHtml(item.unit)
         return `<tr><td style="padding:4px 8px;">${safeName}</td><td style="padding:4px 8px;text-align:right;">${safeQuantity}</td><td style="padding:4px 8px;">${safeUnit}</td></tr>`
       })

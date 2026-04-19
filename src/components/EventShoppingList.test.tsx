@@ -101,5 +101,38 @@ describe('EventShoppingList estimated prices', () => {
     })
 
     expect(toastSuccessMock).toHaveBeenCalledWith('Shopping list emailed')
+    await waitFor(() => expect(screen.queryByText('Email shopping list')).not.toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: 'Email List' }))
+    expect(screen.getByLabelText('Recipient email')).toHaveValue('')
+  })
+
+  it('shows validation error when sending without recipient email', async () => {
+    const user = userEvent.setup()
+
+    render(<EventShoppingList event={event} recipes={recipes} />)
+
+    await user.click(screen.getByRole('button', { name: 'Email List' }))
+    await user.click(screen.getByRole('button', { name: 'Send Email' }))
+
+    expect(eventsApiMock.emailShoppingList).not.toHaveBeenCalled()
+    expect(toastErrorMock).toHaveBeenCalledWith('Recipient email is required')
+  })
+
+  it('shows error toast when API request fails', async () => {
+    const user = userEvent.setup()
+    eventsApiMock.emailShoppingList.mockRejectedValueOnce(new Error('Network down'))
+
+    render(<EventShoppingList event={event} recipes={recipes} />)
+
+    await user.click(screen.getByRole('button', { name: 'Email List' }))
+    await user.type(screen.getByLabelText('Recipient email'), 'parent@example.com')
+    await user.click(screen.getByRole('button', { name: 'Send Email' }))
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith('Failed to email shopping list', {
+        description: 'Network down',
+      })
+    })
   })
 })
