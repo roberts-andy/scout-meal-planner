@@ -6,6 +6,7 @@ import {
   createRecipeSchema,
   createFeedbackSchema,
   togglePackedItemSchema,
+  togglePurchasedItemSchema,
   emailShoppingListSchema,
   updateMemberSchema,
   validationError,
@@ -91,6 +92,14 @@ describe('createEventSchema', () => {
     const result = createEventSchema.safeParse({
       ...valid,
       packedItems: ['Skillet', 'Dutch Oven'],
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts optional purchasedItems', () => {
+    const result = createEventSchema.safeParse({
+      ...valid,
+      purchasedItems: ['beans-can', 'salt-tsp'],
     })
     expect(result.success).toBe(true)
   })
@@ -285,6 +294,20 @@ describe('togglePackedItemSchema', () => {
 
   it('rejects non-boolean packed flag', () => {
     expect(togglePackedItemSchema.safeParse({ item: 'Skillet', packed: 'yes' }).success).toBe(false)
+  })
+})
+
+describe('togglePurchasedItemSchema', () => {
+  it('accepts valid payload', () => {
+    expect(togglePurchasedItemSchema.safeParse({ item: 'beans-can', purchased: true }).success).toBe(true)
+  })
+
+  it('rejects empty item', () => {
+    expect(togglePurchasedItemSchema.safeParse({ item: '', purchased: true }).success).toBe(false)
+  })
+
+  it('rejects non-boolean purchased flag', () => {
+    expect(togglePurchasedItemSchema.safeParse({ item: 'beans-can', purchased: 'yes' }).success).toBe(false)
   })
 })
 

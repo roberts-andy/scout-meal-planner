@@ -1,11 +1,14 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { EventShoppingList } from './EventShoppingList'
 
 const { eventsApiMock, toastSuccessMock, toastErrorMock } = vi.hoisted(() => ({
   eventsApiMock: {
     emailShoppingList: vi.fn(),
+    togglePurchasedItem: vi.fn(),
   },
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
@@ -25,6 +28,12 @@ vi.mock('sonner', () => ({
 beforeEach(() => {
   vi.clearAllMocks()
 })
+
+function wrapper() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+  return ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client }, children)
+}
 
 describe('EventShoppingList estimated prices', () => {
   const event = {
@@ -58,7 +67,7 @@ describe('EventShoppingList estimated prices', () => {
   }] as any
 
   it('shows a price column and total estimated cost with optional item prices', () => {
-    render(<EventShoppingList event={event} recipes={recipes} />)
+    render(<EventShoppingList event={event} recipes={recipes} />, { wrapper: wrapper() })
 
     expect(screen.getAllByText('Price')[0]).toBeInTheDocument()
     expect(screen.getByText('Total Estimated Cost')).toBeInTheDocument()
@@ -80,7 +89,7 @@ describe('EventShoppingList estimated prices', () => {
     const user = userEvent.setup()
     eventsApiMock.emailShoppingList.mockResolvedValueOnce({ message: 'sent' })
 
-    render(<EventShoppingList event={event} recipes={recipes} />)
+    render(<EventShoppingList event={event} recipes={recipes} />, { wrapper: wrapper() })
 
     await user.click(screen.getByRole('button', { name: 'Email List' }))
     await user.type(screen.getByLabelText('Recipient email'), 'parent@example.com')
@@ -109,7 +118,7 @@ describe('EventShoppingList estimated prices', () => {
   it('shows validation error when sending without recipient email', async () => {
     const user = userEvent.setup()
 
-    render(<EventShoppingList event={event} recipes={recipes} />)
+    render(<EventShoppingList event={event} recipes={recipes} />, { wrapper: wrapper() })
 
     await user.click(screen.getByRole('button', { name: 'Email List' }))
     await user.click(screen.getByRole('button', { name: 'Send Email' }))
@@ -122,7 +131,7 @@ describe('EventShoppingList estimated prices', () => {
     const user = userEvent.setup()
     eventsApiMock.emailShoppingList.mockRejectedValueOnce(new Error('Network down'))
 
-    render(<EventShoppingList event={event} recipes={recipes} />)
+    render(<EventShoppingList event={event} recipes={recipes} />, { wrapper: wrapper() })
 
     await user.click(screen.getByRole('button', { name: 'Email List' }))
     await user.type(screen.getByLabelText('Recipient email'), 'parent@example.com')
@@ -133,5 +142,21 @@ describe('EventShoppingList estimated prices', () => {
         description: 'Network down',
       })
     })
+  })
+
+  it('initializes from purchasedItems and persists optimistic toggles', async () => {
+    const user = userEvent.setup()
+    const eventWithPurchased = { ...event, purchasedItems: ['beans-can'] }
+    eventsApiMock.togglePurchasedItem.mockResolvedValueOnce({ ...eventWithPurchased, purchasedItems: [] })
+
+    render(<EventShoppingList event={eventWithPurchased as any} recipes={recipes} />, { wrapper: wrapper() })
+
+    const beansCheckbox = screen.getByRole('checkbox', { name: 'Beans' })
+    expect(beansCheckbox).toHaveAttribute('aria-checked', 'true')
+
+    await user.click(beansCheckbox)
+
+    expect(beansCheckbox).toHaveAttribute('aria-checked', 'false')
+    expect(eventsApiMock.togglePurchasedItem).toHaveBeenCalledWith('event-1', 'beans-can', false)
   })
 })
