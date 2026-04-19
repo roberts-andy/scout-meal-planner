@@ -104,6 +104,8 @@ export const membersApi = {
     request<TroopMember>(`/members/${id}`, { method: 'PUT', body: JSON.stringify({ role }) }),
   approve: (id: string) =>
     request<TroopMember>(`/members/${id}`, { method: 'PUT', body: JSON.stringify({ status: 'active' }) }),
+  updateStatus: (troopId: string, memberId: string, status: TroopMember['status']) =>
+    request<TroopMember>(`/troops/${troopId}/members/${memberId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   remove: (id: string) =>
     request<void>(`/members/${id}`, { method: 'DELETE' }),
 }

@@ -32,6 +32,7 @@ import { getTroopContext } from '../middleware/auth.js'
 import './members.js'
 
 const handler = registeredHandlers.members as (req: HttpRequest, ctx: any) => Promise<any>
+const troopMemberStatusHandler = registeredHandlers.troopMemberStatus as (req: HttpRequest, ctx: any) => Promise<any>
 
 function makeReq(opts: {
   method: string
@@ -127,5 +128,79 @@ describe('members handler — POST', () => {
     expect(created.displayName).toBe('New Member')
     expect(created.email).toBe('new@example.com')
     expect(created.role).toBe('scout')
+  })
+})
+
+describe('troopMemberStatus handler — PATCH', () => {
+  it('returns 403 when caller is not troopAdmin', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(scoutAuth)
+
+    const result = await troopMemberStatusHandler(makeReq({
+      method: 'PATCH',
+      params: { troopId: 'troop-42', memberId: 'member-1' },
+      body: { status: 'deactivated' },
+    }), ctx)
+
+    expect(result.status).toBe(403)
+    expect(cosmos.update).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 when status is missing', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+
+    const result = await troopMemberStatusHandler(makeReq({
+      method: 'PATCH',
+      params: { troopId: 'troop-42', memberId: 'member-1' },
+      body: {},
+    }), ctx)
+
+    expect(result.status).toBe(400)
+    expect(cosmos.update).not.toHaveBeenCalled()
+  })
+
+  it('updates a member to deactivated status', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+    vi.mocked(cosmos.queryItems).mockResolvedValueOnce([{
+      id: 'member-1',
+      troopId: 'troop-42',
+      status: 'active',
+      role: 'scout',
+    }])
+    vi.mocked(cosmos.update).mockImplementationOnce(async (_container, _id, member) => member as any)
+
+    const result = await troopMemberStatusHandler(makeReq({
+      method: 'PATCH',
+      params: { troopId: 'troop-42', memberId: 'member-1' },
+      body: { status: 'deactivated' },
+    }), ctx)
+
+    expect(result.status).toBeUndefined()
+    expect(cosmos.update).toHaveBeenCalledWith(
+      'members',
+      'member-1',
+      expect.objectContaining({ status: 'deactivated' }),
+      'troop-42',
+    )
+    expect(result.jsonBody.status).toBe('deactivated')
+  })
+
+  it('updates a member to removed status', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+    vi.mocked(cosmos.queryItems).mockResolvedValueOnce([{
+      id: 'member-2',
+      troopId: 'troop-42',
+      status: 'active',
+      role: 'scout',
+    }])
+    vi.mocked(cosmos.update).mockImplementationOnce(async (_container, _id, member) => member as any)
+
+    const result = await troopMemberStatusHandler(makeReq({
+      method: 'PATCH',
+      params: { troopId: 'troop-42', memberId: 'member-2' },
+      body: { status: 'removed' },
+    }), ctx)
+
+    expect(result.status).toBeUndefined()
+    expect(result.jsonBody.status).toBe('removed')
   })
 })

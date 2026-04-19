@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Copy, UserCircleMinus, CheckCircle } from '@phosphor-icons/react'
 import type { TroopMember, TroopRole } from '@/lib/types'
 
@@ -34,6 +35,7 @@ export function TroopAdmin() {
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false)
   const [addMemberError, setAddMemberError] = useState('')
   const [memberForm, setMemberForm] = useState<{ displayName: string; email: string; role: TroopRole }>(DEFAULT_MEMBER_FORM)
+  const [memberAction, setMemberAction] = useState<{ type: 'deactivate' | 'remove'; member: TroopMember } | null>(null)
 
   const troopQuery = useQuery({ queryKey: ['troop'], queryFn: troopsApi.get })
   const membersQuery = useQuery({ queryKey: ['members'], queryFn: membersApi.getAll })
@@ -48,8 +50,13 @@ export function TroopAdmin() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members'] }),
   })
 
+  const deactivateMember = useMutation({
+    mutationFn: ({ troopId, memberId }: { troopId: string; memberId: string }) => membersApi.updateStatus(troopId, memberId, 'deactivated'),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members'] }),
+  })
+
   const removeMember = useMutation({
-    mutationFn: (id: string) => membersApi.remove(id),
+    mutationFn: ({ troopId, memberId }: { troopId: string; memberId: string }) => membersApi.updateStatus(troopId, memberId, 'removed'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members'] }),
   })
 
@@ -75,6 +82,7 @@ export function TroopAdmin() {
   const members = (membersQuery.data || []) as TroopMember[]
   const pendingMembers = members.filter((m) => m.status === 'pending')
   const activeMembers = members.filter((m) => m.status === 'active')
+  const isActionPending = deactivateMember.isPending || removeMember.isPending
 
   function copyInviteCode() {
     if (troop?.inviteCode) {
@@ -93,6 +101,18 @@ export function TroopAdmin() {
     } catch (err) {
       setAddMemberError(err instanceof Error ? err.message : 'An unexpected error occurred while adding member')
     }
+  }
+
+  async function confirmMemberAction() {
+    if (!memberAction || !troop?.id) return
+
+    if (memberAction.type === 'deactivate') {
+      await deactivateMember.mutateAsync({ troopId: troop.id, memberId: memberAction.member.id })
+    } else {
+      await removeMember.mutateAsync({ troopId: troop.id, memberId: memberAction.member.id })
+    }
+
+    setMemberAction(null)
   }
 
   return (
@@ -230,8 +250,8 @@ export function TroopAdmin() {
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => removeMember.mutate(member.id)}
-                          disabled={removeMember.isPending}
+                          onClick={() => setMemberAction({ type: 'remove', member })}
+                          disabled={isActionPending}
                         >
                           Decline
                         </Button>
@@ -290,14 +310,25 @@ export function TroopAdmin() {
                   </TableCell>
                   <TableCell>
                     {member.userId !== user?.userId && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => removeMember.mutate(member.id)}
-                        disabled={removeMember.isPending}
-                      >
-                        <UserCircleMinus className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setMemberAction({ type: 'deactivate', member })}
+                          disabled={isActionPending}
+                        >
+                          Deactivate
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setMemberAction({ type: 'remove', member })}
+                          disabled={isActionPending}
+                        >
+                          <UserCircleMinus className="h-4 w-4" />
+                          Remove
+                        </Button>
+                      </div>
                     )}
                   </TableCell>
                 </TableRow>
@@ -306,6 +337,31 @@ export function TroopAdmin() {
           </Table>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!memberAction} onOpenChange={(open) => { if (!open) setMemberAction(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {memberAction?.type === 'deactivate' ? 'Deactivate member?' : 'Remove member?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {memberAction?.type === 'deactivate'
+                ? `${memberAction?.member.displayName} will lose access immediately, but their troop data will be retained.`
+                : `${memberAction?.member.displayName} will be removed from the troop roster and lose access immediately.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isActionPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmMemberAction}
+              disabled={isActionPending}
+              className={memberAction?.type === 'remove' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : undefined}
+            >
+              {memberAction?.type === 'deactivate' ? 'Confirm Deactivate' : 'Confirm Remove'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

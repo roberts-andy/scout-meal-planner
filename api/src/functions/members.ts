@@ -1,5 +1,5 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
-import { queryItems, create, update, remove } from '../cosmosdb.js'
+import { queryItems, create, update } from '../cosmosdb.js'
 import { getTroopContext, unauthorized, forbidden } from '../middleware/auth.js'
 import { checkPermission } from '../middleware/roles.js'
 import { createMemberSchema, updateMemberSchema, validationError } from '../schemas.js'
@@ -19,7 +19,7 @@ async function membersHandler(req: HttpRequest, context: InvocationContext): Pro
     if (method === 'GET' && !id) {
       const members = await queryItems(
         CONTAINER,
-        'SELECT * FROM c WHERE c.troopId = @troopId',
+        'SELECT * FROM c WHERE c.troopId = @troopId AND c.status != "removed"',
         [{ name: '@troopId', value: auth.troopId }]
       )
       return { jsonBody: members }
@@ -122,13 +122,59 @@ async function membersHandler(req: HttpRequest, context: InvocationContext): Pro
         return { status: 404, jsonBody: { error: 'Member not found' } }
       }
 
-      await remove(CONTAINER, id, auth.troopId)
+      const member = members[0]
+      await update(CONTAINER, id, { ...member, status: 'removed' }, auth.troopId)
       return { status: 204 }
     }
 
     return { status: 405, jsonBody: { error: 'Method not allowed' } }
   } catch (err) {
     context.error(`${method} /api/members${id ? '/' + id : ''} failed:`, err)
+    return { status: 500, jsonBody: { error: 'Internal server error' } }
+  }
+}
+
+/** PATCH /api/troops/:troopId/members/:memberId — set member status (troopAdmin only) */
+async function troopMemberStatusHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  const method = req.method
+  const troopId = req.params.troopId
+  const memberId = req.params.memberId
+  context.log(`${method} /api/troops/${troopId}/members/${memberId}`)
+
+  const auth = await getTroopContext(req, context)
+  if (!auth) return unauthorized()
+  if (auth.role !== 'troopAdmin') return forbidden()
+  if (auth.troopId !== troopId) return forbidden()
+  if (method !== 'PATCH') return { status: 405, jsonBody: { error: 'Method not allowed' } }
+
+  try {
+    const parsed = updateMemberSchema.safeParse(await req.json())
+    if (!parsed.success) return validationError(parsed.error)
+    if (!parsed.data.status) {
+      return {
+        status: 400,
+        jsonBody: { error: 'Invalid request body', details: { status: ['Required'] } },
+      }
+    }
+
+    const members = await queryItems<any>(
+      CONTAINER,
+      'SELECT * FROM c WHERE c.id = @id AND c.troopId = @troopId',
+      [
+        { name: '@id', value: memberId },
+        { name: '@troopId', value: troopId },
+      ]
+    )
+
+    if (members.length === 0) {
+      return { status: 404, jsonBody: { error: 'Member not found' } }
+    }
+
+    const member = members[0]
+    const updated = await update(CONTAINER, memberId, { ...member, status: parsed.data.status }, troopId)
+    return { jsonBody: updated }
+  } catch (err) {
+    context.error(`PATCH /api/troops/${troopId}/members/${memberId} failed:`, err)
     return { status: 500, jsonBody: { error: 'Internal server error' } }
   }
 }
@@ -162,6 +208,13 @@ app.http('members', {
   authLevel: 'anonymous',
   route: 'members/{id?}',
   handler: membersHandler,
+})
+
+app.http('troopMemberStatus', {
+  methods: ['PATCH'],
+  authLevel: 'anonymous',
+  route: 'troops/{troopId}/members/{memberId}',
+  handler: troopMemberStatusHandler,
 })
 
 app.http('memberMe', {

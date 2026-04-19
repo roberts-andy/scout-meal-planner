@@ -108,7 +108,7 @@ async function joinTroopHandler(req: HttpRequest, context: InvocationContext): P
   // Check if already a member
   const existing = await queryItems<any>(
     'members',
-    'SELECT * FROM c WHERE c.troopId = @troopId AND c.userId = @userId',
+    'SELECT * FROM c WHERE c.troopId = @troopId AND c.userId = @userId AND c.status != "removed"',
     [
       { name: '@troopId', value: troop.id },
       { name: '@userId', value: claims.userId },

@@ -144,4 +144,13 @@ describe('membersApi', () => {
       body: JSON.stringify(member),
     }))
   })
+
+  it('updateStatus patches /troops/{troopId}/members/{memberId}', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ id: 'm1', status: 'deactivated' }))
+    await membersApi.updateStatus('troop-1', 'm1', 'deactivated')
+    expect(mockFetch).toHaveBeenCalledWith('/api/troops/troop-1/members/m1', expect.objectContaining({
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'deactivated' }),
+    }))
+  })
 })
