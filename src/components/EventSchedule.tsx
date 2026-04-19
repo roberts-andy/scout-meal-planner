@@ -15,6 +15,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { format } from 'date-fns'
 import { CreateRecipeDialog } from './CreateRecipeDialog'
@@ -33,6 +34,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null)
   const [mealType, setMealType] = useState<MealType>('breakfast')
   const [mealCourse, setMealCourse] = useState<MealCourse | undefined>(undefined)
+  const [dietaryNotes, setDietaryNotes] = useState('')
   const [recipeId, setRecipeId] = useState<string>('')
   const [scoutCount, setScoutCount] = useState(8)
   const [isTrailside, setIsTrailside] = useState(false)
@@ -48,6 +50,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
       id: `meal-${Date.now()}`,
       type: mealType,
       course: mealCourse,
+      dietaryNotes: dietaryNotes.trim() || undefined,
       recipeId: recipeId || undefined,
       scoutCount,
       ...(isTrailside ? { isTrailside: true } : {}),
@@ -62,6 +65,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
     setIsAddMealOpen(false)
     setSelectedDayIndex(null)
     setMealCourse(undefined)
+    setDietaryNotes('')
     setRecipeId('')
     setIsTrailside(false)
     setIsTimeConstrained(false)
@@ -171,7 +175,15 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
                                 Time-Constrained
                               </Badge>
                             )}
+                            {meal.dietaryNotes && (
+                              <Badge variant="outline" className="text-xs">
+                                Dietary Notes
+                              </Badge>
+                            )}
                           </div>
+                          {meal.dietaryNotes && (
+                            <p className="text-sm text-muted-foreground mb-2">{meal.dietaryNotes}</p>
+                          )}
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex items-center gap-2">
                               <Button
@@ -253,6 +265,17 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
             </div>
 
             <div className="grid gap-2">
+              <Label htmlFor="meal-dietary-notes">Dietary Notes (Optional)</Label>
+              <Textarea
+                id="meal-dietary-notes"
+                value={dietaryNotes}
+                onChange={(e) => setDietaryNotes(e.target.value)}
+                placeholder="e.g., nut allergy, vegetarian option needed"
+                rows={3}
+              />
+            </div>
+
+            <div className="grid gap-2">
               <Label>Recipe (Optional)</Label>
               <Select value={recipeId || undefined} onValueChange={setRecipeId}>
                 <SelectTrigger>
@@ -266,6 +289,11 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
                   ))}
                 </SelectContent>
               </Select>
+              {dietaryNotes.trim() && (
+                <p className="text-xs text-muted-foreground">
+                  Dietary notes for recipe selection: {dietaryNotes.trim()}
+                </p>
+              )}
             </div>
 
             <div className="grid gap-2">
