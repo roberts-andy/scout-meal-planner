@@ -126,6 +126,9 @@ describe('createEventSchema', () => {
         meals: [{ id: 'm1', type: 'breakfast', scoutCount: 8, isTrailside: 'yes' }]
       }]
     }
+    expect(createEventSchema.safeParse(bad).success).toBe(false)
+  })
+
   it('rejects invalid meal course', () => {
     const bad = { ...valid, days: [{ date: '2026-07-01', meals: [{ id: 'm1', type: 'dinner', course: 'appetizer', scoutCount: 8 }] }] }
     expect(createEventSchema.safeParse(bad).success).toBe(false)
