@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Card, CardContent } from '@/components/ui/card'
-import { Users, Flame, GitBranch, ClockCounterClockwise, Star } from '@phosphor-icons/react'
+import { Users, Flame, GitBranch, ClockCounterClockwise, Star, Printer } from '@phosphor-icons/react'
 import { formatQuantity, calculateRecipeRatings, revertRecipeToVersion } from '@/lib/helpers'
 import { RecipeVersionHistory } from './RecipeVersionHistory'
 
@@ -35,11 +35,15 @@ export function RecipeDetailDialog({ recipe, recipes, feedback, open, onOpenChan
     const revertedRecipe = revertRecipeToVersion(recipe, versionNumber)
     onUpdateRecipe(revertedRecipe)
   }
+
+  const handlePrint = () => {
+    window.print()
+  }
   
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
+        <DialogContent className="recipe-print-root sm:max-w-[700px] max-h-[90vh]">
           <DialogHeader>
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
@@ -61,24 +65,35 @@ export function RecipeDetailDialog({ recipe, recipes, feedback, open, onOpenChan
                   )}
                 </div>
               </div>
-              {hasVersionHistory && (
+              <div className="flex items-center gap-2 no-print">
                 <Button
                   variant="outline"
                   size="sm"
                   className="gap-2 shrink-0"
-                  onClick={() => setShowVersionHistory(true)}
+                  onClick={handlePrint}
                 >
-                  <ClockCounterClockwise size={16} />
-                  History
+                  <Printer size={16} />
+                  Print
                 </Button>
-              )}
+                {hasVersionHistory && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 shrink-0"
+                    onClick={() => setShowVersionHistory(true)}
+                  >
+                    <ClockCounterClockwise size={16} />
+                    History
+                  </Button>
+                )}
+              </div>
             </div>
           </DialogHeader>
-        <ScrollArea className="max-h-[70vh] pr-4">
+        <ScrollArea className="recipe-print-scroll max-h-[70vh] pr-4">
           <div className="space-y-6 py-4">
             {ratingSummary && (
               <>
-                <Card className="bg-accent/5 border-accent/20">
+                <Card className="bg-accent/5 border-accent/20 no-print">
                   <CardContent className="pt-6">
                     <div className="flex items-start gap-6">
                       <div className="text-center">
@@ -187,13 +202,13 @@ export function RecipeDetailDialog({ recipe, recipes, feedback, open, onOpenChan
 
             <div>
               <h3 className="font-semibold mb-3">Cooking Variations</h3>
-              <Accordion type="single" collapsible className="w-full">
+              <Accordion type="single" collapsible className="w-full no-print">
                 {recipe.variations.map((variation, index) => (
                   <AccordionItem key={variation.id} value={`variation-${index}`}>
                     <AccordionTrigger>
                       <div className="flex items-center gap-2">
                         <Flame size={16} />
-                        <span className="capitalize">{variation.cookingMethod.replace('-', ' ')}</span>
+                          <span className="capitalize">{variation.cookingMethod.replaceAll('-', ' ')}</span>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent>
@@ -224,6 +239,33 @@ export function RecipeDetailDialog({ recipe, recipes, feedback, open, onOpenChan
                   </AccordionItem>
                 ))}
               </Accordion>
+              <div className="print-only space-y-4">
+                {recipe.variations.map((variation) => (
+                  <div key={variation.id} className="recipe-print-section space-y-3">
+                    <h4 className="text-sm font-semibold capitalize">{variation.cookingMethod.replaceAll('-', ' ')}</h4>
+                    {variation.instructions.length > 0 && (
+                      <div>
+                        <h5 className="text-sm font-medium mb-1">Instructions</h5>
+                        <ol className="recipe-print-list list-decimal space-y-1">
+                          {variation.instructions.map((instruction, i) => (
+                            <li key={i} className="text-sm text-muted-foreground">{instruction}</li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+                    {variation.equipment.length > 0 && (
+                      <div>
+                        <h5 className="text-sm font-medium mb-1">Equipment Needed</h5>
+                        <ul className="recipe-print-equipment">
+                          {variation.equipment.map((item, i) => (
+                            <li key={i} className="text-sm text-muted-foreground">{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </ScrollArea>
