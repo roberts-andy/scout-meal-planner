@@ -6,6 +6,37 @@ import { checkPermission } from '../middleware/roles.js'
 type ContentType = 'recipe' | 'feedback'
 type ReviewAction = 'approve' | 'reject'
 
+interface ModeratedItem {
+  id: string
+  createdAt?: number
+  createdBy?: {
+    displayName?: string
+    userId?: string
+  }
+  moderation?: {
+    status?: string
+    reviewedAt?: number
+    reviewedBy?: {
+      userId?: string
+      displayName?: string
+    }
+  }
+}
+
+interface ModeratedRecipe extends ModeratedItem {
+  name?: string
+  variations?: Array<{
+    instructions?: string[]
+  }>
+}
+
+interface ModeratedFeedback extends ModeratedItem {
+  comments?: string
+  whatWorked?: string
+  whatToChange?: string
+  scoutName?: string
+}
+
 const containerByType: Record<ContentType, string> = {
   recipe: 'recipes',
   feedback: 'feedback',
@@ -15,16 +46,18 @@ function isContentType(value: string | undefined): value is ContentType {
   return value === 'recipe' || value === 'feedback'
 }
 
-function buildPreview(contentType: ContentType, item: any): string {
+function buildPreview(contentType: ContentType, item: ModeratedRecipe | ModeratedFeedback): string {
   if (contentType === 'recipe') {
-    const instructions = Array.isArray(item.variations)
-      ? item.variations.flatMap((variation: any) => Array.isArray(variation.instructions) ? variation.instructions : [])
+    const recipe = item as ModeratedRecipe
+    const instructions = Array.isArray(recipe.variations)
+      ? recipe.variations.flatMap((variation) => Array.isArray(variation.instructions) ? variation.instructions : [])
       : []
     const instructionPreview = instructions.slice(0, 2).join(' ')
-    return [item.name, instructionPreview].filter(Boolean).join(' — ')
+    return [recipe.name, instructionPreview].filter(Boolean).join(' — ')
   }
 
-  const feedbackParts = [item.comments, item.whatWorked, item.whatToChange]
+  const feedback = item as ModeratedFeedback
+  const feedbackParts = [feedback.comments, feedback.whatWorked, feedback.whatToChange]
     .filter((part) => typeof part === 'string' && part.trim().length > 0)
   return feedbackParts.join(' • ')
 }
@@ -42,7 +75,7 @@ async function adminFlaggedContentHandler(req: HttpRequest, context: InvocationC
   try {
     if (method === 'GET') {
       const [flaggedRecipes, flaggedFeedback] = await Promise.all([
-        queryItems<any>(
+        queryItems<ModeratedRecipe>(
           'recipes',
           'SELECT * FROM c WHERE c.troopId = @troopId AND IS_DEFINED(c.moderation.status) AND c.moderation.status = @status',
           [
@@ -50,7 +83,7 @@ async function adminFlaggedContentHandler(req: HttpRequest, context: InvocationC
             { name: '@status', value: 'flagged' },
           ],
         ),
-        queryItems<any>(
+        queryItems<ModeratedFeedback>(
           'feedback',
           'SELECT * FROM c WHERE c.troopId = @troopId AND IS_DEFINED(c.moderation.status) AND c.moderation.status = @status',
           [
@@ -89,13 +122,19 @@ async function adminFlaggedContentHandler(req: HttpRequest, context: InvocationC
         return { status: 400, jsonBody: { error: 'contentType and id are required in route parameters' } }
       }
 
-      const payload = await req.json().catch(() => null) as { action?: ReviewAction } | null
+      let payload: { action?: ReviewAction } | null = null
+      try {
+        payload = await req.json() as { action?: ReviewAction }
+      } catch (err) {
+        context.error('PUT /api/admin/flagged-content invalid JSON body:', err)
+        return { status: 400, jsonBody: { error: 'Invalid JSON request body' } }
+      }
       if (!payload || (payload.action !== 'approve' && payload.action !== 'reject')) {
         return { status: 400, jsonBody: { error: 'action must be "approve" or "reject"' } }
       }
 
       const container = containerByType[contentTypeParam]
-      const existing = await getById<any>(container, id, auth.troopId)
+      const existing = await getById<ModeratedItem & Record<string, unknown>>(container, id, auth.troopId)
       if (!existing) return { status: 404, jsonBody: { error: 'Flagged content not found' } }
 
       if (payload.action === 'reject') {

@@ -27,12 +27,17 @@ const DEFAULT_MEMBER_FORM: { displayName: string; email: string; role: TroopRole
   email: '',
   role: 'scout',
 }
+const submittedAtFormatter = new Intl.DateTimeFormat('en-US', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+})
 
 export function TroopAdmin() {
   const { user, role } = useAuthContext()
   const queryClient = useQueryClient()
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false)
   const [addMemberError, setAddMemberError] = useState('')
+  const [flaggedContentError, setFlaggedContentError] = useState('')
   const [memberForm, setMemberForm] = useState<{ displayName: string; email: string; role: TroopRole }>(DEFAULT_MEMBER_FORM)
 
   const troopQuery = useQuery({ queryKey: ['troop'], queryFn: troopsApi.get })
@@ -73,13 +78,21 @@ export function TroopAdmin() {
     },
   })
 
+  async function refreshFlaggedContentQueries() {
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'flagged-content'] })
+    await queryClient.invalidateQueries({ queryKey: ['recipes'] })
+    await queryClient.invalidateQueries({ queryKey: ['feedback'] })
+  }
+
   const reviewFlaggedContent = useMutation({
     mutationFn: ({ contentType, id, action }: { contentType: 'recipe' | 'feedback'; id: string; action: 'approve' | 'reject' }) =>
       adminApi.reviewFlaggedContent(contentType, id, action),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'flagged-content'] })
-      queryClient.invalidateQueries({ queryKey: ['recipes'] })
-      queryClient.invalidateQueries({ queryKey: ['feedback'] })
+    onSuccess: async () => {
+      setFlaggedContentError('')
+      await refreshFlaggedContentQueries()
+    },
+    onError: (err) => {
+      setFlaggedContentError(err instanceof Error ? err.message : 'Unable to review flagged content')
     },
   })
 
@@ -137,21 +150,29 @@ export function TroopAdmin() {
   }
 
   async function handleEditFlaggedContent(item: FlaggedContentItem) {
-    if (item.contentType === 'recipe') {
-      const recipe = item.content as Recipe
-      const updatedName = window.prompt('Edit recipe name', recipe.name)
-      if (!updatedName || !updatedName.trim() || updatedName.trim() === recipe.name) return
-      await recipesApi.update({ ...recipe, name: updatedName.trim() })
-    } else {
-      const feedback = item.content as MealFeedback
-      const updatedComments = window.prompt('Edit feedback comments', feedback.comments)
-      if (!updatedComments || !updatedComments.trim() || updatedComments.trim() === feedback.comments) return
-      await feedbackApi.update({ ...feedback, comments: updatedComments.trim() })
-    }
+    try {
+      if (item.contentType === 'recipe') {
+        const recipe = item.content as Recipe
+        const updatedName = window.prompt('Edit recipe name', recipe.name)
+        if (!updatedName || !updatedName.trim() || updatedName.trim() === recipe.name) return
+        await recipesApi.update({ ...recipe, name: updatedName.trim() })
+      } else {
+        const feedback = item.content as MealFeedback
+        const updatedComments = window.prompt('Edit feedback comments', feedback.comments)
+        if (!updatedComments || !updatedComments.trim() || updatedComments.trim() === feedback.comments) return
+        await feedbackApi.update({ ...feedback, comments: updatedComments.trim() })
+      }
 
-    await queryClient.invalidateQueries({ queryKey: ['admin', 'flagged-content'] })
-    await queryClient.invalidateQueries({ queryKey: ['recipes'] })
-    await queryClient.invalidateQueries({ queryKey: ['feedback'] })
+      setFlaggedContentError('')
+      await refreshFlaggedContentQueries()
+    } catch (err) {
+      setFlaggedContentError(err instanceof Error ? err.message : 'Unable to edit flagged content')
+    }
+  }
+
+  function formatSubmittedAt(submittedAt: number | null) {
+    if (!submittedAt) return 'Unknown'
+    return submittedAtFormatter.format(new Date(submittedAt))
   }
 
   return (
@@ -391,6 +412,9 @@ export function TroopAdmin() {
           <CardDescription>Review moderated submissions from FR-023</CardDescription>
         </CardHeader>
         <CardContent>
+          {flaggedContentError && (
+            <p className="mb-3 text-sm text-destructive">{flaggedContentError}</p>
+          )}
           {flaggedContentQuery.isLoading && (
             <p className="text-sm text-muted-foreground">Loading flagged content...</p>
           )}
@@ -413,8 +437,10 @@ export function TroopAdmin() {
                   <TableRow key={`${item.contentType}:${item.id}`}>
                     <TableCell className="capitalize">{item.contentType}</TableCell>
                     <TableCell>{item.submittedBy}</TableCell>
-                    <TableCell>{item.submittedAt ? new Date(item.submittedAt).toLocaleString() : 'Unknown'}</TableCell>
-                    <TableCell className="max-w-lg whitespace-normal break-words">{item.preview || 'No preview available'}</TableCell>
+                    <TableCell>{formatSubmittedAt(item.submittedAt)}</TableCell>
+                    <TableCell className="max-w-lg whitespace-normal break-words" title={item.preview || 'No preview available'}>
+                      {item.preview || 'No preview available'}
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-2">
                         <Button
@@ -427,7 +453,7 @@ export function TroopAdmin() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => void handleEditFlaggedContent(item)}
+                          onClick={() => handleEditFlaggedContent(item)}
                         >
                           Edit
                         </Button>
