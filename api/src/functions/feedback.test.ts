@@ -45,6 +45,7 @@ import './feedback.js'
 
 const feedbackHandler = registeredHandlers.feedback as (req: HttpRequest, ctx: any) => Promise<any>
 const feedbackByEventHandler = registeredHandlers.feedbackByEvent as (req: HttpRequest, ctx: any) => Promise<any>
+const feedbackByRecipeHandler = registeredHandlers.feedbackByRecipe as (req: HttpRequest, ctx: any) => Promise<any>
 
 function makeReq(opts: {
   method: string
@@ -152,5 +153,29 @@ describe('feedback handler moderation', () => {
     const result = await feedbackByEventHandler(makeReq({ method: 'GET', params: { eventId: 'event-1' } }), ctx)
 
     expect(result.jsonBody).toEqual([{ id: 'f-approved', moderation: { status: 'approved' } }])
+  })
+
+  it('returns recipe feedback with event context for visible entries', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(scoutAuth)
+    vi.mocked(cosmos.queryItems).mockResolvedValueOnce([
+      { id: 'f-approved', eventId: 'event-1', moderation: { status: 'approved' } },
+      { id: 'f-flagged', eventId: 'event-2', moderation: { status: 'flagged' } },
+    ])
+    vi.mocked(cosmos.getAllByTroop).mockResolvedValueOnce([
+      { id: 'event-1', name: 'June Campout', startDate: '2026-06-10' },
+      { id: 'event-2', name: 'Summer Trek', startDate: '2026-07-15' },
+    ])
+
+    const result = await feedbackByRecipeHandler(makeReq({ method: 'GET', params: { recipeId: 'recipe-1' } }), ctx)
+
+    expect(result.jsonBody).toEqual([
+      {
+        id: 'f-approved',
+        eventId: 'event-1',
+        moderation: { status: 'approved' },
+        eventName: 'June Campout',
+        eventDate: '2026-06-10',
+      },
+    ])
   })
 })

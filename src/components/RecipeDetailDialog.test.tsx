@@ -3,6 +3,11 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { RecipeDetailDialog } from './RecipeDetailDialog'
 import type { Recipe } from '@/lib/types'
+import { useRecipeFeedback } from '@/hooks/useFeedback'
+
+vi.mock('@/hooks/useFeedback', () => ({
+  useRecipeFeedback: vi.fn(),
+}))
 
 const recipe: Recipe = {
   id: 'recipe-1',
@@ -34,6 +39,10 @@ describe('RecipeDetailDialog', () => {
 
   beforeEach(() => {
     vi.stubGlobal('print', printSpy)
+    vi.mocked(useRecipeFeedback).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as any)
   })
 
   afterEach(() => {
@@ -82,5 +91,35 @@ describe('RecipeDetailDialog', () => {
 
     const noPrintElements = document.body.querySelectorAll('.no-print')
     expect(noPrintElements.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('renders recipe feedback history with event attribution', () => {
+    vi.mocked(useRecipeFeedback).mockReturnValue({
+      data: [
+        {
+          id: 'fb-1',
+          recipeId: 'recipe-1',
+          eventName: 'Spring Campout',
+          eventDate: '2026-04-11',
+          comments: 'Big hit with the patrol',
+          rating: { taste: 5, difficulty: 4, portionSize: 5 },
+        },
+      ],
+      isLoading: false,
+    } as any)
+
+    render(
+      <RecipeDetailDialog
+        recipe={recipe}
+        open
+        onOpenChange={onOpenChange}
+        onUpdateRecipe={onUpdateRecipe}
+      />
+    )
+
+    expect(screen.getByText('Past Feedback')).toBeInTheDocument()
+    expect(screen.getByText('Spring Campout')).toBeInTheDocument()
+    expect(screen.getByText('Big hit with the patrol')).toBeInTheDocument()
+    expect(screen.getByText('1 review')).toBeInTheDocument()
   })
 })

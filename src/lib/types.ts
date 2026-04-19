@@ -192,6 +192,8 @@ export interface MealFeedback {
   photos?: string[]
   createdAt: number
   updatedAt?: number
+  eventName?: string
+  eventDate?: string
   createdBy?: AuditInfo
   updatedBy?: AuditInfo
 }

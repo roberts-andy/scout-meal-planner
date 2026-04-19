@@ -9,6 +9,14 @@ export function useFeedback() {
   })
 }
 
+export function useRecipeFeedback(recipeId: string, enabled = true) {
+  return useQuery({
+    queryKey: ['feedback', 'recipe', recipeId],
+    queryFn: () => feedbackApi.getByRecipe(recipeId),
+    enabled: enabled && !!recipeId,
+  })
+}
+
 export function useCreateFeedback() {
   const queryClient = useQueryClient()
   return useMutation({
