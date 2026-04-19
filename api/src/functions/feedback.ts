@@ -3,6 +3,7 @@ import { getAllByTroop, getById, create, update, remove, queryItems } from '../c
 import { getTroopContext, unauthorized, forbidden } from '../middleware/auth.js'
 import { checkPermission } from '../middleware/roles.js'
 import { createFeedbackSchema, updateFeedbackSchema, validationError } from '../schemas.js'
+import { canViewModeratedContent, moderateTextFields } from '../middleware/moderation.js'
 
 const CONTAINER = 'feedback'
 
@@ -17,7 +18,7 @@ async function feedbackHandler(req: HttpRequest, context: InvocationContext): Pr
   try {
     if (method === 'GET' && !id) {
       const feedback = await getAllByTroop(CONTAINER, auth.troopId)
-      return { jsonBody: feedback }
+      return { jsonBody: feedback.filter((entry) => canViewModeratedContent(auth.role, entry.moderation)) }
     }
 
     if (method === 'POST') {
@@ -26,10 +27,16 @@ async function feedbackHandler(req: HttpRequest, context: InvocationContext): Pr
       if (!parsed.success) return validationError(parsed.error)
       const now = Date.now()
       const audit = { userId: auth.userId, displayName: auth.displayName }
+      const moderation = await moderateTextFields([
+        { field: 'comments', text: parsed.data.comments },
+        { field: 'whatWorked', text: parsed.data.whatWorked },
+        { field: 'whatToChange', text: parsed.data.whatToChange },
+      ], context)
       const feedback = await create(CONTAINER, {
         id: crypto.randomUUID(),
         troopId: auth.troopId,
         ...parsed.data,
+        moderation,
         createdAt: now,
         updatedAt: now,
         createdBy: audit,
@@ -44,11 +51,17 @@ async function feedbackHandler(req: HttpRequest, context: InvocationContext): Pr
       if (!parsed.success) return validationError(parsed.error)
       const existing = await getById(CONTAINER, id, auth.troopId)
       if (!existing) return { status: 404, jsonBody: { error: 'Feedback not found' } }
+      const moderation = await moderateTextFields([
+        { field: 'comments', text: parsed.data.comments },
+        { field: 'whatWorked', text: parsed.data.whatWorked },
+        { field: 'whatToChange', text: parsed.data.whatToChange },
+      ], context)
       const feedback = await update(CONTAINER, id, {
         ...existing,
         ...parsed.data,
         id,
         troopId: auth.troopId,
+        moderation,
         updatedAt: Date.now(),
         updatedBy: { userId: auth.userId, displayName: auth.displayName },
       }, auth.troopId)
@@ -84,7 +97,7 @@ async function feedbackByEventHandler(req: HttpRequest, context: InvocationConte
         { name: '@troopId', value: auth.troopId },
       ]
     )
-    return { jsonBody: feedback }
+    return { jsonBody: feedback.filter((entry: any) => canViewModeratedContent(auth.role, entry.moderation)) }
   } catch (err) {
     context.error(`GET /api/feedback/event/${eventId} failed:`, err)
     return { status: 500, jsonBody: { error: 'Internal server error' } }

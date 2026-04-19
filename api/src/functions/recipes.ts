@@ -3,6 +3,7 @@ import { getAllByTroop, getById, create, update, remove } from '../cosmosdb.js'
 import { getTroopContext, unauthorized, forbidden } from '../middleware/auth.js'
 import { checkPermission } from '../middleware/roles.js'
 import { createRecipeSchema, updateRecipeSchema, validationError } from '../schemas.js'
+import { canViewModeratedContent, moderateTextFields } from '../middleware/moderation.js'
 
 const CONTAINER = 'recipes'
 
@@ -17,12 +18,15 @@ async function recipesHandler(req: HttpRequest, context: InvocationContext): Pro
   try {
     if (method === 'GET' && !id) {
       const recipes = await getAllByTroop(CONTAINER, auth.troopId)
-      return { jsonBody: recipes }
+      return { jsonBody: recipes.filter((recipe) => canViewModeratedContent(auth.role, recipe.moderation)) }
     }
 
     if (method === 'GET' && id) {
       const recipe = await getById(CONTAINER, id, auth.troopId)
       if (!recipe) return { status: 404, jsonBody: { error: 'Recipe not found' } }
+      if (!canViewModeratedContent(auth.role, recipe.moderation)) {
+        return { status: 404, jsonBody: { error: 'Recipe not found' } }
+      }
       return { jsonBody: recipe }
     }
 
@@ -32,10 +36,20 @@ async function recipesHandler(req: HttpRequest, context: InvocationContext): Pro
       if (!parsed.success) return validationError(parsed.error)
       const now = Date.now()
       const audit = { userId: auth.userId, displayName: auth.displayName }
+      const moderation = await moderateTextFields([
+        { field: 'name', text: parsed.data.name },
+        ...parsed.data.variations.flatMap((variation, index) =>
+          variation.instructions.map((instruction, instructionIndex) => ({
+            field: `variations[${index}].instructions[${instructionIndex}]`,
+            text: instruction,
+          }))
+        ),
+      ], context)
       const recipe = await create(CONTAINER, {
         id: crypto.randomUUID(),
         troopId: auth.troopId,
         ...parsed.data,
+        moderation,
         createdAt: now,
         updatedAt: now,
         createdBy: audit,
@@ -50,11 +64,21 @@ async function recipesHandler(req: HttpRequest, context: InvocationContext): Pro
       if (!parsed.success) return validationError(parsed.error)
       const existing = await getById(CONTAINER, id, auth.troopId)
       if (!existing) return { status: 404, jsonBody: { error: 'Recipe not found' } }
+      const moderation = await moderateTextFields([
+        { field: 'name', text: parsed.data.name },
+        ...parsed.data.variations.flatMap((variation, index) =>
+          variation.instructions.map((instruction, instructionIndex) => ({
+            field: `variations[${index}].instructions[${instructionIndex}]`,
+            text: instruction,
+          }))
+        ),
+      ], context)
       const recipe = await update(CONTAINER, id, {
         ...existing,
         ...parsed.data,
         id,
         troopId: auth.troopId,
+        moderation,
         updatedAt: Date.now(),
         updatedBy: { userId: auth.userId, displayName: auth.displayName },
       }, auth.troopId)
