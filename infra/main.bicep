@@ -69,3 +69,4 @@ output functionAppName string = resources.outputs.functionAppName
 output entraClientId string = resources.outputs.entraClientId
 output contentSafetyEndpoint string = resources.outputs.contentSafetyEndpoint
 output acsEndpoint string = resources.outputs.acsEndpoint
+output acsFromEmail string = resources.outputs.acsFromEmail

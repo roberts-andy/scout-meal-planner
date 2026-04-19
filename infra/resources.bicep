@@ -41,9 +41,6 @@ param contentSafetyAccountName string
 @description('Name of the Azure Communication Services resource')
 param communicationServiceName string
 
-@description('Sender address for ACS Email (must be from a verified domain)')
-param acsFromEmail string = ''
-
 // Cosmos DB Account — Serverless
 resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   name: cosmosAccountName
@@ -237,7 +234,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'ENTRA_CLIENT_ID', value: entraClientId }
         { name: 'CONTENT_SAFETY_ENDPOINT', value: contentSafety.properties.endpoint }
         { name: 'ACS_ENDPOINT', value: communicationService.properties.hostName }
-        { name: 'ACS_FROM_EMAIL', value: acsFromEmail }
+        { name: 'ACS_FROM_EMAIL', value: 'DoNotReply@${emailDomain.properties.fromSenderDomain}' }
       ]
     }
     httpsOnly: true
@@ -367,12 +364,34 @@ resource contentSafetyRoleAssignment 'Microsoft.Authorization/roleAssignments@20
   }
 }
 
-// ── Azure Communication Services ──
+// ── Email Communication Services ──
+resource emailService 'Microsoft.Communication/emailServices@2023-06-01-preview' = {
+  name: '${communicationServiceName}-email'
+  location: 'global'
+  properties: {
+    dataLocation: 'United States'
+  }
+}
+
+// Azure-managed email domain (auto-provisioned sender address)
+resource emailDomain 'Microsoft.Communication/emailServices/domains@2023-06-01-preview' = {
+  parent: emailService
+  name: 'AzureManagedDomain'
+  location: 'global'
+  properties: {
+    domainManagement: 'AzureManaged'
+  }
+}
+
+// ── Azure Communication Services (linked to Email domain) ──
 resource communicationService 'Microsoft.Communication/communicationServices@2023-06-01-preview' = {
   name: communicationServiceName
   location: 'global'
   properties: {
     dataLocation: 'United States'
+    linkedDomains: [
+      emailDomain.id
+    ]
   }
 }
 
@@ -393,3 +412,4 @@ output functionAppName string = functionApp.name
 output entraClientId string = entraClientId
 output contentSafetyEndpoint string = contentSafety.properties.endpoint
 output acsEndpoint string = communicationService.properties.hostName
+output acsFromEmail string = 'DoNotReply@${emailDomain.properties.fromSenderDomain}'
