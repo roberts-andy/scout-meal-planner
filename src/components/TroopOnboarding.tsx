@@ -12,8 +12,12 @@ interface TroopOnboardingProps {
 }
 
 export function TroopOnboarding({ onComplete }: TroopOnboardingProps) {
-  const inviteCodeFromUrl = new URLSearchParams(window.location.search).get('code')?.trim().toUpperCase() || ''
-  const shouldStartOnJoin = window.location.pathname === '/join' || inviteCodeFromUrl.length > 0
+  const search = typeof window !== 'undefined' ? window.location.search : ''
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : ''
+  const inviteCodeFromUrl = search
+    ? new URLSearchParams(search).get('code')?.trim().toUpperCase() || ''
+    : ''
+  const shouldStartOnJoin = (pathname ? pathname === '/join' : false) || inviteCodeFromUrl.length > 0
   const [troopName, setTroopName] = useState('')
   const [inviteCode, setInviteCode] = useState(inviteCodeFromUrl)
   const [activeTab, setActiveTab] = useState<'create' | 'join'>(shouldStartOnJoin ? 'join' : 'create')

@@ -75,19 +75,24 @@ export function TroopAdmin() {
   const members = (membersQuery.data || []) as TroopMember[]
   const pendingMembers = members.filter((m) => m.status === 'pending')
   const activeMembers = members.filter((m) => m.status === 'active')
-  const inviteLink = troop?.inviteCode
-    ? `${window.location.origin}/join?code=${encodeURIComponent(troop.inviteCode)}`
+  const appOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+  const inviteLink = appOrigin && troop?.inviteCode
+    ? `${appOrigin}/join?code=${encodeURIComponent(troop.inviteCode)}`
     : ''
 
   function copyInviteCode() {
-    if (troop?.inviteCode) {
-      navigator.clipboard.writeText(troop.inviteCode)
+    if (troop?.inviteCode && typeof navigator !== 'undefined' && navigator.clipboard) {
+      void navigator.clipboard.writeText(troop.inviteCode).catch(() => {
+        console.warn('Failed to copy invite code to clipboard')
+      })
     }
   }
 
   function copyInviteLink() {
-    if (inviteLink) {
-      navigator.clipboard.writeText(inviteLink)
+    if (inviteLink && typeof navigator !== 'undefined' && navigator.clipboard) {
+      void navigator.clipboard.writeText(inviteLink).catch(() => {
+        console.warn('Failed to copy invite link to clipboard')
+      })
     }
   }
 

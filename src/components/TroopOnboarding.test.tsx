@@ -27,6 +27,7 @@ describe('TroopOnboarding invite links', () => {
 
     render(<TroopOnboarding onComplete={vi.fn()} />)
 
+    expect(screen.getByRole('tab', { name: /join troop/i })).toHaveAttribute('data-state', 'active')
     expect(screen.getByLabelText(/invite code/i)).toHaveValue('TROOP-A3X9')
     expect(screen.getByRole('button', { name: /join troop/i })).toBeEnabled()
   })
