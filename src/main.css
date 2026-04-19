@@ -254,7 +254,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem 0.75rem;
-    list-style: disc;
     margin-top: 0.25rem;
     padding-left: 1.25rem;
   }
