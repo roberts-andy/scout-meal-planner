@@ -29,11 +29,8 @@
     "contentSafetyAccountName": {
       "value": "cs-scout-meal-planner"
     },
-    "sendGridAccountName": {
-      "value": "sg-scout-meal-planner"
-    },
-    "sendGridEmail": {
-      "value": ""
+    "communicationServiceName": {
+      "value": "acs-scout-meal-planner"
     }
   }
 }
