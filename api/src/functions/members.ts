@@ -123,6 +123,7 @@ async function membersHandler(req: HttpRequest, context: InvocationContext): Pro
       }
 
       const member = members[0]
+      // Soft-delete as removed so member history is retained while access is revoked.
       await update(CONTAINER, id, { ...member, status: 'removed' }, auth.troopId)
       return { status: 204 }
     }
