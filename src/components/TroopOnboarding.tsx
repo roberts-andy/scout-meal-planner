@@ -12,8 +12,11 @@ interface TroopOnboardingProps {
 }
 
 export function TroopOnboarding({ onComplete }: TroopOnboardingProps) {
+  const inviteCodeFromUrl = new URLSearchParams(window.location.search).get('code')?.trim().toUpperCase() || ''
+  const shouldStartOnJoin = window.location.pathname === '/join' || inviteCodeFromUrl.length > 0
   const [troopName, setTroopName] = useState('')
-  const [inviteCode, setInviteCode] = useState('')
+  const [inviteCode, setInviteCode] = useState(inviteCodeFromUrl)
+  const [activeTab, setActiveTab] = useState<'create' | 'join'>(shouldStartOnJoin ? 'join' : 'create')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -55,7 +58,7 @@ export function TroopOnboarding({ onComplete }: TroopOnboardingProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="create">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'create' | 'join')}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="create">
                 <Campfire className="mr-2 h-4 w-4" />
