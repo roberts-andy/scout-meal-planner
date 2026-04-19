@@ -118,11 +118,18 @@ describe('scaleIngredient', () => {
   })
 
   it('preserves other ingredient fields', () => {
-    const ing = makeIngredient({ category: 'pantry', notes: 'sifted' })
+    const ing = makeIngredient({ category: 'pantry', notes: 'sifted', estimatedPrice: 3.5 })
     const result = scaleIngredient(ing, 4, 4)
     expect(result.category).toBe('pantry')
     expect(result.notes).toBe('sifted')
     expect(result.unit).toBe('cup')
+    expect(result.estimatedPrice).toBe(3.5)
+  })
+
+  it('scales estimatedPrice proportionally', () => {
+    const ing = makeIngredient({ estimatedPrice: 2 })
+    const result = scaleIngredient(ing, 4, 10)
+    expect(result.estimatedPrice).toBe(5)
   })
 })
 
@@ -237,6 +244,26 @@ describe('generateShoppingList', () => {
     for (let i = 1; i < list.length; i++) {
       expect(list[i].ingredient.name.localeCompare(list[i - 1].ingredient.name)).toBeGreaterThanOrEqual(0)
     }
+  })
+
+  it('aggregates estimated prices when provided', () => {
+    const recipes = [makeRecipe({
+      ingredients: [
+        makeIngredient({ estimatedPrice: 2 }),
+      ],
+    })]
+    const event = makeEvent()
+    const list = generateShoppingList(event, recipes)
+    const flour = list.find(item => item.ingredient.name === 'Flour')
+    expect(flour?.ingredient.estimatedPrice).toBe(9)
+  })
+
+  it('keeps estimatedPrice undefined when not provided', () => {
+    const recipes = [makeRecipe({ ingredients: [makeIngredient({ estimatedPrice: undefined })] })]
+    const event = makeEvent({ days: [{ date: '2025-07-01', meals: [{ id: 'meal-1', type: 'breakfast', scoutCount: 8, recipeId: 'recipe-1' }] }] })
+    const list = generateShoppingList(event, recipes)
+    const flour = list.find(item => item.ingredient.name === 'Flour')
+    expect(flour?.ingredient.estimatedPrice).toBeUndefined()
   })
 })
 
