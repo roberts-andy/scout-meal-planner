@@ -10,6 +10,9 @@ az deployment sub create \
   --location centralus \
   --template-file "$SCRIPT_DIR/main.bicep" \
   --parameters "$SCRIPT_DIR/parameters.json" \
+  --parameters sendGridEmail="$SENDGRID_EMAIL" \
+               sendGridPassword="$SENDGRID_PASSWORD" \
+               sendGridApiKey="$SENDGRID_API_KEY" \
   --name "scout-meal-planner-$(date +%Y%m%d%H%M%S)"
 
 echo ""

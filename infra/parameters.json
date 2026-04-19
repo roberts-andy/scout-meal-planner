@@ -25,6 +25,15 @@
     },
     "deployerPrincipalId": {
       "value": "c96e135f-f098-489f-bb15-07894d415ebe"
+    },
+    "contentSafetyAccountName": {
+      "value": "cs-scout-meal-planner"
+    },
+    "sendGridAccountName": {
+      "value": "sg-scout-meal-planner"
+    },
+    "sendGridEmail": {
+      "value": ""
     }
   }
 }

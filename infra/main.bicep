@@ -30,6 +30,23 @@ param storageAccountName string = 'stscoutmealplanner'
 @description('Object ID of the GitHub Actions service principal for deployment')
 param deployerPrincipalId string = ''
 
+@description('Name of the Azure AI Content Safety account')
+param contentSafetyAccountName string = 'cs-scout-meal-planner'
+
+@description('Name of the SendGrid account')
+param sendGridAccountName string = 'sg-scout-meal-planner'
+
+@description('Email address for SendGrid account administration')
+param sendGridEmail string = ''
+
+@secure()
+@description('Password for the SendGrid account')
+param sendGridPassword string = ''
+
+@secure()
+@description('SendGrid API key (generate in the SendGrid portal after provisioning)')
+param sendGridApiKey string = ''
+
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
   location: location
@@ -48,6 +65,11 @@ module resources 'resources.bicep' = {
     functionAppName: functionAppName
     storageAccountName: storageAccountName
     deployerPrincipalId: deployerPrincipalId
+    contentSafetyAccountName: contentSafetyAccountName
+    sendGridAccountName: sendGridAccountName
+    sendGridEmail: sendGridEmail
+    sendGridPassword: sendGridPassword
+    sendGridApiKey: sendGridApiKey
   }
 }
 
@@ -55,3 +77,5 @@ output staticWebAppUrl string = resources.outputs.staticWebAppUrl
 output cosmosAccountEndpoint string = resources.outputs.cosmosAccountEndpoint
 output functionAppName string = resources.outputs.functionAppName
 output msaAppClientId string = resources.outputs.msaAppClientId
+output contentSafetyEndpoint string = resources.outputs.contentSafetyEndpoint
+output sendGridAccountName string = resources.outputs.sendGridAccountName

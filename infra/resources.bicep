@@ -37,6 +37,23 @@ param maximumInstanceCount int = 100
 @allowed([512, 2048, 4096])
 param instanceMemoryMB int = 2048
 
+@description('Name of the Azure AI Content Safety account')
+param contentSafetyAccountName string
+
+@description('Name of the SendGrid account')
+param sendGridAccountName string
+
+@description('Email address for SendGrid account administration')
+param sendGridEmail string
+
+@secure()
+@description('Password for the SendGrid account')
+param sendGridPassword string
+
+@secure()
+@description('SendGrid API key (generate in the SendGrid portal after provisioning)')
+param sendGridApiKey string = ''
+
 // Cosmos DB Account — Serverless
 resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   name: cosmosAccountName
@@ -228,6 +245,8 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'COSMOS_ENDPOINT', value: cosmosAccount.properties.documentEndpoint }
         { name: 'COSMOS_DATABASE', value: cosmosDatabaseName }
         { name: 'ENTRA_CLIENT_ID', value: msaApp.appId }
+        { name: 'CONTENT_SAFETY_ENDPOINT', value: contentSafety.properties.endpoint }
+        { name: 'SENDGRID_API_KEY', value: sendGridApiKey }
       ]
     }
     httpsOnly: true
@@ -345,7 +364,50 @@ resource msaApp 'Microsoft.Graph/applications@v1.0' = {
   }
 }
 
+// ── Azure AI Content Safety ──
+resource contentSafety 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
+  name: contentSafetyAccountName
+  location: location
+  kind: 'ContentSafety'
+  sku: {
+    name: 'F0'
+  }
+  properties: {
+    customSubDomainName: contentSafetyAccountName
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+// Cognitive Services User role for Function App managed identity
+resource contentSafetyRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(contentSafety.id, functionApp.id, 'a97b65f3-24c7-4388-baec-2e87135dc908')
+  scope: contentSafety
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'a97b65f3-24c7-4388-baec-2e87135dc908')
+    principalId: functionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// ── SendGrid Email (Azure Marketplace — Free tier) ──
+resource sendGrid 'Sendgrid.Email/accounts@2015-01-01' = {
+  name: sendGridAccountName
+  location: location
+  plan: {
+    name: 'free'
+    publisher: 'Sendgrid'
+    product: 'sendgrid_azure'
+  }
+  properties: {
+    password: sendGridPassword
+    acceptMarketingEmails: false
+    email: sendGridEmail
+  }
+}
+
 output staticWebAppUrl string = staticWebApp.properties.defaultHostname
 output cosmosAccountEndpoint string = cosmosAccount.properties.documentEndpoint
 output functionAppName string = functionApp.name
 output msaAppClientId string = msaApp.appId
+output contentSafetyEndpoint string = contentSafety.properties.endpoint
+output sendGridAccountName string = sendGrid.name
