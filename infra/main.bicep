@@ -36,6 +36,9 @@ param contentSafetyAccountName string = 'cs-scout-meal-planner'
 @description('Name of the Azure Communication Services resource')
 param communicationServiceName string = 'acs-scout-meal-planner'
 
+@description('Client ID of the pre-created Entra app registration for MSAL sign-in')
+param entraClientId string = '42871bb7-a693-4d97-9cb9-69bbf9a50ff4'
+
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
   location: location
@@ -54,6 +57,7 @@ module resources 'resources.bicep' = {
     functionAppName: functionAppName
     storageAccountName: storageAccountName
     deployerPrincipalId: deployerPrincipalId
+    entraClientId: entraClientId
     contentSafetyAccountName: contentSafetyAccountName
     communicationServiceName: communicationServiceName
   }
@@ -62,6 +66,6 @@ module resources 'resources.bicep' = {
 output staticWebAppUrl string = resources.outputs.staticWebAppUrl
 output cosmosAccountEndpoint string = resources.outputs.cosmosAccountEndpoint
 output functionAppName string = resources.outputs.functionAppName
-output msaAppClientId string = resources.outputs.msaAppClientId
+output entraClientId string = resources.outputs.entraClientId
 output contentSafetyEndpoint string = resources.outputs.contentSafetyEndpoint
 output acsEndpoint string = resources.outputs.acsEndpoint
