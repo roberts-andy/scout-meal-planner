@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { eventsApi, recipesApi, feedbackApi, membersApi } from './api'
+import { eventsApi, recipesApi, feedbackApi, membersApi, shareApi } from './api'
 
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
@@ -76,6 +76,22 @@ describe('eventsApi', () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({ error: 'Not found' }, 404))
     await expect(eventsApi.getById('bad')).rejects.toThrow('Not found')
   })
+
+  it('regenerateShare posts to /events/{id}/share', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ shareToken: 't', shareUrl: 'https://example.com/share/t' }))
+    await eventsApi.regenerateShare('1')
+    expect(mockFetch).toHaveBeenCalledWith('/api/events/1/share', expect.objectContaining({
+      method: 'POST',
+    }))
+  })
+
+  it('revokeShare sends DELETE to /events/{id}/share', async () => {
+    mockFetch.mockResolvedValueOnce(emptyResponse())
+    await eventsApi.revokeShare('1')
+    expect(mockFetch).toHaveBeenCalledWith('/api/events/1/share', expect.objectContaining({
+      method: 'DELETE',
+    }))
+  })
 })
 
 // ── Recipes API ──
@@ -143,5 +159,13 @@ describe('membersApi', () => {
       method: 'POST',
       body: JSON.stringify(member),
     }))
+  })
+})
+
+describe('shareApi', () => {
+  it('getByToken fetches /share/{token}', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ event: { id: 'e1' }, recipes: [] }))
+    await shareApi.getByToken('token-1')
+    expect(mockFetch).toHaveBeenCalledWith('/api/share/token-1', expect.anything())
   })
 })

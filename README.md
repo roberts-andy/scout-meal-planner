@@ -232,6 +232,10 @@ All endpoints are served under `/api` and proxied through SWA to the Function Ap
 | POST | `/api/events` | Create event |
 | PUT | `/api/events/{id}` | Update event |
 | DELETE | `/api/events/{id}` | Delete event |
+| GET | `/api/events/{id}/share` | Get current share link state for event |
+| POST | `/api/events/{id}/share` | Generate/regenerate share link token |
+| DELETE | `/api/events/{id}/share` | Revoke share link token |
+| GET | `/api/share/{token}` | Public read-only shared event plan |
 | GET | `/api/recipes` | List all recipes |
 | GET | `/api/recipes/{id}` | Get recipe by ID |
 | POST | `/api/recipes` | Create recipe |

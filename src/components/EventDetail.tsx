@@ -1,14 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Event, Recipe, MealFeedback } from '@/lib/types'
+import { eventsApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Link as LinkIcon, PencilSimple } from '@phosphor-icons/react'
+import { ArrowLeft, Link as LinkIcon, PencilSimple, Copy, ArrowsClockwise, XCircle } from '@phosphor-icons/react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EventSchedule } from './EventSchedule'
 import { EventShoppingList } from './EventShoppingList'
 import { EventEquipment } from './EventEquipment'
 import { EventFeedback } from './EventFeedback'
 import { EditEventDialog } from './EditEventDialog'
+import { toast } from 'sonner'
 
 interface EventDetailProps {
   event: Event
@@ -34,6 +36,78 @@ export function EventDetail({
   onUpdateRecipe
 }: EventDetailProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [isSharing, setIsSharing] = useState(false)
+
+  useEffect(() => {
+    if (event.shareToken) {
+      setShareUrl(`${window.location.origin}/share/${event.shareToken}`)
+      return
+    }
+    setShareUrl(null)
+  }, [event.shareToken])
+
+  const copyToClipboard = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const handleCopyShareLink = async () => {
+    setIsSharing(true)
+    try {
+      const next = shareUrl
+        ? { shareUrl }
+        : await eventsApi.regenerateShare(event.id)
+      setShareUrl(next.shareUrl)
+      const copied = await copyToClipboard(next.shareUrl)
+      if (copied) {
+        toast.success('Share link copied')
+      } else {
+        toast.success('Share link generated', { description: next.shareUrl })
+      }
+    } catch (err) {
+      toast.error('Failed to create share link', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      })
+    } finally {
+      setIsSharing(false)
+    }
+  }
+
+  const handleRegenerate = async () => {
+    setIsSharing(true)
+    try {
+      const next = await eventsApi.regenerateShare(event.id)
+      setShareUrl(next.shareUrl)
+      await copyToClipboard(next.shareUrl)
+      toast.success('Share link regenerated and copied')
+    } catch (err) {
+      toast.error('Failed to regenerate share link', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      })
+    } finally {
+      setIsSharing(false)
+    }
+  }
+
+  const handleRevoke = async () => {
+    setIsSharing(true)
+    try {
+      await eventsApi.revokeShare(event.id)
+      setShareUrl(null)
+      toast.success('Share link revoked')
+    } catch (err) {
+      toast.error('Failed to revoke share link', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      })
+    } finally {
+      setIsSharing(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -78,6 +152,24 @@ export function EventDetail({
           {event.description && (
             <p className="text-sm text-muted-foreground mt-2 max-w-3xl">{event.description}</p>
           )}
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleCopyShareLink} disabled={isSharing}>
+              <Copy size={16} />
+              {shareUrl ? 'Copy Share Link' : 'Create Share Link'}
+            </Button>
+            {shareUrl && (
+              <>
+                <Button variant="outline" size="sm" className="gap-2" onClick={handleRegenerate} disabled={isSharing}>
+                  <ArrowsClockwise size={16} />
+                  Regenerate
+                </Button>
+                <Button variant="ghost" size="sm" className="gap-2" onClick={handleRevoke} disabled={isSharing}>
+                  <XCircle size={16} />
+                  Revoke
+                </Button>
+              </>
+            )}
+          </div>
           {event.link && (
             <a 
               href={event.link} 

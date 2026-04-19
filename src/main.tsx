@@ -8,6 +8,7 @@ import "@github/spark/spark"
 import { msalConfig } from './lib/authConfig.ts'
 import { AuthProvider } from './components/AuthProvider.tsx'
 import App from './App.tsx'
+import { SharedEventPage } from './components/SharedEventPage.tsx'
 import { ErrorFallback } from './ErrorFallback.tsx'
 
 import "./main.css"
@@ -25,16 +26,29 @@ const queryClient = new QueryClient({
   },
 })
 
-msalInstance.initialize().then(() => {
+const sharedMatch = window.location.pathname.match(/^\/share\/([^/]+)$/)
+
+if (sharedMatch) {
+  const token = decodeURIComponent(sharedMatch[1])
   createRoot(document.getElementById('root')!).render(
     <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <MsalProvider instance={msalInstance}>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </QueryClientProvider>
-      </MsalProvider>
+      <QueryClientProvider client={queryClient}>
+        <SharedEventPage token={token} />
+      </QueryClientProvider>
     </ErrorBoundary>
   )
-})
+} else {
+  msalInstance.initialize().then(() => {
+    createRoot(document.getElementById('root')!).render(
+      <ErrorBoundary FallbackComponent={ErrorFallback}>
+        <MsalProvider instance={msalInstance}>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </QueryClientProvider>
+        </MsalProvider>
+      </ErrorBoundary>
+    )
+  })
+}

@@ -1,4 +1,4 @@
-import type { Event, Recipe, MealFeedback, Troop, TroopMember } from './types'
+import type { Event, Recipe, MealFeedback, Troop, TroopMember, SharedEventPlan } from './types'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
@@ -56,6 +56,12 @@ export const eventsApi = {
     request<Event>(`/events/${event.id}`, { method: 'PUT', body: JSON.stringify(event) }),
   delete: (id: string) =>
     request<void>(`/events/${id}`, { method: 'DELETE' }),
+  getShare: (id: string) =>
+    request<{ shareToken: string | null; shareUrl: string | null }>(`/events/${id}/share`),
+  regenerateShare: (id: string) =>
+    request<{ shareToken: string; shareUrl: string }>(`/events/${id}/share`, { method: 'POST' }),
+  revokeShare: (id: string) =>
+    request<void>(`/events/${id}/share`, { method: 'DELETE' }),
 }
 
 // Recipes
@@ -106,4 +112,8 @@ export const membersApi = {
     request<TroopMember>(`/members/${id}`, { method: 'PUT', body: JSON.stringify({ status: 'active' }) }),
   remove: (id: string) =>
     request<void>(`/members/${id}`, { method: 'DELETE' }),
+}
+
+export const shareApi = {
+  getByToken: (token: string) => request<SharedEventPlan>(`/share/${encodeURIComponent(token)}`),
 }

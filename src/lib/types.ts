@@ -136,10 +136,37 @@ export interface Event {
   cabinCamping?: boolean
   description?: string
   link?: string
+  shareToken?: string
+  shareTokenUpdatedAt?: number
   createdAt: number
   updatedAt: number
   createdBy?: AuditInfo
   updatedBy?: AuditInfo
+}
+
+export interface SharedRecipe {
+  id: string
+  name: string
+  servings: number
+  ingredients: Ingredient[]
+  variations: Array<{ id: string; equipment: string[] }>
+}
+
+export interface SharedEvent {
+  id: string
+  name: string
+  startDate: string
+  endDate: string
+  days: EventDay[]
+  hike?: boolean
+  highAltitude?: boolean
+  tentCamping?: boolean
+  cabinCamping?: boolean
+}
+
+export interface SharedEventPlan {
+  event: SharedEvent
+  recipes: SharedRecipe[]
 }
 
 export interface FeedbackRating {
