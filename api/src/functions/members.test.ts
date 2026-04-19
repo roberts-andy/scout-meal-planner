@@ -281,6 +281,14 @@ describe('troopMemberStatus handler — PATCH /troops/{troopId}/members/{memberI
     }), ctx)
 
     expect(result.status).toBeUndefined()
+    expect(cosmos.queryItems).toHaveBeenCalledWith(
+      'members',
+      'SELECT * FROM c WHERE c.id = @id AND c.troopId = @troopId',
+      [
+        { name: '@id', value: 'member-1' },
+        { name: '@troopId', value: 'troop-42' },
+      ],
+    )
     expect(cosmos.update).toHaveBeenCalledWith(
       'members',
       'member-1',
@@ -312,6 +320,21 @@ describe('troopMemberStatus handler — PATCH /troops/{troopId}/members/{memberI
     }), ctx)
 
     expect(result.status).toBe(400)
+    expect(cosmos.queryItems).toHaveBeenNthCalledWith(
+      1,
+      'members',
+      'SELECT * FROM c WHERE c.id = @id AND c.troopId = @troopId',
+      [
+        { name: '@id', value: 'member-1' },
+        { name: '@troopId', value: 'troop-42' },
+      ],
+    )
+    expect(cosmos.queryItems).toHaveBeenNthCalledWith(
+      2,
+      'members',
+      'SELECT * FROM c WHERE c.troopId = @troopId AND c.role = "troopAdmin" AND c.status = "active"',
+      [{ name: '@troopId', value: 'troop-42' }],
+    )
     expect(cosmos.update).not.toHaveBeenCalled()
   })
 })
