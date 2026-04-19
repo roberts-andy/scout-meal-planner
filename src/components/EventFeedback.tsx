@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { StarRating } from '@/components/StarRating'
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
+import { canCollectEventFeedback } from '@/lib/helpers'
 
 interface EventFeedbackProps {
   event: Event
@@ -54,6 +55,7 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
     portionSize: 0
   })
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const feedbackEnabled = canCollectEventFeedback(event)
 
   const eventFeedback = feedback.filter(f => f.eventId === event.id)
 
@@ -163,6 +165,18 @@ export function EventFeedback({ event, recipes, feedback, onAddFeedback, onUpdat
   const handleDelete = (feedbackId: string) => {
     onDeleteFeedback(feedbackId)
     setDeleteConfirmId(null)
+  }
+
+  if (!feedbackEnabled) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-6">
+        <ChatCircle size={64} weight="duotone" className="text-muted-foreground mb-4" />
+        <h2 className="text-2xl font-semibold mb-2">Feedback not available yet</h2>
+        <p className="text-muted-foreground text-center max-w-md">
+          Feedback opens after this event ends.
+        </p>
+      </div>
+    )
   }
 
   if (allMeals.length === 0) {

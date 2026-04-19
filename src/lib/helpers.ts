@@ -205,6 +205,13 @@ export function isEventActive(event: Event): boolean {
   return today <= endDate
 }
 
+export function canCollectEventFeedback(event: Event, now: Date = new Date()): boolean {
+  const endDate = new Date(event.endDate)
+  if (Number.isNaN(endDate.getTime())) return false
+  endDate.setHours(23, 59, 59, 999)
+  return endDate <= now
+}
+
 export function getRecipeEventVersion(recipe: Recipe, eventId: string): RecipeVersion | undefined {
   return recipe.versions.find(v => v.eventId === eventId)
 }

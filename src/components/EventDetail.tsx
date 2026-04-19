@@ -9,6 +9,7 @@ import { EventShoppingList } from './EventShoppingList'
 import { EventEquipment } from './EventEquipment'
 import { EventFeedback } from './EventFeedback'
 import { EditEventDialog } from './EditEventDialog'
+import { canCollectEventFeedback } from '@/lib/helpers'
 
 interface EventDetailProps {
   event: Event
@@ -34,6 +35,7 @@ export function EventDetail({
   onUpdateRecipe
 }: EventDetailProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const feedbackEnabled = canCollectEventFeedback(event)
 
   return (
     <div className="min-h-screen bg-background">
@@ -98,7 +100,7 @@ export function EventDetail({
             <TabsTrigger value="schedule">Schedule</TabsTrigger>
             <TabsTrigger value="shopping">Shopping List</TabsTrigger>
             <TabsTrigger value="equipment">Equipment</TabsTrigger>
-            <TabsTrigger value="feedback">Feedback</TabsTrigger>
+            <TabsTrigger value="feedback" disabled={!feedbackEnabled}>Feedback</TabsTrigger>
           </TabsList>
 
           <TabsContent value="schedule" className="mt-0">
