@@ -58,7 +58,7 @@ describe('RecipeDetailDialog', () => {
   })
 
   it('renders print-only recipe details and marks interactive UI as no-print', () => {
-    const { container } = render(
+    render(
       <RecipeDetailDialog
         recipe={recipe}
         open
@@ -74,6 +74,13 @@ describe('RecipeDetailDialog', () => {
     expect(printOnlySection).toHaveTextContent('Heat pot')
     expect(printOnlySection).toHaveTextContent('Pot')
 
-    expect(document.body.querySelector('.no-print')).not.toBeNull()
+    const printButton = screen.getByRole('button', { name: 'Print' })
+    expect(printButton.closest('.no-print')).not.toBeNull()
+
+    const screenAccordion = document.body.querySelector('.w-full.no-print')
+    expect(screenAccordion).not.toBeNull()
+
+    const noPrintElements = document.body.querySelectorAll('.no-print')
+    expect(noPrintElements.length).toBeGreaterThanOrEqual(2)
   })
 })
