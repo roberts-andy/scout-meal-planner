@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Event, Recipe, Meal, MealType } from '@/lib/types'
+import { Event, Recipe, Meal, MealType, MealCourse } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, Trash, Users, Minus, PencilSimple, GitBranch, Lock } from '@phosphor-icons/react'
@@ -32,6 +32,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
   const [isAddMealOpen, setIsAddMealOpen] = useState(false)
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null)
   const [mealType, setMealType] = useState<MealType>('breakfast')
+  const [mealCourse, setMealCourse] = useState<MealCourse | undefined>(undefined)
   const [recipeId, setRecipeId] = useState<string>('')
   const [scoutCount, setScoutCount] = useState(8)
   const [isTrailside, setIsTrailside] = useState(false)
@@ -46,6 +47,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
     const newMeal: Meal = {
       id: `meal-${Date.now()}`,
       type: mealType,
+      course: mealCourse,
       recipeId: recipeId || undefined,
       scoutCount,
       ...(isTrailside ? { isTrailside: true } : {}),
@@ -59,6 +61,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
     onUpdateEvent(updated)
     setIsAddMealOpen(false)
     setSelectedDayIndex(null)
+    setMealCourse(undefined)
     setRecipeId('')
     setIsTrailside(false)
     setIsTimeConstrained(false)
@@ -146,6 +149,11 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
                             <Badge variant="secondary" className="capitalize">
                               {meal.type}
                             </Badge>
+                            {meal.course && (
+                              <Badge variant="outline" className="capitalize">
+                                {meal.course}
+                              </Badge>
+                            )}
                             {recipe && <span className="font-medium">{recipe.name}</span>}
                             {originalRecipe && (
                               <Badge variant="outline" className="gap-1 text-xs">
@@ -256,6 +264,22 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
                       {recipe.name}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Course (Optional)</Label>
+              <Select value={mealCourse ?? 'none'} onValueChange={(value) => setMealCourse(value === 'none' ? undefined : (value as MealCourse))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No course label</SelectItem>
+                  <SelectItem value="main">Main</SelectItem>
+                  <SelectItem value="side">Side</SelectItem>
+                  <SelectItem value="dessert">Dessert</SelectItem>
+                  <SelectItem value="snack">Snack</SelectItem>
                 </SelectContent>
               </Select>
             </div>

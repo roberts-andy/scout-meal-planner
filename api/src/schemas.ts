@@ -3,6 +3,7 @@ import { z, ZodError } from 'zod'
 // ── Shared value schemas ──
 
 const mealType = z.enum(['breakfast', 'lunch', 'dinner', 'snack', 'other'])
+const mealCourse = z.enum(['main', 'side', 'dessert', 'snack'])
 const cookingMethod = z.enum(['open-fire', 'camp-stove', 'dutch-oven', 'skillet', 'grill', 'no-cook', 'other'])
 const ingredientUnit = z.enum(['cup', 'tbsp', 'tsp', 'oz', 'lb', 'g', 'kg', 'ml', 'l', 'whole', 'package', 'can', 'to-taste'])
 const troopRole = z.enum(['troopAdmin', 'adultLeader', 'seniorPatrolLeader', 'patrolLeader', 'scout'])
@@ -46,6 +47,7 @@ const recipeVersionSchema = z.object({
 const mealSchema = z.object({
   id: z.string(),
   type: mealType,
+  course: mealCourse.optional(),
   name: z.string().optional(),
   recipeId: z.string().optional(),
   scoutCount: z.number().int().min(0),

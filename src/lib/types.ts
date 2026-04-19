@@ -46,6 +46,7 @@ export interface AuditInfo {
 // ── Meal Planning ──
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'other'
+export type MealCourse = 'main' | 'side' | 'dessert' | 'snack'
 
 export type CookingMethod = 'open-fire' | 'camp-stove' | 'dutch-oven' | 'skillet' | 'grill' | 'no-cook' | 'other'
 
@@ -105,6 +106,7 @@ export interface Recipe {
 export interface Meal {
   id: string
   type: MealType
+  course?: MealCourse
   name?: string
   recipeId?: string
   scoutCount: number

@@ -85,6 +85,14 @@ describe('createEventSchema', () => {
     expect(result.success).toBe(true)
   })
 
+  it('accepts optional meal course labels', () => {
+    const withCourse = {
+      ...valid,
+      days: [{ date: '2026-07-01', meals: [{ id: 'm1', type: 'dinner', course: 'dessert', scoutCount: 8 }] }],
+    }
+    expect(createEventSchema.safeParse(withCourse).success).toBe(true)
+  })
+
   it('rejects missing name', () => {
     expect(createEventSchema.safeParse({ ...valid, name: '' }).success).toBe(false)
   })
@@ -118,6 +126,8 @@ describe('createEventSchema', () => {
         meals: [{ id: 'm1', type: 'breakfast', scoutCount: 8, isTrailside: 'yes' }]
       }]
     }
+  it('rejects invalid meal course', () => {
+    const bad = { ...valid, days: [{ date: '2026-07-01', meals: [{ id: 'm1', type: 'dinner', course: 'appetizer', scoutCount: 8 }] }] }
     expect(createEventSchema.safeParse(bad).success).toBe(false)
   })
 
