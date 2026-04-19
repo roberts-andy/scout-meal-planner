@@ -77,7 +77,7 @@ describe('members handler — POST', () => {
 
   it('returns 403 when caller lacks manageMembers permission', async () => {
     vi.mocked(getTroopContext).mockResolvedValueOnce(scoutAuth)
-    const result = await handler(makeReq({ method: 'POST', body: { displayName: 'New Member', email: 'new@example.com', role: 'scout' } }), ctx)
+    const result = await handler(makeReq({ method: 'POST', body: { displayName: 'New Member', role: 'scout' } }), ctx)
     expect(result.status).toBe(403)
     expect(cosmos.create).not.toHaveBeenCalled()
   })
@@ -93,20 +93,43 @@ describe('members handler — POST', () => {
     vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
     vi.mocked(cosmos.queryItems).mockResolvedValueOnce([{ id: 'existing-member' }])
 
-    const result = await handler(makeReq({ method: 'POST', body: { displayName: 'New Member', email: 'new@example.com', role: 'scout' } }), ctx)
+    const result = await handler(makeReq({ method: 'POST', body: { displayName: 'New Member', email: 'new@example.com', role: 'adultLeader' } }), ctx)
 
     expect(result.status).toBe(409)
     expect(cosmos.create).not.toHaveBeenCalled()
   })
 
-  it('creates and returns an active member document', async () => {
+  it('creates a scout with first-name displayName and no stored email/userId', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+    vi.mocked(cosmos.create).mockImplementationOnce(async (_container, member) => member as any)
+
+    const result = await handler(makeReq({
+      method: 'POST',
+      body: { displayName: 'New Member', role: 'scout', email: 'ignored@example.com', id: 'malicious-id', troopId: 'other-troop' },
+    }), ctx)
+
+    expect(result.status).toBe(201)
+    expect(cosmos.queryItems).not.toHaveBeenCalled()
+    const created = vi.mocked(cosmos.create).mock.calls[0][1] as any
+    expect(created.id).toMatch(/^[0-9a-f-]+$/)
+    expect(created.id).not.toBe('malicious-id')
+    expect(created.troopId).toBe('troop-42')
+    expect(created.status).toBe('active')
+    expect(created.displayName).toBe('New')
+    expect(created.role).toBe('scout')
+    expect(created).not.toHaveProperty('email')
+    expect(created).not.toHaveProperty('userId')
+    expect(created).not.toHaveProperty('joinedAt')
+  })
+
+  it('creates non-scout members with email and seeded userId/joinedAt fields', async () => {
     vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
     vi.mocked(cosmos.queryItems).mockResolvedValueOnce([])
     vi.mocked(cosmos.create).mockImplementationOnce(async (_container, member) => member as any)
 
     const result = await handler(makeReq({
       method: 'POST',
-      body: { displayName: 'New Member', email: 'new@example.com', role: 'scout', id: 'malicious-id', troopId: 'other-troop' },
+      body: { displayName: 'Adult Leader', email: 'adult@example.com', role: 'adultLeader' },
     }), ctx)
 
     expect(result.status).toBe(201)
@@ -115,17 +138,14 @@ describe('members handler — POST', () => {
       'SELECT * FROM c WHERE c.troopId = @troopId AND c.email = @email',
       [
         { name: '@troopId', value: 'troop-42' },
-        { name: '@email', value: 'new@example.com' },
+        { name: '@email', value: 'adult@example.com' },
       ],
     )
     const created = vi.mocked(cosmos.create).mock.calls[0][1] as any
-    expect(created.id).toMatch(/^[0-9a-f-]+$/)
-    expect(created.id).not.toBe('malicious-id')
-    expect(created.troopId).toBe('troop-42')
-    expect(created.status).toBe('active')
+    expect(created.displayName).toBe('Adult Leader')
+    expect(created.email).toBe('adult@example.com')
+    expect(created.userId).toBe('')
     expect(created.joinedAt).toEqual(expect.any(Number))
-    expect(created.displayName).toBe('New Member')
-    expect(created.email).toBe('new@example.com')
-    expect(created.role).toBe('scout')
+    expect(created.role).toBe('adultLeader')
   })
 })

@@ -134,8 +134,16 @@ export const updateMemberSchema = z.object({
 
 export const createMemberSchema = z.object({
   displayName: z.string().min(1).max(100),
-  email: z.string().email(),
+  email: z.string().email().optional(),
   role: troopRole,
+}).superRefine((data, ctx) => {
+  if (data.role !== 'scout' && !data.email) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['email'],
+      message: 'Email is required for non-scout members',
+    })
+  }
 })
 
 /** Format a ZodError into an HTTP 400 response */

@@ -11,6 +11,10 @@ function generateInviteCode(): string {
   return 'TROOP-' + randomBytes(3).toString('hex').toUpperCase().slice(0, 4)
 }
 
+function toFirstName(displayName: string): string {
+  return displayName.trim().split(/\s+/)[0] || ''
+}
+
 async function troopsHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const method = req.method
   context.log(`${method} /api/troops`)
@@ -122,12 +126,9 @@ async function joinTroopHandler(req: HttpRequest, context: InvocationContext): P
   const member = {
     id: crypto.randomUUID(),
     troopId: troop.id,
-    userId: claims.userId,
-    email: claims.email,
-    displayName: claims.displayName,
+    displayName: toFirstName(claims.displayName),
     role: 'scout',  // Default role; admin can upgrade
     status: 'pending',
-    joinedAt: Date.now(),
   }
 
   const created = await create('members', member)

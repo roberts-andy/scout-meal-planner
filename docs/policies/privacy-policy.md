@@ -109,6 +109,7 @@ When building features, apply these rules:
 | Principle | Rule | Example |
 |-----------|------|---------|
 | Data minimization | Do not add new PII fields without updating this policy and confirming COPPA compliance | Adding "last name" to youth profiles would violate policy |
+| Scout member records | For `role: "scout"` in Cosmos `members`, store only: `id`, `troopId`, `displayName` (first name), `role`, `status` | Storing scout `email` or `userId` in the member document is not allowed |
 | Youth safety | Never link dietary restrictions, medical info, or allergies to a specific person | Dietary notes go on the meal, not the member |
 | Consent chain | Any new data collection from youth requires reviewing the consent model in PRD Section 11 | Adding photo uploads from scouts needs consent review |
 | Sharing scope | Shareable links must never expose PII, feedback text, or member information | Shopping list: OK. Feedback comments: not OK |
