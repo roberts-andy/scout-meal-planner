@@ -107,6 +107,28 @@ describe('createEventSchema', () => {
     expect(createEventSchema.safeParse(bad).success).toBe(false)
   })
 
+  it('accepts independently selected meal flags', () => {
+    const withFlags = {
+      ...valid,
+      days: [{
+        date: '2026-07-01',
+        meals: [{ id: 'm1', type: 'breakfast', scoutCount: 8, isTrailside: true, isTimeConstrained: false }]
+      }]
+    }
+    expect(createEventSchema.safeParse(withFlags).success).toBe(true)
+  })
+
+  it('rejects non-boolean meal flags', () => {
+    const bad = {
+      ...valid,
+      days: [{
+        date: '2026-07-01',
+        meals: [{ id: 'm1', type: 'breakfast', scoutCount: 8, isTrailside: 'yes' }]
+      }]
+    }
+    expect(createEventSchema.safeParse(bad).success).toBe(false)
+  })
+
   it('rejects invalid meal course', () => {
     const bad = { ...valid, days: [{ date: '2026-07-01', meals: [{ id: 'm1', type: 'dinner', course: 'appetizer', scoutCount: 8 }] }] }
     expect(createEventSchema.safeParse(bad).success).toBe(false)

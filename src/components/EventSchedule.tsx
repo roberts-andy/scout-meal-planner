@@ -15,6 +15,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import { format } from 'date-fns'
 import { CreateRecipeDialog } from './CreateRecipeDialog'
 import { isEventActive } from '@/lib/helpers'
@@ -34,6 +35,8 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
   const [mealCourse, setMealCourse] = useState<MealCourse | undefined>(undefined)
   const [recipeId, setRecipeId] = useState<string>('')
   const [scoutCount, setScoutCount] = useState(8)
+  const [isTrailside, setIsTrailside] = useState(false)
+  const [isTimeConstrained, setIsTimeConstrained] = useState(false)
   const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null)
 
   const eventIsActive = isEventActive(event)
@@ -47,6 +50,8 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
       course: mealCourse,
       recipeId: recipeId || undefined,
       scoutCount,
+      ...(isTrailside ? { isTrailside: true } : {}),
+      ...(isTimeConstrained ? { isTimeConstrained: true } : {}),
       selectedVariationId: undefined
     }
 
@@ -58,6 +63,8 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
     setSelectedDayIndex(null)
     setMealCourse(undefined)
     setRecipeId('')
+    setIsTrailside(false)
+    setIsTimeConstrained(false)
   }
 
   const handleDeleteMeal = (dayIndex: number, mealId: string) => {
@@ -152,6 +159,16 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
                               <Badge variant="outline" className="gap-1 text-xs">
                                 <GitBranch size={12} />
                                 from {originalRecipe.name}
+                              </Badge>
+                            )}
+                            {meal.isTrailside && (
+                              <Badge variant="outline" className="text-xs">
+                                Trailside
+                              </Badge>
+                            )}
+                            {meal.isTimeConstrained && (
+                              <Badge variant="outline" className="text-xs">
+                                Time-Constrained
                               </Badge>
                             )}
                           </div>
@@ -275,6 +292,30 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
                 value={scoutCount}
                 onChange={(e) => setScoutCount(parseInt(e.target.value) || 1)}
               />
+            </div>
+
+            <div className="grid gap-3">
+              <Label>Meal Parameters</Label>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="meal-is-trailside"
+                  checked={isTrailside}
+                  onCheckedChange={(checked) => setIsTrailside(checked === true)}
+                />
+                <Label htmlFor="meal-is-trailside" className="font-normal cursor-pointer">
+                  Trailside
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="meal-is-time-constrained"
+                  checked={isTimeConstrained}
+                  onCheckedChange={(checked) => setIsTimeConstrained(checked === true)}
+                />
+                <Label htmlFor="meal-is-time-constrained" className="font-normal cursor-pointer">
+                  Time-Constrained
+                </Label>
+              </div>
             </div>
           </div>
           <DialogFooter>
