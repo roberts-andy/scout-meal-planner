@@ -75,7 +75,12 @@ async def create_event_share(event_id: str, request: Request, auth: RequireTroop
         try:
             await delete_item(SHARE_TOKENS_CONTAINER, share_token, share_token)
         except Exception:
-            logger.warning("Failed to rollback share token index after event update error", exc_info=True)
+            logger.warning(
+                "Failed to rollback share token index after event update error (event_id=%s, share_token=%s)",
+                event_id,
+                share_token,
+                exc_info=True,
+            )
         raise
 
     if previous_share_token and previous_share_token != share_token:
@@ -84,7 +89,12 @@ async def create_event_share(event_id: str, request: Request, auth: RequireTroop
             if existing_index:
                 await delete_item(SHARE_TOKENS_CONTAINER, previous_share_token, previous_share_token)
         except Exception:
-            logger.warning("Failed to delete previous share token index", exc_info=True)
+            logger.warning(
+                "Failed to delete previous share token index (event_id=%s, share_token=%s)",
+                event_id,
+                previous_share_token,
+                exc_info=True,
+            )
 
     return {
         "shareToken": share_token,
@@ -115,7 +125,12 @@ async def delete_event_share(event_id: str, auth: RequireTroopContext):
             if token_mapping:
                 await delete_item(SHARE_TOKENS_CONTAINER, token, token)
         except Exception:
-            logger.warning("Failed to delete share token index while revoking link", exc_info=True)
+            logger.warning(
+                "Failed to delete share token index while revoking link (event_id=%s, share_token=%s)",
+                event_id,
+                token,
+                exc_info=True,
+            )
 
 
 @router.get("/share/{token}")
