@@ -4,6 +4,8 @@ import { loginRequest } from '@/lib/authConfig'
 import { useCallback, useEffect, useState } from 'react'
 import type { AuthUser, TroopRole } from '@/lib/types'
 
+const MSAL_USER_CANCELLED_ERROR = 'user_cancelled'
+
 export interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
@@ -166,5 +168,5 @@ export function useAuth(): AuthState {
 function isUserCancelledError(err: unknown): boolean {
   if (!err || typeof err !== 'object') return false
   const errorCode = (err as { errorCode?: unknown }).errorCode
-  return typeof errorCode === 'string' && errorCode === 'user_cancelled'
+  return typeof errorCode === 'string' && errorCode === MSAL_USER_CANCELLED_ERROR
 }
