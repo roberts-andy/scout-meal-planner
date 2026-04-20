@@ -17,7 +17,7 @@ async def client():
 
 
 @pytest.mark.asyncio
-async def test_health_endpoint_uses_lightweight_connectivity_check(client, monkeypatch):
+async def test_health_endpoint_succeeds_when_connection_healthy(client, monkeypatch):
     check_database_connection = AsyncMock(return_value=None)
     monkeypatch.setattr(health_router, "check_database_connection", check_database_connection)
 
