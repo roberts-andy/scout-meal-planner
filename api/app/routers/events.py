@@ -79,6 +79,14 @@ async def create_event(body: CreateEvent, auth: RequireTroopContext):
         "eventId": event["id"],
         "troopId": auth.troopId,
     })
+
+    assigned_count = len(_extract_meal_recipe_assignments(event))
+    if assigned_count > 0:
+        track_custom_event("recipe_assigned", properties={
+            "eventId": event["id"],
+            "troopId": auth.troopId,
+            "assignmentCount": str(assigned_count),
+        })
     return event
 
 

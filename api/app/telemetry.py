@@ -41,19 +41,21 @@ def get_telemetry_client() -> TelemetryClient | None:
     if _client is not None:
         return _client
 
-    connection_string = os.environ.get("APPINSIGHTS_CONNECTION_STRING")
-    if not connection_string:
-        return None
-
-    instrumentation_key, endpoint = _parse_connection_string(connection_string)
-    if not instrumentation_key:
-        logger.warning("APPINSIGHTS_CONNECTION_STRING is set but missing InstrumentationKey")
-        return None
-
     with _client_lock:
-        if _client is None:
-            _client = TelemetryClient(instrumentation_key)
-            _configure_endpoint(_client, endpoint)
+        if _client is not None:
+            return _client
+
+        connection_string = os.environ.get("APPINSIGHTS_CONNECTION_STRING")
+        if not connection_string:
+            return None
+
+        instrumentation_key, endpoint = _parse_connection_string(connection_string)
+        if not instrumentation_key:
+            logger.warning("APPINSIGHTS_CONNECTION_STRING is set but missing InstrumentationKey")
+            return None
+
+        _client = TelemetryClient(instrumentation_key)
+        _configure_endpoint(_client, endpoint)
     return _client
 
 

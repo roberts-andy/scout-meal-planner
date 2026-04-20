@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 from app.main import app
 from app.middleware.auth import require_troop_context
@@ -115,3 +115,68 @@ async def test_update_event_emits_recipe_assigned_custom_event(client, monkeypat
         "troopId": "troop-1",
         "assignmentCount": "1",
     })
+
+
+@pytest.mark.asyncio
+async def test_create_event_emits_recipe_assigned_custom_event_when_meals_preassigned(client, monkeypatch):
+    track_custom_event = Mock()
+
+    async def fake_create_item(*_args, **_kwargs):
+        return {
+            "id": "event-2",
+            "troopId": "troop-1",
+            "name": "Summer Campout",
+            "startDate": "2026-06-01",
+            "endDate": "2026-06-02",
+            "days": [
+                {
+                    "date": "2026-06-01",
+                    "meals": [
+                        {"id": "meal-1", "type": "breakfast", "scoutCount": 4, "recipeId": "recipe-1"},
+                        {"id": "meal-2", "type": "dinner", "scoutCount": 4, "recipeId": "recipe-2"},
+                    ],
+                },
+            ],
+        }
+
+    monkeypatch.setattr(events_router, "create_item", fake_create_item)
+    monkeypatch.setattr(events_router, "track_custom_event", track_custom_event)
+
+    app.dependency_overrides[require_troop_context] = lambda: SimpleNamespace(
+        userId="user-1",
+        email="leader@example.com",
+        displayName="Leader",
+        troopId="troop-1",
+        role="troopAdmin",
+    )
+
+    response = await client.post(
+        "/api/events",
+        json={
+            "name": "Summer Campout",
+            "startDate": "2026-06-01",
+            "endDate": "2026-06-02",
+            "days": [
+                {
+                    "date": "2026-06-01",
+                    "meals": [
+                        {"id": "meal-1", "type": "breakfast", "scoutCount": 4, "recipeId": "recipe-1"},
+                        {"id": "meal-2", "type": "dinner", "scoutCount": 4, "recipeId": "recipe-2"},
+                    ],
+                },
+            ],
+        },
+    )
+
+    assert response.status_code == 201
+    assert track_custom_event.call_args_list == [
+        call("event_created", properties={
+            "eventId": "event-2",
+            "troopId": "troop-1",
+        }),
+        call("recipe_assigned", properties={
+            "eventId": "event-2",
+            "troopId": "troop-1",
+            "assignmentCount": "2",
+        }),
+    ]
