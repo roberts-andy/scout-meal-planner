@@ -1,17 +1,18 @@
-from __future__ import annotations
-
 import asyncio
 from copy import deepcopy
 from types import SimpleNamespace
 
 import pytest
+from azure.cosmos.exceptions import CosmosHttpResponseError
 
 from app.routers import event_packed, event_purchased
 from app.schemas import TogglePackedItem, TogglePurchasedItem
 
 
-class _PreconditionFailed(Exception):
-    status_code = 412
+class _PreconditionFailed(CosmosHttpResponseError):
+    def __init__(self):
+        super().__init__(message="Precondition Failed")
+        self.status_code = 412
 
 
 @pytest.mark.asyncio
@@ -50,7 +51,7 @@ async def test_toggle_packed_retries_on_etag_conflict_and_preserves_both_updates
     )
 
     assert set(state["packedItems"]) == {"Skillet", "Spatula"}
-    assert len(if_match_values) >= 3
+    assert len(if_match_values) == 3
     assert all(value is not None for value in if_match_values)
 
 
@@ -90,5 +91,5 @@ async def test_toggle_purchased_retries_on_etag_conflict_and_preserves_both_upda
     )
 
     assert set(state["purchasedItems"]) == {"beans-can", "salt-tsp"}
-    assert len(if_match_values) >= 3
+    assert len(if_match_values) == 3
     assert all(value is not None for value in if_match_values)

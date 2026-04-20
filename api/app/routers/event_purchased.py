@@ -4,6 +4,7 @@ import time
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
+from azure.cosmos.exceptions import CosmosHttpResponseError
 
 from app.cosmosdb import get_by_id, update_item
 from app.middleware.auth import RequireTroopContext, forbidden
@@ -47,9 +48,12 @@ async def toggle_purchased(event_id: str, body: TogglePurchasedItem, auth: Requi
                 auth.troopId,
                 if_match=existing.get("_etag"),
             )
-        except Exception as exc:
-            if getattr(exc, "status_code", None) == 412:
+        except CosmosHttpResponseError as exc:
+            if exc.status_code == 412:
                 continue
             raise
 
-    return JSONResponse({"error": "Conflict updating purchased items"}, status_code=409)
+    return JSONResponse(
+        {"error": "Failed to update purchased items after retries due to concurrent modifications"},
+        status_code=409,
+    )
