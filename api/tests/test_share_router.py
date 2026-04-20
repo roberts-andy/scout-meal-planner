@@ -166,6 +166,43 @@ async def test_delete_event_share_removes_share_token_mapping(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_create_event_share_rolls_back_index_if_event_update_fails(monkeypatch):
+    auth = TroopContext(
+        userId="user-1",
+        email="leader@example.com",
+        displayName="Leader",
+        troopId="troop-1",
+        role="troopAdmin",
+    )
+    deleted_items: list[tuple[str, str, str | None]] = []
+
+    async def fake_get_by_id(container_name: str, item_id: str, partition_key_value: str | None = None):
+        if container_name == "events":
+            return {"id": "event-1", "troopId": "troop-1"}
+        return None
+
+    async def fake_create_item(_container_name: str, _item: dict):
+        return _item
+
+    async def fake_update_item(_container_name: str, _item_id: str, _item: dict, _partition_key_value: str | None = None):
+        raise RuntimeError("update failed")
+
+    async def fake_delete_item(container_name: str, item_id: str, partition_key_value: str | None = None):
+        deleted_items.append((container_name, item_id, partition_key_value))
+
+    monkeypatch.setattr(share, "get_by_id", fake_get_by_id)
+    monkeypatch.setattr(share, "create_item", fake_create_item)
+    monkeypatch.setattr(share, "update_item", fake_update_item)
+    monkeypatch.setattr(share, "delete_item", fake_delete_item)
+    monkeypatch.setattr(share, "_generate_share_token", lambda: "new-token")
+
+    with pytest.raises(RuntimeError):
+        await share.create_event_share("event-1", _make_request("/api/events/event-1/share"), auth)
+
+    assert deleted_items == [("share-tokens", "new-token", "new-token")]
+
+
+@pytest.mark.asyncio
 async def test_get_shared_event_rejects_stale_mapping(monkeypatch):
     deleted_items: list[tuple[str, str, str | None]] = []
 
