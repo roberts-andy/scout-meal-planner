@@ -76,7 +76,7 @@ function buildPaginationPath(path: string, params?: { limit?: number; continuati
 function withDefaultPagination(params?: { limit?: number; continuationToken?: string }) {
   return {
     limit: params?.limit ?? DEFAULT_PAGE_SIZE,
-    continuationToken: params?.continuationToken,
+    ...(params?.continuationToken ? { continuationToken: params.continuationToken } : {}),
   }
 }
 

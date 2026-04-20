@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { eventsApi } from '@/lib/api'
 import { Event } from '@/lib/types'
@@ -12,12 +11,6 @@ export function useEvents() {
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.continuationToken ?? undefined,
   })
-
-  useEffect(() => {
-    if (query.hasNextPage && !query.isFetchingNextPage) {
-      void query.fetchNextPage()
-    }
-  }, [query.hasNextPage, query.isFetchingNextPage, query.fetchNextPage])
 
   return {
     ...query,

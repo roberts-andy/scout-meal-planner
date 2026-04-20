@@ -26,17 +26,21 @@ beforeEach(() => {
 })
 
 describe('useEvents', () => {
-  it('fetches and flattens paginated events via eventsApi.getPage', async () => {
+  it('fetches first page and can fetch next page on demand', async () => {
     const events = [{ id: 'e1', name: 'Camp' } as any]
     vi.mocked(eventsApi.getPage)
       .mockResolvedValueOnce({ items: events, continuationToken: 'token-1' })
       .mockResolvedValueOnce({ items: [{ id: 'e2', name: 'Hike' } as any], continuationToken: null })
     const { result } = renderHook(() => useEvents(), { wrapper: wrapper() })
+    await waitFor(() => expect(result.current.data).toEqual([{ id: 'e1', name: 'Camp' }]))
+    expect(eventsApi.getPage).toHaveBeenNthCalledWith(1, { limit: 50, continuationToken: undefined })
+
+    await result.current.fetchNextPage()
+
     await waitFor(() => expect(result.current.data).toEqual([
       { id: 'e1', name: 'Camp' },
       { id: 'e2', name: 'Hike' },
     ]))
-    expect(eventsApi.getPage).toHaveBeenNthCalledWith(1, { limit: 50, continuationToken: undefined })
     expect(eventsApi.getPage).toHaveBeenNthCalledWith(2, { limit: 50, continuationToken: 'token-1' })
   })
 })

@@ -26,18 +26,22 @@ beforeEach(() => {
 })
 
 describe('useRecipes', () => {
-  it('fetches and flattens paginated recipes via recipesApi.getPage', async () => {
+  it('fetches first page and can fetch next page on demand', async () => {
     vi.mocked(recipesApi.getPage)
       .mockResolvedValueOnce({ items: [{ id: 'r1', name: 'Pancakes' } as any], continuationToken: 'token-1' })
       .mockResolvedValueOnce({ items: [{ id: 'r2', name: 'Chili' } as any], continuationToken: null })
 
     const { result } = renderHook(() => useRecipes(), { wrapper: wrapper() })
 
+    await waitFor(() => expect(result.current.data).toEqual([{ id: 'r1', name: 'Pancakes' }]))
+    expect(recipesApi.getPage).toHaveBeenNthCalledWith(1, { limit: 50, continuationToken: undefined })
+
+    await result.current.fetchNextPage()
+
     await waitFor(() => expect(result.current.data).toEqual([
       { id: 'r1', name: 'Pancakes' },
       { id: 'r2', name: 'Chili' },
     ]))
-    expect(recipesApi.getPage).toHaveBeenNthCalledWith(1, { limit: 50, continuationToken: undefined })
     expect(recipesApi.getPage).toHaveBeenNthCalledWith(2, { limit: 50, continuationToken: 'token-1' })
   })
 })
