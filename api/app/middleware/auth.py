@@ -5,7 +5,7 @@ import logging
 import os
 import time as _time
 from dataclasses import dataclass
-from typing import Annotated
+from typing import Annotated, NoReturn
 
 import httpx
 from fastapi import Depends, HTTPException, Request
@@ -138,11 +138,11 @@ async def get_troop_context(request: Request) -> TroopContext | None:
     )
 
 
-def unauthorized(message: str = "Authentication required"):
+def unauthorized(message: str = "Authentication required") -> NoReturn:
     raise HTTPException(status_code=401, detail=message)
 
 
-def forbidden(message: str = "Insufficient permissions"):
+def forbidden(message: str = "Insufficient permissions") -> NoReturn:
     raise HTTPException(status_code=403, detail=message)
 
 
@@ -151,7 +151,7 @@ async def require_token(request: Request) -> TokenClaims:
     claims = await validate_token(request)
     if not claims:
         unauthorized()
-    return claims  # type: ignore[return-value]
+    return claims
 
 
 # FastAPI dependency: require troop membership
@@ -159,7 +159,7 @@ async def require_troop_context(request: Request) -> TroopContext:
     ctx = await get_troop_context(request)
     if not ctx:
         unauthorized()
-    return ctx  # type: ignore[return-value]
+    return ctx
 
 
 # Annotated types for dependency injection

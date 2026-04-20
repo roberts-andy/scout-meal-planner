@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from dataclasses import asdict
 
 from fastapi import APIRouter, HTTPException
 from fastapi import Query
@@ -61,7 +62,7 @@ async def create_feedback(body: CreateFeedback, auth: RequireTroopContext):
         "id": str(uuid.uuid4()),
         "troopId": auth.troopId,
         **body.model_dump(),
-        "moderation": moderation.__dict__,
+        "moderation": asdict(moderation),
         **audit_create(auth),
     })
     return feedback
@@ -88,7 +89,7 @@ async def update_feedback(feedback_id: str, body: UpdateFeedback, auth: RequireT
         **body.model_dump(),
         "id": feedback_id,
         "troopId": auth.troopId,
-        "moderation": moderation.__dict__,
+        "moderation": asdict(moderation),
         **audit_update(auth),
     }, auth.troopId)
     return feedback
@@ -96,8 +97,14 @@ async def update_feedback(feedback_id: str, body: UpdateFeedback, auth: RequireT
 
 @router.delete("/feedback/{feedback_id}", status_code=204)
 async def delete_feedback(feedback_id: str, auth: RequireTroopContext):
-    if not check_permission(auth.role, "manageEvents"):
+    if not check_permission(auth.role, "submitFeedback"):
         forbidden()
+    existing = await get_by_id(CONTAINER, feedback_id, auth.troopId)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    created_by_user = (existing.get("createdBy") or {}).get("userId", "")
+    if created_by_user != auth.userId and not check_permission(auth.role, "manageEvents"):
+        raise HTTPException(status_code=403, detail="You can only delete your own feedback")
     await delete_item(CONTAINER, feedback_id, auth.troopId)
 
 

@@ -6,9 +6,10 @@ import secrets
 import time
 import uuid
 
+from azure.cosmos.exceptions import CosmosHttpResponseError
 from fastapi import APIRouter, HTTPException
 
-from app.cosmosdb import get_by_id, create_item, update_item, query_items
+from app.cosmosdb import get_by_id, create_item, update_item, query_items, delete_item
 from app.middleware.auth import RequireToken, RequireTroopContext, forbidden, get_troop_context, validate_token
 from app.middleware.roles import check_permission
 from app.schemas import CreateTroop, UpdateTroop, JoinTroop
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 CONTAINER = "troops"
+CASCADE_DELETE_CONTAINERS = ("members", "events", "feedback", "recipes")
 
 
 def _generate_invite_code() -> str:
@@ -74,6 +76,66 @@ async def update_troop(body: UpdateTroop, auth: RequireTroopContext):
     updated = {**existing, **body.model_dump(), "id": auth.troopId, "updatedAt": int(time.time() * 1000)}
     result = await update_item(CONTAINER, auth.troopId, updated)
     return result
+
+
+@router.delete("/troops", status_code=204)
+async def delete_troop(auth: RequireTroopContext):
+    """Delete the troop and cascade-delete troop-scoped records."""
+    if not check_permission(auth.role, "manageTroop"):
+        forbidden()
+
+    existing = await get_by_id(CONTAINER, auth.troopId)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Troop not found")
+
+    failures: list[dict] = []
+
+    troop_param = [{"name": "@troopId", "value": auth.troopId}]
+    for container in CASCADE_DELETE_CONTAINERS:
+        try:
+            items = await query_items(
+                container,
+                "SELECT c.id FROM c WHERE c.troopId = @troopId",
+                troop_param,
+            )
+        except Exception as exc:
+            failures.append({"container": container, "operation": "query", "error": type(exc).__name__})
+            continue
+
+        for item in items:
+            try:
+                await delete_item(container, item["id"], auth.troopId)
+            except CosmosHttpResponseError as exc:
+                if exc.status_code == 404:
+                    continue
+                failures.append({
+                    "container": container,
+                    "operation": "delete",
+                    "id": item.get("id"),
+                    "error": type(exc).__name__,
+                })
+            except Exception as exc:
+                if getattr(exc, "status_code", None) == 404:
+                    continue
+                failures.append({
+                    "container": container,
+                    "operation": "delete",
+                    "id": item.get("id"),
+                    "error": type(exc).__name__,
+                })
+
+    try:
+        await delete_item(CONTAINER, auth.troopId)
+    except CosmosHttpResponseError as exc:
+        if exc.status_code != 404:
+            failures.append({"container": CONTAINER, "operation": "delete", "id": auth.troopId, "error": type(exc).__name__})
+    except Exception as exc:
+        if getattr(exc, "status_code", None) != 404:
+            failures.append({"container": CONTAINER, "operation": "delete", "id": auth.troopId, "error": type(exc).__name__})
+
+    if failures:
+        logger.error("Troop %s deletion completed with failures: %s", auth.troopId, failures)
+        raise HTTPException(status_code=500, detail={"error": "Troop deletion failed", "failures": failures})
 
 
 @router.post("/troops/join", status_code=201)
