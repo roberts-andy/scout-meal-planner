@@ -56,6 +56,10 @@ async def update_feedback(feedback_id: str, body: UpdateFeedback, auth: RequireT
     existing = await get_by_id(CONTAINER, feedback_id, auth.troopId)
     if not existing:
         raise HTTPException(status_code=404, detail="Feedback not found")
+    created_by = existing.get("createdBy")
+    created_by_user = created_by["userId"] if isinstance(created_by, dict) else ""
+    if created_by_user != auth.userId and not check_permission(auth.role, "manageEvents"):
+        forbidden("You can only edit your own feedback")
     moderation = await moderate_text_fields([
         ModerationField(field="comments", text=body.comments),
         ModerationField(field="whatWorked", text=body.whatWorked),

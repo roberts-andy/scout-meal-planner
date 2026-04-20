@@ -6,7 +6,7 @@ import uuid
 
 from fastapi import APIRouter, HTTPException
 
-from app.cosmosdb import get_all_by_troop, get_by_id, create_item, update_item, delete_item
+from app.cosmosdb import get_all_by_troop, get_by_id, create_item, update_item, delete_item, query_items
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
 from app.schemas import CreateEvent, UpdateEvent
@@ -58,7 +58,7 @@ async def update_event(event_id: str, body: UpdateEvent, auth: RequireTroopConte
         raise HTTPException(status_code=404, detail="Event not found")
     event = await update_item(CONTAINER, event_id, {
         **existing,
-        **body.model_dump(),
+        **body.model_dump(exclude_none=True),
         "id": event_id,
         "troopId": auth.troopId,
         "updatedAt": int(time.time() * 1000),
@@ -71,4 +71,14 @@ async def update_event(event_id: str, body: UpdateEvent, auth: RequireTroopConte
 async def delete_event(event_id: str, auth: RequireTroopContext):
     if not check_permission(auth.role, "manageEvents"):
         forbidden()
+    feedback_items = await query_items(
+        "feedback",
+        "SELECT * FROM c WHERE c.eventId = @eventId AND c.troopId = @troopId",
+        [
+            {"name": "@eventId", "value": event_id},
+            {"name": "@troopId", "value": auth.troopId},
+        ],
+    )
+    for feedback_item in feedback_items:
+        await delete_item("feedback", feedback_item["id"], feedback_item["troopId"])
     await delete_item(CONTAINER, event_id, auth.troopId)

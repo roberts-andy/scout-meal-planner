@@ -61,7 +61,7 @@ describe('joinTroop handler', () => {
     expect(result.status).toBe(401)
   })
 
-  it('creates scout member with first-name displayName and minimal fields', async () => {
+  it('creates scout member with first-name displayName and authenticated identity fields', async () => {
     vi.mocked(validateToken).mockResolvedValueOnce({
       userId: 'scout-1',
       email: 'scout@example.com',
@@ -78,9 +78,12 @@ describe('joinTroop handler', () => {
     const created = vi.mocked(cosmos.create).mock.calls[0][1] as any
     expect(created.id).toMatch(/^[0-9a-f-]+$/)
     expect(created.troopId).toBe('troop-1')
+    expect(created.userId).toBe('scout-1')
+    expect(created.email).toBe('scout@example.com')
+    expect(created.joinedAt).toEqual(expect.any(Number))
     expect(created.displayName).toBe('Scout')
     expect(created.role).toBe('scout')
     expect(created.status).toBe('pending')
-    expect(Object.keys(created).sort()).toEqual(['displayName', 'id', 'role', 'status', 'troopId'])
+    expect(Object.keys(created).sort()).toEqual(['displayName', 'email', 'id', 'joinedAt', 'role', 'status', 'troopId', 'userId'])
   })
 })
