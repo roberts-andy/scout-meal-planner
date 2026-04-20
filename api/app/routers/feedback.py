@@ -4,7 +4,7 @@ import logging
 import time
 import uuid
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.cosmosdb import get_all_by_troop, get_by_id, create_item, update_item, delete_item, query_items
@@ -76,8 +76,14 @@ async def update_feedback(feedback_id: str, body: UpdateFeedback, auth: RequireT
 
 @router.delete("/feedback/{feedback_id}", status_code=204)
 async def delete_feedback(feedback_id: str, auth: RequireTroopContext):
-    if not check_permission(auth.role, "manageEvents"):
+    if not check_permission(auth.role, "submitFeedback"):
         forbidden()
+    existing = await get_by_id(CONTAINER, feedback_id, auth.troopId)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    created_by_user = (existing.get("createdBy") or {}).get("userId", "")
+    if created_by_user != auth.userId and not check_permission(auth.role, "manageEvents"):
+        raise HTTPException(status_code=403, detail="You can only delete your own feedback")
     await delete_item(CONTAINER, feedback_id, auth.troopId)
 
 
