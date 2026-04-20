@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass
-from typing import Annotated
+from typing import Annotated, NoReturn
 
 import httpx
 from fastapi import Depends, HTTPException, Request
@@ -114,11 +114,11 @@ async def get_troop_context(request: Request) -> TroopContext | None:
     )
 
 
-def unauthorized(message: str = "Authentication required"):
+def unauthorized(message: str = "Authentication required") -> NoReturn:
     raise HTTPException(status_code=401, detail=message)
 
 
-def forbidden(message: str = "Insufficient permissions"):
+def forbidden(message: str = "Insufficient permissions") -> NoReturn:
     raise HTTPException(status_code=403, detail=message)
 
 
