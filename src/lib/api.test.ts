@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { eventsApi, recipesApi, feedbackApi, membersApi, shareApi } from './api'
+import { eventsApi, recipesApi, feedbackApi, membersApi, shareApi, setUnauthorizedHandler } from './api'
 
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
@@ -22,6 +22,7 @@ function emptyResponse(status = 204) {
 
 beforeEach(() => {
   mockFetch.mockReset()
+  setUnauthorizedHandler(null)
 })
 
 // ── Events API ──
@@ -93,6 +94,15 @@ describe('eventsApi', () => {
   it('throws on non-ok response', async () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({ error: 'Not found' }, 404))
     await expect(eventsApi.getById('bad')).rejects.toThrow('Not found')
+  })
+
+  it('triggers re-auth handler when API returns 401', async () => {
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
+    mockFetch.mockResolvedValueOnce(jsonResponse({ error: 'Unauthorized' }, 401))
+
+    await expect(eventsApi.getAll()).rejects.toThrow('Unauthorized')
+    expect(onUnauthorized).toHaveBeenCalledTimes(1)
   })
 
   it('throws using detail field on non-ok response', async () => {
