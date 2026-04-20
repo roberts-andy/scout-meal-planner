@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { eventsApi } from '@/lib/api'
 import { Event } from '@/lib/types'
+import { trackCustomEvent } from '@/lib/telemetry'
 
 
 export function useEvents() {
@@ -21,8 +22,11 @@ export function useCreateEvent() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (event: Event) => eventsApi.create(event),
-    onSuccess: () => {
+    onSuccess: (createdEvent) => {
       queryClient.invalidateQueries({ queryKey: ['events'] })
+      trackCustomEvent('event_created', {
+        eventId: createdEvent.id,
+      })
     },
   })
 }

@@ -19,11 +19,24 @@ from app.cosmosdb import (
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
 from app.schemas import CreateEvent, UpdateEvent
+from app.telemetry import track_custom_event
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 CONTAINER = "events"
+
+
+def _meal_recipe_assignments(event: dict) -> dict[str, str]:
+    assignments: dict[str, str] = {}
+    for day_index, day in enumerate(event.get("days") or []):
+        for meal_index, meal in enumerate(day.get("meals") or []):
+            recipe_id = meal.get("recipeId")
+            if not recipe_id:
+                continue
+            meal_key = str(meal.get("id") or f"{day_index}:{meal_index}")
+            assignments[meal_key] = str(recipe_id)
+    return assignments
 
 
 @router.get("/events")
@@ -60,6 +73,10 @@ async def create_event(body: CreateEvent, auth: RequireTroopContext):
         **body.model_dump(),
         **audit_create(auth),
     })
+    track_custom_event("event_created", properties={
+        "eventId": event["id"],
+        "troopId": auth.troopId,
+    })
     return event
 
 
@@ -77,6 +94,19 @@ async def update_event(event_id: str, body: UpdateEvent, auth: RequireTroopConte
         "troopId": auth.troopId,
         **audit_update(auth),
     }, auth.troopId)
+
+    previous_assignments = _meal_recipe_assignments(existing)
+    updated_assignments = _meal_recipe_assignments(event)
+    assigned_count = sum(
+        1 for meal_key, recipe_id in updated_assignments.items()
+        if previous_assignments.get(meal_key) != recipe_id
+    )
+    if assigned_count > 0:
+        track_custom_event("recipe_assigned", properties={
+            "eventId": event_id,
+            "troopId": auth.troopId,
+            "assignmentCount": str(assigned_count),
+        })
     return event
 
 

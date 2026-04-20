@@ -1,9 +1,12 @@
 import logging
+import time
 
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
+from starlette.requests import Request
 
 from app.cosmosdb import close_database_clients, init_database
+from app.telemetry import track_exception, track_request
 from app.routers import (
     events,
     event_packed,
@@ -37,6 +40,35 @@ async def lifespan(application: FastAPI):
 
 
 app = FastAPI(title="Scout Meal Planner API", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def application_insights_middleware(request: Request, call_next):
+    started = time.perf_counter()
+    response_code = 500
+    success = False
+    try:
+        response = await call_next(request)
+        response_code = response.status_code
+        success = response_code < 500
+        return response
+    except Exception as exc:
+        track_exception(exc, properties={
+            "path": request.url.path,
+            "method": request.method,
+        })
+        raise
+    finally:
+        duration_ms = (time.perf_counter() - started) * 1000
+        track_request(
+            name=f"{request.method} {request.url.path}",
+            url=str(request.url),
+            success=success,
+            duration_ms=duration_ms,
+            response_code=response_code,
+            http_method=request.method,
+            properties={"path": request.url.path},
+        )
 
 # CORS: Not needed. Azure Static Web Apps proxies all /api requests,
 # and local dev uses the SWA CLI proxy. See

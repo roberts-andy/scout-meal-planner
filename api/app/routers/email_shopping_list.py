@@ -12,6 +12,7 @@ from app.cosmosdb import get_by_id
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
 from app.schemas import EmailShoppingList
+from app.telemetry import track_custom_event
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -20,6 +21,11 @@ EVENTS_CONTAINER = "events"
 MAX_SUBJECT_EVENT_NAME_LENGTH = 200
 
 _email_client: EmailClient | None = None
+
+
+def _email_domain(value: str) -> str:
+    parts = value.rsplit("@", 1)
+    return parts[1].lower() if len(parts) == 2 else "unknown"
 
 
 def _get_email_client() -> EmailClient:
@@ -83,5 +89,12 @@ async def email_shopping_list(event_id: str, body: EmailShoppingList, auth: Requ
 
     if result.get("status") != "Succeeded":
         raise HTTPException(status_code=502, detail="Failed to send email")
+
+    track_custom_event("shopping_list_emailed", properties={
+        "eventId": event_id,
+        "troopId": auth.troopId,
+        "recipientDomain": _email_domain(body.recipientEmail),
+        "itemCount": str(len(body.items)),
+    })
 
     return {"message": "Shopping list email sent"}

@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Request
 from app.cosmosdb import create_item, delete_item, get_by_id, get_all_by_troop, update_item
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
+from app.telemetry import track_custom_event
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -105,6 +106,11 @@ async def create_event_share(event_id: str, request: Request, auth: RequireTroop
                 previous_share_token,
                 exc_info=True,
             )
+
+    track_custom_event("shared_link_generated", properties={
+        "eventId": event_id,
+        "troopId": auth.troopId,
+    })
 
     return {
         "shareToken": share_token,
