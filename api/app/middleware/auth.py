@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from dataclasses import dataclass
 from typing import Annotated
 
@@ -21,17 +22,26 @@ if not CLIENT_ID:
 # Microsoft identity platform /consumers endpoint
 JWKS_URI = "https://login.microsoftonline.com/consumers/discovery/v2.0/keys"
 ISSUER = "https://login.microsoftonline.com/9188040d-6c67-4c5b-b112-36a304b66dad/v2.0"
+JWKS_CACHE_TTL_SECONDS = int(os.environ.get("JWKS_CACHE_TTL_SECONDS", "300"))
 
 _jwks: dict | None = None
+_jwks_fetched_at: float | None = None
 
 
-async def _get_jwks() -> dict:
-    global _jwks
-    if _jwks is None:
+async def _get_jwks(force_refresh: bool = False) -> dict:
+    global _jwks, _jwks_fetched_at
+    now = time.monotonic()
+    cache_expired = (
+        _jwks is None
+        or _jwks_fetched_at is None
+        or (now - _jwks_fetched_at) >= JWKS_CACHE_TTL_SECONDS
+    )
+    if force_refresh or cache_expired:
         async with httpx.AsyncClient() as client:
             resp = await client.get(JWKS_URI)
             resp.raise_for_status()
             _jwks = resp.json()
+            _jwks_fetched_at = now
     return _jwks
 
 
@@ -73,7 +83,22 @@ async def validate_token(request: Request) -> TokenClaims | None:
             displayName=payload.get("name", ""),
         )
     except JWTError:
-        return None
+        try:
+            jwks = await _get_jwks(force_refresh=True)
+            payload = jwt.decode(
+                token,
+                jwks,
+                algorithms=["RS256"],
+                audience=CLIENT_ID,
+                issuer=ISSUER,
+            )
+            return TokenClaims(
+                userId=payload.get("sub") or payload.get("oid", ""),
+                email=(payload.get("emails") or [None])[0] or payload.get("preferred_username", ""),
+                displayName=payload.get("name", ""),
+            )
+        except JWTError:
+            return None
 
 
 async def get_troop_context(request: Request) -> TroopContext | None:
