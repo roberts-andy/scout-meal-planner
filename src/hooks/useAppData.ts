@@ -70,10 +70,7 @@ export function useAppData() {
   }
 
   const handleDeleteFeedback = (feedbackId: string) => {
-    const fb = feedback.find(f => f.id === feedbackId)
-    if (fb) {
-      deleteFeedback.mutate({ id: feedbackId, eventId: fb.eventId })
-    }
+    deleteFeedback.mutate(feedbackId)
   }
 
   const queryError = eventsError || recipesError || feedbackError

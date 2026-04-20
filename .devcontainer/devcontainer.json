@@ -10,7 +10,7 @@
       "version": "4"
     }
   },
-  "postCreateCommand": "npm install && cd api && npm install",
+  "postCreateCommand": "npm install && cd api && pip install -r requirements.txt -r requirements-dev.txt",
   "postStartCommand": ".devcontainer/wait-for-cosmos.sh",
   "customizations": {
     "vscode": {

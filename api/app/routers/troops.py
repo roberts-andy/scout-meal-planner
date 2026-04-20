@@ -6,8 +6,7 @@ import secrets
 import time
 import uuid
 
-from fastapi import APIRouter
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException
 
 from app.cosmosdb import get_by_id, create_item, update_item, query_items
 from app.middleware.auth import RequireToken, RequireTroopContext, forbidden, get_troop_context, validate_token
@@ -21,7 +20,7 @@ CONTAINER = "troops"
 
 
 def _generate_invite_code() -> str:
-    return "TROOP-" + secrets.token_hex(2).upper()[:4]
+    return "TROOP-" + secrets.token_hex(4).upper()
 
 
 def _to_first_name(display_name: str) -> str:
@@ -60,7 +59,7 @@ async def create_troop(body: CreateTroop, claims: RequireToken):
 async def get_troop(auth: RequireTroopContext):
     troop = await get_by_id(CONTAINER, auth.troopId)
     if not troop:
-        return JSONResponse({"error": "Troop not found"}, status_code=404)
+        raise HTTPException(status_code=404, detail="Troop not found")
     return troop
 
 
@@ -70,7 +69,7 @@ async def update_troop(body: UpdateTroop, auth: RequireTroopContext):
         forbidden()
     existing = await get_by_id(CONTAINER, auth.troopId)
     if not existing:
-        return JSONResponse({"error": "Troop not found"}, status_code=404)
+        raise HTTPException(status_code=404, detail="Troop not found")
 
     updated = {**existing, **body.model_dump(), "id": auth.troopId, "updatedAt": int(time.time() * 1000)}
     result = await update_item(CONTAINER, auth.troopId, updated)
@@ -86,7 +85,7 @@ async def join_troop(body: JoinTroop, claims: RequireToken):
     )
 
     if not troops:
-        return JSONResponse({"error": "Invalid invite code"}, status_code=404)
+        raise HTTPException(status_code=404, detail="Invalid invite code")
 
     troop = troops[0]
 
@@ -100,14 +99,17 @@ async def join_troop(body: JoinTroop, claims: RequireToken):
     )
 
     if existing:
-        return JSONResponse({"error": "Already a member of this troop"}, status_code=409)
+        raise HTTPException(status_code=409, detail="Already a member of this troop")
 
     member = await create_item("members", {
         "id": str(uuid.uuid4()),
         "troopId": troop["id"],
+        "userId": claims.userId,
+        "email": claims.email,
         "displayName": _to_first_name(claims.displayName),
         "role": "scout",
         "status": "pending",
+        "joinedAt": int(time.time() * 1000),
     })
 
     return {"troop": troop, "member": member}
