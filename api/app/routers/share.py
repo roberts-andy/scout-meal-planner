@@ -4,9 +4,9 @@ import logging
 import time
 import uuid
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 
-from app.cosmosdb import get_by_id, get_all_by_troop, update_item, query_items
+from app.cosmosdb import create_item, delete_item, get_by_id, get_all_by_troop, update_item
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
 
@@ -15,6 +15,7 @@ router = APIRouter()
 
 EVENTS_CONTAINER = "events"
 RECIPES_CONTAINER = "recipes"
+SHARE_TOKENS_CONTAINER = "share-tokens"
 
 
 def _generate_share_token() -> str:
@@ -33,7 +34,6 @@ async def get_event_share(event_id: str, request: Request, auth: RequireTroopCon
 
     existing = await get_by_id(EVENTS_CONTAINER, event_id, auth.troopId)
     if not existing:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Event not found")
 
     token = existing.get("shareToken")
@@ -50,17 +50,40 @@ async def create_event_share(event_id: str, request: Request, auth: RequireTroop
 
     existing = await get_by_id(EVENTS_CONTAINER, event_id, auth.troopId)
     if not existing:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Event not found")
 
-    share_token = _generate_share_token()
+    share_token = ""
+    for _ in range(5):
+        candidate = _generate_share_token()
+        token_match = await get_by_id(SHARE_TOKENS_CONTAINER, candidate, candidate)
+        if not token_match:
+            share_token = candidate
+            break
+    if not share_token:
+        raise HTTPException(status_code=500, detail="Could not generate unique share token")
+
+    now = int(time.time() * 1000)
+    previous_share_token = existing.get("shareToken")
     await update_item(EVENTS_CONTAINER, event_id, {
         **existing,
         "shareToken": share_token,
-        "shareTokenUpdatedAt": int(time.time() * 1000),
-        "updatedAt": int(time.time() * 1000),
+        "shareTokenUpdatedAt": now,
+        "updatedAt": now,
         "updatedBy": {"userId": auth.userId, "displayName": auth.displayName},
     }, auth.troopId)
+
+    if previous_share_token and previous_share_token != share_token:
+        existing_index = await get_by_id(SHARE_TOKENS_CONTAINER, previous_share_token, previous_share_token)
+        if existing_index:
+            await delete_item(SHARE_TOKENS_CONTAINER, previous_share_token, previous_share_token)
+
+    await create_item(SHARE_TOKENS_CONTAINER, {
+        "id": share_token,
+        "shareToken": share_token,
+        "eventId": event_id,
+        "troopId": auth.troopId,
+        "updatedAt": now,
+    })
 
     return {
         "shareToken": share_token,
@@ -75,7 +98,6 @@ async def delete_event_share(event_id: str, auth: RequireTroopContext):
 
     existing = await get_by_id(EVENTS_CONTAINER, event_id, auth.troopId)
     if not existing:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Event not found")
 
     next_event = {k: v for k, v in existing.items() if k not in ("shareToken", "shareTokenUpdatedAt")}
@@ -85,19 +107,25 @@ async def delete_event_share(event_id: str, auth: RequireTroopContext):
         "updatedBy": {"userId": auth.userId, "displayName": auth.displayName},
     }, auth.troopId)
 
+    token = existing.get("shareToken")
+    if token:
+        token_mapping = await get_by_id(SHARE_TOKENS_CONTAINER, token, token)
+        if token_mapping:
+            await delete_item(SHARE_TOKENS_CONTAINER, token, token)
+
 
 @router.get("/share/{token}")
 async def get_shared_event(token: str):
-    events = await query_items(
-        EVENTS_CONTAINER,
-        "SELECT * FROM c WHERE c.shareToken = @token",
-        [{"name": "@token", "value": token}],
-    )
-    if not events:
-        from fastapi import HTTPException
+    token_mapping = await get_by_id(SHARE_TOKENS_CONTAINER, token, token)
+    if not token_mapping:
         raise HTTPException(status_code=404, detail="Shared event not found")
 
-    event = events[0]
+    event = await get_by_id(EVENTS_CONTAINER, token_mapping["eventId"], token_mapping["troopId"])
+    if not event or event.get("shareToken") != token:
+        if event and event.get("shareToken") != token:
+            await delete_item(SHARE_TOKENS_CONTAINER, token, token)
+        raise HTTPException(status_code=404, detail="Shared event not found")
+
     all_recipes = await get_all_by_troop(RECIPES_CONTAINER, event["troopId"])
 
     recipe_ids: set[str] = set()
