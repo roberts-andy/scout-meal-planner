@@ -28,6 +28,7 @@ _connection_string = os.environ.get("COSMOS_CONNECTION_STRING")
 _database_id = os.environ.get("COSMOS_DATABASE", "scout-meal-planner")
 
 _client: CosmosClient | None = None
+_health_check_client: CosmosClient | None = None
 _database: DatabaseProxy | None = None
 _containers: dict[str, ContainerProxy] = {}
 _initialized = False
@@ -117,23 +118,35 @@ async def init_database() -> None:
 
 
 async def check_database_connection() -> None:
+    global _health_check_client
+
     if _database is not None:
         await _database.read()
         return
 
-    if not _endpoint and not _connection_string:
-        raise RuntimeError("Neither COSMOS_ENDPOINT nor COSMOS_CONNECTION_STRING is set.")
-
-    if _endpoint:
-        client = CosmosClient(_endpoint, credential=DefaultAzureCredential(), transport=_SafeAioHttpTransport())
-    else:
-        client = CosmosClient.from_connection_string(_connection_string, transport=_SafeAioHttpTransport())
-
-    try:
-        database = client.get_database_client(_database_id)
+    if _client is not None:
+        database = _client.get_database_client(_database_id)
         await database.read()
-    finally:
-        await client.close()
+        return
+
+    if not _endpoint and not _connection_string:
+        raise RuntimeError("Database configuration missing: either COSMOS_ENDPOINT or COSMOS_CONNECTION_STRING must be set.")
+
+    if _health_check_client is None:
+        if _endpoint:
+            _health_check_client = CosmosClient(
+                _endpoint,
+                credential=DefaultAzureCredential(),
+                transport=_SafeAioHttpTransport(),
+            )
+        else:
+            _health_check_client = CosmosClient.from_connection_string(
+                _connection_string,
+                transport=_SafeAioHttpTransport(),
+            )
+
+    database = _health_check_client.get_database_client(_database_id)
+    await database.read()
 
 
 def _get_container(name: str) -> ContainerProxy:
