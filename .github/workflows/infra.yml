@@ -35,7 +35,7 @@ jobs:
             --query "properties.outputs" -o json)
           echo "SWA URL: $(echo $result | jq -r '.staticWebAppUrl.value')"
           echo "Cosmos endpoint: $(echo $result | jq -r '.cosmosAccountEndpoint.value')"
-          echo "Function App: $(echo $result | jq -r '.functionAppName.value')"
+          echo "API App: $(echo $result | jq -r '.apiAppName.value')"
           echo "Content Safety: $(echo $result | jq -r '.contentSafetyEndpoint.value')"
 
       - name: Get SWA deployment token

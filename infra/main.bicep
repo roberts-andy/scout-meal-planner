@@ -21,17 +21,11 @@ param repositoryUrl string = ''
 @description('GitHub branch for SWA deployment')
 param repositoryBranch string = 'main'
 
-@description('Name of the Container App')
-param containerAppName string = 'ca-scout-meal-planner'
+@description('Name of the App Service Plan')
+param appServicePlanName string = 'plan-scout-meal-planner'
 
-@description('Name of the Container Apps Environment')
-param containerAppEnvName string = 'cae-scout-meal-planner'
-
-@description('Name of the Azure Container Registry')
-param containerRegistryName string = 'crscoutmealplanner'
-
-@description('Object ID of the GitHub Actions service principal for deployment')
-param deployerPrincipalId string = ''
+@description('Name of the API Web App')
+param apiAppName string = 'app-scout-meal-planner-api'
 
 @description('Name of the Azure AI Content Safety account')
 param contentSafetyAccountName string = 'cs-scout-meal-planner'
@@ -57,10 +51,8 @@ module resources 'resources.bicep' = {
     cosmosDatabaseName: cosmosDatabaseName
     repositoryUrl: repositoryUrl
     repositoryBranch: repositoryBranch
-    containerAppName: containerAppName
-    containerAppEnvName: containerAppEnvName
-    containerRegistryName: containerRegistryName
-    deployerPrincipalId: deployerPrincipalId
+    appServicePlanName: appServicePlanName
+    apiAppName: apiAppName
     entraClientId: entraClientId
     contentSafetyAccountName: contentSafetyAccountName
     communicationServiceName: communicationServiceName
@@ -69,9 +61,8 @@ module resources 'resources.bicep' = {
 
 output staticWebAppUrl string = resources.outputs.staticWebAppUrl
 output cosmosAccountEndpoint string = resources.outputs.cosmosAccountEndpoint
-output containerAppName string = resources.outputs.containerAppName
-output containerAppFqdn string = resources.outputs.containerAppFqdn
-output containerRegistryLoginServer string = resources.outputs.containerRegistryLoginServer
+output apiAppName string = resources.outputs.apiAppName
+output apiAppDefaultHostname string = resources.outputs.apiAppDefaultHostname
 output entraClientId string = resources.outputs.entraClientId
 output contentSafetyEndpoint string = resources.outputs.contentSafetyEndpoint
 output acsEndpoint string = resources.outputs.acsEndpoint
