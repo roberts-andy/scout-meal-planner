@@ -92,3 +92,44 @@ async def test_get_jwks_cache_expires_after_ttl(monkeypatch):
     assert third == {"keys": ["key-2"]}
     assert requested_urls == [auth.JWKS_URI, auth.JWKS_URI]
     assert timeout_values == [10, 10]
+
+
+@pytest.mark.asyncio
+async def test_validate_token_returns_none_when_both_stale_and_fresh_keys_fail(monkeypatch):
+    """Hard failure: jwt.decode fails with both stale and refreshed JWKS → validate_token returns None."""
+    calls: list[bool] = []
+    stale_jwks = {"keys": ["stale"]}
+    fresh_jwks = {"keys": ["fresh"]}
+
+    async def fake_get_jwks(force_refresh: bool = False):
+        calls.append(force_refresh)
+        return fresh_jwks if force_refresh else stale_jwks
+
+    def fake_decode(token: str, jwks: dict, algorithms: list[str], audience: str | None, issuer: str):
+        raise JWTError("invalid key")
+
+    monkeypatch.setattr(auth, "_get_jwks", fake_get_jwks)
+    monkeypatch.setattr(auth.jwt, "decode", fake_decode)
+
+    claims = await auth.validate_token(_make_request("Bearer bad-token"))
+
+    assert claims is None
+    assert calls == [False, True], "Should attempt stale keys then force-refresh"
+
+
+@pytest.mark.asyncio
+async def test_require_token_raises_401_when_both_stale_and_fresh_keys_fail(monkeypatch):
+    """Hard failure through the require_token dependency returns 401."""
+    async def fake_get_jwks(force_refresh: bool = False):
+        return {"keys": ["irrelevant"]}
+
+    def fake_decode(token: str, jwks: dict, algorithms: list[str], audience: str | None, issuer: str):
+        raise JWTError("invalid key")
+
+    monkeypatch.setattr(auth, "_get_jwks", fake_get_jwks)
+    monkeypatch.setattr(auth.jwt, "decode", fake_decode)
+
+    with pytest.raises(auth.HTTPException) as exc:
+        await auth.require_token(_make_request("Bearer bad-token"))
+
+    assert exc.value.status_code == 401
