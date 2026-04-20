@@ -140,7 +140,7 @@ def _install_default_mocks(monkeypatch: pytest.MonkeyPatch):
     async def fake_create_item(_container: str, item: dict[str, Any]):
         return item
 
-    async def fake_update_item(_container: str, _item_id: str, item: dict[str, Any], *_args):
+    async def fake_update_item(_container: str, _item_id: str, item: dict[str, Any], *_args, **_kwargs):
         return item
 
     async def fake_delete_item(*_args):
@@ -159,6 +159,7 @@ def _install_default_mocks(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(events, "create_item", fake_create_item)
     monkeypatch.setattr(events, "update_item", fake_update_item)
     monkeypatch.setattr(events, "delete_item", fake_delete_item)
+    monkeypatch.setattr(events, "query_items", fake_query_items)
 
     monkeypatch.setattr(share, "get_by_id", fake_get_by_id)
     monkeypatch.setattr(share, "get_all_by_troop", fake_get_all_by_troop)
