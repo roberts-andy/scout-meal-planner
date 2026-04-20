@@ -1,5 +1,5 @@
 # Start local dev environment
-# Prerequisites: Node.js 20 LTS (pinned via .nvmrc), Azure Cosmos DB Emulator running
+# Prerequisites: Python 3.13+, Node.js 20+ (for frontend), Azure Cosmos DB Emulator running
 
 $ErrorActionPreference = "Stop"
 
@@ -8,19 +8,23 @@ if (Get-Command fnm -ErrorAction SilentlyContinue) {
     fnm env --use-on-cd --shell power-shell | Out-String | Invoke-Expression
     if (Test-Path ".nvmrc") { fnm use --install-if-missing | Out-Null }
 } elseif ((node --version) -notmatch '^v(20|22)\.') {
-    Write-Host "WARNING: Node $(node --version) may be incompatible with Azure Functions Core Tools v4." -ForegroundColor Yellow
+    Write-Host "WARNING: Node $(node --version) may be incompatible." -ForegroundColor Yellow
     Write-Host "         Install fnm (winget install Schniz.fnm) or switch to Node 20 LTS." -ForegroundColor Yellow
 }
 
-# Install dependencies if needed
+# Install frontend dependencies if needed
 if (-not (Test-Path "node_modules")) {
     Write-Host "Installing frontend dependencies..." -ForegroundColor Cyan
     npm install
 }
-if (-not (Test-Path "api/node_modules")) {
-    Write-Host "Installing API dependencies..." -ForegroundColor Cyan
-    Push-Location api; npm install; Pop-Location
+
+# Set up Python venv and install API dependencies
+if (-not (Test-Path "api/.venv")) {
+    Write-Host "Creating Python virtual environment..." -ForegroundColor Cyan
+    python -m venv api/.venv
 }
+$venvPython = if ($IsWindows -or $env:OS -match "Windows") { "api/.venv/Scripts/python" } else { "api/.venv/bin/python" }
+& $venvPython -m pip install -q -r api/requirements.txt
 
 # Load .env file if present (gitignored — copy .env.example to .env and fill in values)
 if (Test-Path ".env") {
@@ -52,10 +56,38 @@ if (-not $env:COSMOS_ENDPOINT -and -not $env:COSMOS_CONNECTION_STRING) {
 }
 
 Write-Host ""
-Write-Host "Starting dev environment (Vite + SWA CLI + Azure Functions)..." -ForegroundColor Green
-Write-Host "  Frontend + API: http://localhost:4280" -ForegroundColor Yellow
-Write-Host "  Vite (direct):  http://localhost:5000" -ForegroundColor DarkGray
-Write-Host "  Health:         http://localhost:4280/api/health" -ForegroundColor Yellow
+Write-Host "Starting dev environment (Vite + FastAPI)..." -ForegroundColor Green
+Write-Host "  App:    http://localhost:5000" -ForegroundColor Yellow
+Write-Host "  API:    http://localhost:8000" -ForegroundColor DarkGray
+Write-Host "  Health: http://localhost:5000/api/health" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  Vite proxies /api/* to FastAPI automatically." -ForegroundColor DarkGray
 Write-Host ""
 
-npm run dev:swa
+# Start FastAPI in the background
+$uvicorn = if ($IsWindows -or $env:OS -match "Windows") { "api/.venv/Scripts/uvicorn" } else { "api/.venv/bin/uvicorn" }
+$apiJob = Start-Process -NoNewWindow -PassThru -FilePath $uvicorn -ArgumentList "app.main:app --host 127.0.0.1 --port 8000 --reload --reload-exclude .venv" -WorkingDirectory "api"
+
+# Wait for API to be ready
+$retries = 0
+while ($retries -lt 15) {
+    try {
+        $null = Invoke-RestMethod -Uri "http://localhost:8000/api/health" -TimeoutSec 1
+        break
+    } catch {
+        Start-Sleep -Milliseconds 500
+        $retries++
+    }
+}
+if ($retries -ge 15) {
+    Write-Host "ERROR: FastAPI did not start on port 8000" -ForegroundColor Red
+    exit 1
+}
+Write-Host "  API ready on port 8000" -ForegroundColor Green
+
+try {
+    npm run dev
+} finally {
+    # Clean up API process on exit
+    if ($apiJob -and -not $apiJob.HasExited) { Stop-Process -Id $apiJob.Id -Force -ErrorAction SilentlyContinue }
+}

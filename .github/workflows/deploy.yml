@@ -84,7 +84,7 @@ jobs:
           config_file_location: /
           skip_app_build: true
 
-  # ── API → Function App (needs Azure Login — push/dispatch only, OIDC creds don't match PR subject) ──
+  # ── API → Container App (needs Azure Login — push/dispatch only, OIDC creds don't match PR subject) ──
   deploy_api:
     needs: changes
     if: |
@@ -92,24 +92,12 @@ jobs:
       (needs.changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     name: Deploy API
+    env:
+      ACR_NAME: crscoutmealplanner
+      CONTAINER_APP_NAME: ca-scout-meal-planner
+      RESOURCE_GROUP: rg-scout-meal-planner
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: api/package-lock.json
-
-      - name: Install API dependencies
-        run: cd api && npm ci
-
-      - name: Build API
-        run: cd api && npm run build
-
-      - name: Prune dev dependencies
-        run: cd api && npm prune --omit=dev
 
       - name: Azure Login
         uses: azure/login@v2
@@ -118,44 +106,22 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Prepare package
-        run: |
-          cd api
-          zip -r ../api.zip . -x "src/*" "tsconfig.json"
+      - name: Login to ACR
+        run: az acr login --name $ACR_NAME
 
-      - name: Open storage firewall for deployment
+      - name: Build and push container image
         run: |
-          az storage account update \
-            --name stscoutmealplanner \
-            --resource-group rg-scout-meal-planner \
-            --public-network-access Enabled \
-            --default-action Allow
-          sleep 30
+          IMAGE="${ACR_NAME}.azurecr.io/${CONTAINER_APP_NAME}:${{ github.sha }}"
+          docker build -t "$IMAGE" -t "${ACR_NAME}.azurecr.io/${CONTAINER_APP_NAME}:latest" api/
+          docker push "$IMAGE"
+          docker push "${ACR_NAME}.azurecr.io/${CONTAINER_APP_NAME}:latest"
 
-      - name: Upload package to deployment storage
+      - name: Deploy to Container App
         run: |
-          az storage blob upload \
-            --account-name stscoutmealplanner \
-            --container-name app-package-func-scout-meal-planner \
-            --name api.zip \
-            --file api.zip \
-            --auth-mode login \
-            --overwrite
-
-      - name: Close storage firewall
-        if: always()
-        run: |
-          az storage account update \
-            --name stscoutmealplanner \
-            --resource-group rg-scout-meal-planner \
-            --default-action Deny \
-            --public-network-access Disabled
-
-      - name: Trigger function app deployment sync
-        run: |
-          az functionapp restart \
-            --name func-scout-meal-planner \
-            --resource-group rg-scout-meal-planner
+          az containerapp update \
+            --name $CONTAINER_APP_NAME \
+            --resource-group $RESOURCE_GROUP \
+            --image "${ACR_NAME}.azurecr.io/${CONTAINER_APP_NAME}:${{ github.sha }}"
 
   # ── PR cleanup ──
   close_pull_request:

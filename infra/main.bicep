@@ -21,11 +21,14 @@ param repositoryUrl string = ''
 @description('GitHub branch for SWA deployment')
 param repositoryBranch string = 'main'
 
-@description('Name of the Function App')
-param functionAppName string = 'func-scout-meal-planner'
+@description('Name of the Container App')
+param containerAppName string = 'ca-scout-meal-planner'
 
-@description('Name of the Storage Account for Function App')
-param storageAccountName string = 'stscoutmealplanner'
+@description('Name of the Container Apps Environment')
+param containerAppEnvName string = 'cae-scout-meal-planner'
+
+@description('Name of the Azure Container Registry')
+param containerRegistryName string = 'crscoutmealplanner'
 
 @description('Object ID of the GitHub Actions service principal for deployment')
 param deployerPrincipalId string = ''
@@ -54,8 +57,9 @@ module resources 'resources.bicep' = {
     cosmosDatabaseName: cosmosDatabaseName
     repositoryUrl: repositoryUrl
     repositoryBranch: repositoryBranch
-    functionAppName: functionAppName
-    storageAccountName: storageAccountName
+    containerAppName: containerAppName
+    containerAppEnvName: containerAppEnvName
+    containerRegistryName: containerRegistryName
     deployerPrincipalId: deployerPrincipalId
     entraClientId: entraClientId
     contentSafetyAccountName: contentSafetyAccountName
@@ -65,7 +69,9 @@ module resources 'resources.bicep' = {
 
 output staticWebAppUrl string = resources.outputs.staticWebAppUrl
 output cosmosAccountEndpoint string = resources.outputs.cosmosAccountEndpoint
-output functionAppName string = resources.outputs.functionAppName
+output containerAppName string = resources.outputs.containerAppName
+output containerAppFqdn string = resources.outputs.containerAppFqdn
+output containerRegistryLoginServer string = resources.outputs.containerRegistryLoginServer
 output entraClientId string = resources.outputs.entraClientId
 output contentSafetyEndpoint string = resources.outputs.contentSafetyEndpoint
 output acsEndpoint string = resources.outputs.acsEndpoint
