@@ -42,7 +42,7 @@ def _get_email_client() -> EmailClient:
 @router.post("/events/{event_id}/shopping-list/email", status_code=202)
 async def email_shopping_list(event_id: str, body: EmailShoppingList, auth: RequireTroopContext):
     if not is_feature_enabled(FLAG_ENABLE_EMAIL_SHOPPING_LIST):
-        raise HTTPException(status_code=404, detail="Shopping list email feature is disabled")
+        raise HTTPException(status_code=503, detail="Shopping list email feature is disabled")
 
     if not check_permission(auth.role, "viewContent"):
         forbidden()

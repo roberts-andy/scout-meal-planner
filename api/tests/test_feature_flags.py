@@ -53,7 +53,7 @@ async def test_share_endpoints_reject_when_flag_disabled(monkeypatch: pytest.Mon
     with pytest.raises(HTTPException) as exc:
         await share.get_event_share("event-1", RequestFactory.make(), auth)
 
-    assert exc.value.status_code == 404
+    assert exc.value.status_code == 503
     assert exc.value.detail == "Shared links feature is disabled"
 
 
@@ -80,7 +80,7 @@ async def test_email_endpoint_rejects_when_flag_disabled(monkeypatch: pytest.Mon
             SimpleNamespace(role="scout", troopId="troop-1"),
         )
 
-    assert exc.value.status_code == 404
+    assert exc.value.status_code == 503
     assert exc.value.detail == "Shopping list email feature is disabled"
     assert called is False
 
@@ -105,7 +105,7 @@ async def test_feedback_endpoints_reject_when_flag_disabled(monkeypatch: pytest.
             ),
         )
 
-    assert exc.value.status_code == 404
+    assert exc.value.status_code == 503
     assert exc.value.detail == "Feedback feature is disabled"
 
 

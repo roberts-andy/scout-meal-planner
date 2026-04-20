@@ -22,7 +22,7 @@ SHARE_TOKENS_CONTAINER = "share-tokens"
 
 def _require_shared_links_enabled() -> None:
     if not is_feature_enabled(FLAG_ENABLE_SHARED_LINKS):
-        raise HTTPException(status_code=404, detail="Shared links feature is disabled")
+        raise HTTPException(status_code=503, detail="Shared links feature is disabled")
 
 
 def _generate_share_token() -> str:

@@ -33,7 +33,7 @@ EVENTS_CONTAINER = "events"
 
 def _require_feedback_enabled() -> None:
     if not is_feature_enabled(FLAG_ENABLE_FEEDBACK):
-        raise HTTPException(status_code=404, detail="Feedback feature is disabled")
+        raise HTTPException(status_code=503, detail="Feedback feature is disabled")
 
 
 @router.get("/feedback")
