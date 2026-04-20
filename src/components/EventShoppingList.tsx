@@ -19,6 +19,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { eventsApi } from '@/lib/api'
+import { isFeatureEnabled } from '@/lib/featureFlags'
 import { toast } from 'sonner'
 
 interface EventShoppingListProps {
@@ -32,6 +33,7 @@ export function EventShoppingList({ event, recipes }: EventShoppingListProps) {
   const [recipientEmail, setRecipientEmail] = useState('')
   const [isSendingEmail, setIsSendingEmail] = useState(false)
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
+  const emailShoppingListEnabled = isFeatureEnabled('enable-email-shopping-list')
 
   useEffect(() => {
     setCheckedItems(new Set(event.purchasedItems ?? []))
@@ -132,35 +134,37 @@ export function EventShoppingList({ event, recipes }: EventShoppingListProps) {
               {checkedItems.size} of {shoppingList.length} items checked
             </p>
           </div>
-          <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">Email List</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Email shopping list</DialogTitle>
-                <DialogDescription>
-                  Send this shopping list to anyone by entering their email address.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-2">
-                <Label htmlFor="shopping-list-recipient-email">Recipient email</Label>
-                <Input
-                  id="shopping-list-recipient-email"
-                  type="email"
-                  placeholder="name@example.com"
-                  value={recipientEmail}
-                  onChange={(e) => setRecipientEmail(e.target.value)}
-                />
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsEmailDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleSendEmail} disabled={isSendingEmail}>
-                  {isSendingEmail ? 'Sending…' : 'Send Email'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          {emailShoppingListEnabled && (
+            <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">Email List</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Email shopping list</DialogTitle>
+                  <DialogDescription>
+                    Send this shopping list to anyone by entering their email address.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2">
+                  <Label htmlFor="shopping-list-recipient-email">Recipient email</Label>
+                  <Input
+                    id="shopping-list-recipient-email"
+                    type="email"
+                    placeholder="name@example.com"
+                    value={recipientEmail}
+                    onChange={(e) => setRecipientEmail(e.target.value)}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsEmailDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleSendEmail} disabled={isSendingEmail}>
+                    {isSendingEmail ? 'Sending…' : 'Send Email'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
 

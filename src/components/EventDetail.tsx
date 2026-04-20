@@ -12,6 +12,7 @@ import { EventFeedback } from './EventFeedback'
 import { EditEventDialog } from './EditEventDialog'
 import { toast } from 'sonner'
 import { canSubmitEventFeedback } from '@/lib/helpers'
+import { isFeatureEnabled } from '@/lib/featureFlags'
 
 interface EventDetailProps {
   event: Event
@@ -39,7 +40,8 @@ export function EventDetail({
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [isSharing, setIsSharing] = useState(false)
-  const feedbackEnabled = canSubmitEventFeedback(event)
+  const sharedLinksEnabled = isFeatureEnabled('enable-shared-links')
+  const feedbackEnabled = isFeatureEnabled('enable-feedback') && canSubmitEventFeedback(event)
   const headcount = event.headcount
     ? `${event.headcount.scoutCount} scouts, ${event.headcount.adultCount} adults, ${event.headcount.guestCount} guests`
     : 'Not set'
@@ -47,6 +49,11 @@ export function EventDetail({
   const buildShareUrl = (token?: string) => token ? `${window.location.origin}/share/${token}` : null
 
   useEffect(() => {
+    if (!sharedLinksEnabled) {
+      setShareUrl(null)
+      return
+    }
+
     let cancelled = false
     eventsApi.getShare(event.id)
       .then((share) => {
@@ -62,7 +69,7 @@ export function EventDetail({
     return () => {
       cancelled = true
     }
-  }, [event.id, event.shareToken])
+  }, [event.id, event.shareToken, sharedLinksEnabled])
 
   const copyToClipboard = async (value: string) => {
     try {
@@ -180,24 +187,26 @@ export function EventDetail({
             <span>Return: {event.returnTime || 'Not set'}</span>
           </div>
           <p className="text-sm text-muted-foreground mt-1">Headcount: {headcount}</p>
-          <div className="flex flex-wrap items-center gap-2 mt-3">
-            <Button variant="outline" size="sm" className="gap-2" onClick={handleCopyShareLink} disabled={isSharing}>
-              <Copy size={16} />
-              {shareUrl ? 'Copy Share Link' : 'Create Share Link'}
-            </Button>
-            {shareUrl && (
-              <>
-                <Button variant="outline" size="sm" className="gap-2" onClick={handleRegenerate} disabled={isSharing}>
-                  <ArrowsClockwise size={16} />
-                  Regenerate
-                </Button>
-                <Button variant="ghost" size="sm" className="gap-2" onClick={handleRevoke} disabled={isSharing}>
-                  <XCircle size={16} />
-                  Revoke
-                </Button>
-              </>
-            )}
-          </div>
+          {sharedLinksEnabled && (
+            <div className="flex flex-wrap items-center gap-2 mt-3">
+              <Button variant="outline" size="sm" className="gap-2" onClick={handleCopyShareLink} disabled={isSharing}>
+                <Copy size={16} />
+                {shareUrl ? 'Copy Share Link' : 'Create Share Link'}
+              </Button>
+              {shareUrl && (
+                <>
+                  <Button variant="outline" size="sm" className="gap-2" onClick={handleRegenerate} disabled={isSharing}>
+                    <ArrowsClockwise size={16} />
+                    Regenerate
+                  </Button>
+                  <Button variant="ghost" size="sm" className="gap-2" onClick={handleRevoke} disabled={isSharing}>
+                    <XCircle size={16} />
+                    Revoke
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
           {event.link && (
             <a 
               href={event.link} 

@@ -4,6 +4,7 @@ import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { EventShoppingList } from './EventShoppingList'
+import { __setFeatureFlagsForTests } from '@/lib/featureFlags'
 
 const { eventsApiMock, toastSuccessMock, toastErrorMock } = vi.hoisted(() => ({
   eventsApiMock: {
@@ -27,6 +28,7 @@ vi.mock('sonner', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks()
+  __setFeatureFlagsForTests({ 'enable-email-shopping-list': true })
 })
 
 function wrapper() {
@@ -158,5 +160,13 @@ describe('EventShoppingList estimated prices', () => {
 
     expect(beansCheckbox).toHaveAttribute('aria-checked', 'false')
     expect(eventsApiMock.togglePurchasedItem).toHaveBeenCalledWith('event-1', 'beans-can', false)
+  })
+
+  it('hides email action when shopping list email flag is disabled', () => {
+    __setFeatureFlagsForTests({ 'enable-email-shopping-list': false })
+
+    render(<EventShoppingList event={event} recipes={recipes} />, { wrapper: wrapper() })
+
+    expect(screen.queryByRole('button', { name: 'Email List' })).not.toBeInTheDocument()
   })
 })

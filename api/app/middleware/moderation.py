@@ -7,6 +7,8 @@ from typing import Literal
 
 import httpx
 
+from app.feature_flags import FLAG_ENABLE_CONTENT_MODERATION, is_feature_enabled
+
 logger = logging.getLogger(__name__)
 
 ModerationStatus = Literal["approved", "flagged", "pending"]
@@ -80,6 +82,13 @@ async def _analyze_text(text: str) -> dict:
 
 async def moderate_text_fields(fields: list[ModerationField]) -> ModerationResult:
     import time
+
+    if not is_feature_enabled(FLAG_ENABLE_CONTENT_MODERATION):
+        return ModerationResult(
+            status="approved",
+            checkedAt=int(time.time() * 1000),
+            provider="disabled",
+        )
 
     entries = [
         {"field": f.field, "text": (f.text or "").strip()}

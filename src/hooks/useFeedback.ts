@@ -2,10 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { feedbackApi } from '@/lib/api'
 import { MealFeedback } from '@/lib/types'
 
-export function useFeedback() {
+export function useFeedback(enabled = true) {
   return useQuery({
     queryKey: ['feedback'],
     queryFn: feedbackApi.getAll,
+    enabled,
   })
 }
 

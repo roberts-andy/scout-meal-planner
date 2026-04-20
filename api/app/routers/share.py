@@ -7,6 +7,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, Request
 
 from app.cosmosdb import create_item, delete_item, get_by_id, get_all_by_troop, update_item
+from app.feature_flags import FLAG_ENABLE_SHARED_LINKS, is_feature_enabled
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
 from app.telemetry import track_custom_event
@@ -17,6 +18,11 @@ router = APIRouter()
 EVENTS_CONTAINER = "events"
 RECIPES_CONTAINER = "recipes"
 SHARE_TOKENS_CONTAINER = "share-tokens"
+
+
+def _require_shared_links_enabled() -> None:
+    if not is_feature_enabled(FLAG_ENABLE_SHARED_LINKS):
+        raise HTTPException(status_code=404, detail="Shared links feature is disabled")
 
 
 def _generate_share_token() -> str:
@@ -42,6 +48,7 @@ async def _delete_share_token_index(token: str) -> None:
 
 @router.get("/events/{event_id}/share")
 async def get_event_share(event_id: str, request: Request, auth: RequireTroopContext):
+    _require_shared_links_enabled()
     if not check_permission(auth.role, "manageEvents"):
         forbidden()
 
@@ -58,6 +65,7 @@ async def get_event_share(event_id: str, request: Request, auth: RequireTroopCon
 
 @router.post("/events/{event_id}/share")
 async def create_event_share(event_id: str, request: Request, auth: RequireTroopContext):
+    _require_shared_links_enabled()
     if not check_permission(auth.role, "manageEvents"):
         forbidden()
 
@@ -120,6 +128,7 @@ async def create_event_share(event_id: str, request: Request, auth: RequireTroop
 
 @router.delete("/events/{event_id}/share", status_code=204)
 async def delete_event_share(event_id: str, auth: RequireTroopContext):
+    _require_shared_links_enabled()
     if not check_permission(auth.role, "manageEvents"):
         forbidden()
 
@@ -149,6 +158,7 @@ async def delete_event_share(event_id: str, auth: RequireTroopContext):
 
 @router.get("/share/{token}")
 async def get_shared_event(token: str):
+    _require_shared_links_enabled()
     token_mapping = await get_by_id(SHARE_TOKENS_CONTAINER, token, token)
     if not token_mapping:
         raise HTTPException(status_code=404, detail="Shared event not found")

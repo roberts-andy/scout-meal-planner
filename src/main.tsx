@@ -6,6 +6,7 @@ import { MsalProvider } from '@azure/msal-react'
 import "@github/spark/spark"
 
 import { msalConfig } from './lib/authConfig.ts'
+import { loadFeatureFlags } from './lib/featureFlags.ts'
 import { AuthProvider } from './components/AuthProvider.tsx'
 import App from './App.tsx'
 import { SharedEventPage } from './components/SharedEventPage.tsx'
@@ -30,33 +31,35 @@ const queryClient = new QueryClient({
 
 const sharedMatch = window.location.pathname.match(/^\/share\/([^/]+)$/)
 
-if (sharedMatch) {
-  const token = decodeURIComponent(sharedMatch[1])
-  createRoot(document.getElementById('root')!).render(
-    <ErrorBoundary
-      FallbackComponent={ErrorFallback}
-      onError={(error) => trackClientError(error, { source: 'react-error-boundary' })}
-    >
-      <QueryClientProvider client={queryClient}>
-        <SharedEventPage token={token} />
-      </QueryClientProvider>
-    </ErrorBoundary>
-  )
-} else {
-  msalInstance.initialize().then(() => {
+loadFeatureFlags().finally(() => {
+  if (sharedMatch) {
+    const token = decodeURIComponent(sharedMatch[1])
     createRoot(document.getElementById('root')!).render(
       <ErrorBoundary
         FallbackComponent={ErrorFallback}
         onError={(error) => trackClientError(error, { source: 'react-error-boundary' })}
       >
-        <MsalProvider instance={msalInstance}>
-          <QueryClientProvider client={queryClient}>
-            <AuthProvider>
-              <App />
-            </AuthProvider>
-          </QueryClientProvider>
-        </MsalProvider>
+        <QueryClientProvider client={queryClient}>
+          <SharedEventPage token={token} />
+        </QueryClientProvider>
       </ErrorBoundary>
     )
-  })
-}
+  } else {
+    msalInstance.initialize().then(() => {
+      createRoot(document.getElementById('root')!).render(
+        <ErrorBoundary
+          FallbackComponent={ErrorFallback}
+          onError={(error) => trackClientError(error, { source: 'react-error-boundary' })}
+        >
+          <MsalProvider instance={msalInstance}>
+            <QueryClientProvider client={queryClient}>
+              <AuthProvider>
+                <App />
+              </AuthProvider>
+            </QueryClientProvider>
+          </MsalProvider>
+        </ErrorBoundary>
+      )
+    })
+  }
+})

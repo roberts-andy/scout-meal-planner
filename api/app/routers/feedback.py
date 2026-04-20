@@ -17,6 +17,7 @@ from app.cosmosdb import (
     query_items_paginated,
     update_item,
 )
+from app.feature_flags import FLAG_ENABLE_FEEDBACK, is_feature_enabled
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
 from app.middleware.moderation import moderate_text_fields, can_view_moderated_content, ModerationField
@@ -30,12 +31,18 @@ CONTAINER = "feedback"
 EVENTS_CONTAINER = "events"
 
 
+def _require_feedback_enabled() -> None:
+    if not is_feature_enabled(FLAG_ENABLE_FEEDBACK):
+        raise HTTPException(status_code=404, detail="Feedback feature is disabled")
+
+
 @router.get("/feedback")
 async def list_feedback(
     auth: RequireTroopContext,
     limit: int = Query(default=50, ge=1, le=100),
     continuationToken: str | None = None,
 ):
+    _require_feedback_enabled()
     query = "SELECT * FROM c WHERE c.troopId = @troopId"
     if auth.role != "troopAdmin":
         query += ' AND (NOT IS_DEFINED(c.moderation.status) OR c.moderation.status = "approved")'
@@ -52,6 +59,7 @@ async def list_feedback(
 
 @router.post("/feedback", status_code=201)
 async def create_feedback(body: CreateFeedback, auth: RequireTroopContext):
+    _require_feedback_enabled()
     if not check_permission(auth.role, "submitFeedback"):
         forbidden()
     moderation = await moderate_text_fields([
@@ -83,6 +91,7 @@ async def create_feedback(body: CreateFeedback, auth: RequireTroopContext):
 
 @router.put("/feedback/{feedback_id}")
 async def update_feedback(feedback_id: str, body: UpdateFeedback, auth: RequireTroopContext):
+    _require_feedback_enabled()
     if not check_permission(auth.role, "submitFeedback"):
         forbidden()
     existing = await get_by_id(CONTAINER, feedback_id, auth.troopId)
@@ -116,6 +125,7 @@ async def update_feedback(feedback_id: str, body: UpdateFeedback, auth: RequireT
 
 @router.delete("/feedback/{feedback_id}", status_code=204)
 async def delete_feedback(feedback_id: str, auth: RequireTroopContext):
+    _require_feedback_enabled()
     if not check_permission(auth.role, "submitFeedback"):
         forbidden()
     existing = await get_by_id(CONTAINER, feedback_id, auth.troopId)
@@ -129,6 +139,7 @@ async def delete_feedback(feedback_id: str, auth: RequireTroopContext):
 
 @router.get("/feedback/event/{event_id}")
 async def feedback_by_event(event_id: str, auth: RequireTroopContext):
+    _require_feedback_enabled()
     feedback = await query_items(
         CONTAINER,
         "SELECT * FROM c WHERE c.eventId = @eventId AND c.troopId = @troopId",
@@ -142,6 +153,7 @@ async def feedback_by_event(event_id: str, auth: RequireTroopContext):
 
 @router.get("/feedback/recipe/{recipe_id}")
 async def feedback_by_recipe(recipe_id: str, auth: RequireTroopContext):
+    _require_feedback_enabled()
     feedback = await query_items(
         CONTAINER,
         "SELECT * FROM c WHERE c.recipeId = @recipeId AND c.troopId = @troopId",

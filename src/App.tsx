@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Calendar, CookingPot, Flask, GearSix, SignOut } from '@phosphor-icons/react'
 import { useAppData } from '@/hooks/useAppData'
+import { isFeatureEnabled } from '@/lib/featureFlags'
 
 export default function App() {
   const auth = useAuthContext()
@@ -88,6 +89,7 @@ export default function App() {
 }
 
 function AppContent() {
+  const feedbackFeatureEnabled = isFeatureEnabled('enable-feedback')
   const { role, user, logout } = useAuthContext()
   const {
     events,
@@ -107,7 +109,7 @@ function AppContent() {
     handleAddFeedback,
     handleUpdateFeedback,
     handleDeleteFeedback,
-  } = useAppData()
+  } = useAppData({ feedbackEnabled: feedbackFeatureEnabled })
 
   const [activeTab, setActiveTab] = useState<'events' | 'recipes' | 'test' | 'admin'>('events')
 
