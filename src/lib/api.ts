@@ -78,7 +78,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 function buildPaginationPath(path: string, params?: { limit?: number; continuationToken?: string }) {
   const search = new URLSearchParams()
-  if (params?.limit) {
+  if (params?.limit != null) {
     search.set('limit', String(params.limit))
   }
   if (params?.continuationToken) {
