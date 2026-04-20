@@ -126,6 +126,9 @@ async function joinTroopHandler(req: HttpRequest, context: InvocationContext): P
   const member = {
     id: crypto.randomUUID(),
     troopId: troop.id,
+    userId: claims.userId,
+    email: claims.email,
+    joinedAt: Date.now(),
     displayName: toFirstName(claims.displayName),
     role: 'scout',  // Default role; admin can upgrade
     status: 'pending',
