@@ -6,7 +6,7 @@ import secrets
 import time
 import uuid
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.cosmosdb import get_by_id, create_item, update_item, query_items, delete_item
@@ -71,7 +71,7 @@ async def update_troop(body: UpdateTroop, auth: RequireTroopContext):
         forbidden()
     existing = await get_by_id(CONTAINER, auth.troopId)
     if not existing:
-        return JSONResponse({"error": "Troop not found"}, status_code=404)
+        raise HTTPException(status_code=404, detail="Troop not found")
 
     updated = {**existing, **body.model_dump(), "id": auth.troopId, "updatedAt": int(time.time() * 1000)}
     result = await update_item(CONTAINER, auth.troopId, updated)

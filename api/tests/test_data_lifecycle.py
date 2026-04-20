@@ -6,11 +6,11 @@ from app.middleware.auth import TroopContext
 from app.routers import members, troops
 
 
-def _deeply_contains_value(payload, value: str) -> bool:
+def _contains_value_recursively(payload, value: str) -> bool:
     if isinstance(payload, dict):
-        return any(_deeply_contains_value(v, value) for v in payload.values())
+        return any(_contains_value_recursively(v, value) for v in payload.values())
     if isinstance(payload, list):
-        return any(_deeply_contains_value(v, value) for v in payload)
+        return any(_contains_value_recursively(v, value) for v in payload)
     if isinstance(payload, str):
         return value in payload
     return payload == value
@@ -33,9 +33,10 @@ async def test_member_data_deletion_anonymizes_records_and_scrubs_pii(monkeypatc
     updated_event_docs: list[dict] = []
     deleted_members: list[tuple[str, str, str]] = []
 
-    async def fake_query_items(container: str, query: str, _parameters: list[dict] | None = None):
+    async def fake_query_items(container: str, query: str, parameters: list[dict] | None = None):
         if container == "members":
             assert "c.id = @id" in query
+            assert parameters
             return [{
                 "id": removed_member_id,
                 "troopId": auth.troopId,
@@ -92,8 +93,8 @@ async def test_member_data_deletion_anonymizes_records_and_scrubs_pii(monkeypatc
     assert event["updatedBy"] == members.DELETED_MEMBER_AUDIT
 
     for payload in [feedback, event]:
-        assert not _deeply_contains_value(payload, removed_user_id)
-        assert not _deeply_contains_value(payload, removed_email)
+        assert not _contains_value_recursively(payload, removed_user_id)
+        assert not _contains_value_recursively(payload, removed_email)
 
     assert deleted_members == [("members", removed_member_id, auth.troopId)]
 
