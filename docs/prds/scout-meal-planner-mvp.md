@@ -1,7 +1,7 @@
 <!-- markdownlint-disable-file -->
 <!-- markdown-table-prettify-ignore-start -->
 # Scout Meal Planner MVP — Product Requirements Document (PRD)
-Version 1.2 | Status Approved | Owner andyrob | Team Solo Developer | Target September 2026 | Lifecycle MVP
+Version 1.3 | Status Approved | Owner andyrob | Team Solo Developer | Target September 2026 | Lifecycle MVP
 
 ## Progress Tracker
 | Phase | Done | Gaps | Updated |
@@ -392,7 +392,7 @@ See [Privacy Policy](../policies/privacy-policy.md) for the full data handling r
 ## 12. Operational Considerations
 | Aspect | Requirement | Notes |
 |--------|------------|-------|
-| Deployment | GitHub Actions CI/CD: CI on PRs (build + test), deploy on push to `main`. Frontend → Azure SWA via `static-web-apps-deploy`. API → Azure Functions via blob deploy + restart. Infra → Bicep via manual workflow dispatch. | 3 workflows: `ci.yml`, `deploy.yml`, `infra.yml`. Smart path filtering skips unchanged components. |
+| Deployment | GitHub Actions CI/CD: CI on PRs (build + test), deploy on push to `main`. Frontend → Azure SWA via `static-web-apps-deploy`. API → Python FastAPI deployed as Azure SWA managed function. Infra → Bicep via manual workflow dispatch. | 3 workflows: `ci.yml`, `deploy.yml`, `infra.yml`. Smart path filtering skips unchanged components. |
 | Rollback | Redeploy previous version from `main` branch | Sufficient for MVP; no blue/green or slot-based deployment needed |
 | Monitoring | Azure Application Insights | Instrument frontend and API for request tracing, latency, errors, and availability |
 | Alerting | AppInsights default alerts (failures, availability) | Fine-tune alert thresholds after pilot usage establishes baselines |
@@ -455,6 +455,7 @@ Feature flags enable progressive rollout, safe experimentation, and quick kill-s
 | 1.0 | 2026-04-18 | andyrob | Approved — added troop admin FRs (FR-028–030), feature flags, user journeys, communication plan. 2 open questions remain (external dependencies, not blockers). | Approval |
 | 1.1 | 2026-04-18 | andyrob | Added COPPA consent model (Section 11), FR-031 (member data deletion), resolved OQ-004, added parent role to out-of-scope, linked privacy policy. | Update |
 | 1.2 | 2026-04-18 | andyrob | Resolved OQ-001 with Scouting America policy research. Expanded compliance table from 1 row to 5 policy areas. Added REF-003–REF-006 (Scouting America policy sources). All open questions now resolved. | Update |
+| 1.3 | 2026-04-20 | andyrob | Updated technology stack: API is Python FastAPI (was "Azure Functions v4 Node.js"). Updated deployment description. Added gap analysis reference (REF-007). Node.js scaffold in `api/src/` is legacy — Python FastAPI in `api/app/` is the authoritative backend. | Correction |
 
 ## 16. References & Provenance
 | Ref ID | Type | Source | Summary | Conflict Resolution |
@@ -465,6 +466,8 @@ Feature flags enable progressive rollout, safe experimentation, and quick kill-s
 | REF-004 | Policy | [Digital Safety and Online Scouting Activities](https://www.scouting.org/health-and-safety/safety-moments/digital-safety-and-online-scouting-activities/) | Digital safety guidance — protection from inappropriate contact/content, safe online behavior per Scout Oath and Law, no unsupervised private interaction | — |
 | REF-005 | Policy | [Scouting America official site](https://www.scouting.org/) | Age-segmented program design — digital participation follows same age-appropriate, supervised, guardian-approved principles as in-person activities | — |
 | REF-006 | Platform | [Scoutbook](https://www.scouting.org/resources/scoutbook/) | Official Scouting America digital platform — third-party apps must align with national youth protection policies; council/unit approval expected | — |
+
+| REF-007 | Assessment | docs/assessments/prd-gap-analysis-2026-04-20.md | PRD gap analysis — 28/31 FRs fully implemented, 3 partial, architecture divergences documented | — |
 
 ### Citation Usage
 All functional requirements (FR-001 through FR-027) trace directly to BRD business requirements (BR-001 through BR-027). Design direction (Section 5 UX/UI) preserved from REF-002. Feature scope and priorities governed by REF-001. Scouting America compliance requirements (Section 11 regulatory table) grounded in REF-003–REF-006.
@@ -482,7 +485,7 @@ All functional requirements (FR-001 through FR-027) trace directly to BRD busine
 | Headcount | Total people to feed: scouts + adults + guests |
 
 ### Additional Notes
-**Technology stack**: React + Vite frontend, Azure Functions v4 (Node.js) API, Azure Cosmos DB, Azure Static Web App, Microsoft Entra ID (MSAL), Tailwind CSS, shadcn/ui, TanStack Query, Zod schemas, Vitest + Playwright.
+**Technology stack**: React + Vite frontend, Python FastAPI API, Azure Cosmos DB, Azure Static Web App, Microsoft Entra ID (MSAL), Tailwind CSS, shadcn/ui, TanStack Query, Vitest + Playwright.
 
 Generated 2026-04-18 by PRD Builder (mode: iterative)
 <!-- markdown-table-prettify-ignore-end -->
