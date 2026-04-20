@@ -17,10 +17,14 @@ beforeEach(() => {
   mockFetch.mockReset()
 })
 
+function createInteractionRequiredError() {
+  return new InteractionRequiredAuthError('interaction_required', 'interaction required')
+}
+
 describe('useAuth auth-failure handling', () => {
   it('marks session as requiring sign-in when interaction prompt is cancelled', async () => {
     const instance = {
-      acquireTokenSilent: vi.fn().mockRejectedValue(new InteractionRequiredAuthError('interaction_required', 'interaction required')),
+      acquireTokenSilent: vi.fn().mockRejectedValue(createInteractionRequiredError()),
       acquireTokenPopup: vi.fn().mockRejectedValue({ errorCode: 'user_cancelled' }),
       loginRedirect: vi.fn(),
       logoutRedirect: vi.fn(),
@@ -42,7 +46,7 @@ describe('useAuth auth-failure handling', () => {
 
   it('recovers from InteractionRequiredAuthError when popup succeeds', async () => {
     const instance = {
-      acquireTokenSilent: vi.fn().mockRejectedValue(new InteractionRequiredAuthError('interaction_required', 'interaction required')),
+      acquireTokenSilent: vi.fn().mockRejectedValue(createInteractionRequiredError()),
       acquireTokenPopup: vi.fn().mockResolvedValue({ idToken: 'token-123' }),
       loginRedirect: vi.fn(),
       logoutRedirect: vi.fn(),

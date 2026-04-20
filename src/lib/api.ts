@@ -38,7 +38,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     if (res.status === 401 && _handleUnauthorized) {
-      void _handleUnauthorized()
+      void Promise.resolve(_handleUnauthorized()).catch(() => {})
     }
     const body = await res.json().catch(() => ({}))
     const details = body.details && typeof body.details === 'object'

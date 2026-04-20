@@ -162,6 +162,7 @@ export function useAuth(): AuthState {
   }
 }
 
+/** Detects MSAL popup cancellation errors (e.g. user closes/cancels the prompt). */
 function isUserCancelledError(err: unknown): boolean {
   if (!err || typeof err !== 'object') return false
   const errorCode = (err as { errorCode?: unknown }).errorCode
