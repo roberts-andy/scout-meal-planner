@@ -58,7 +58,7 @@ async def update_event(event_id: str, body: UpdateEvent, auth: RequireTroopConte
         raise HTTPException(status_code=404, detail="Event not found")
     event = await update_item(CONTAINER, event_id, {
         **existing,
-        **body.model_dump(exclude_none=True),
+        **body.model_dump(exclude_unset=True),
         "id": event_id,
         "troopId": auth.troopId,
         "updatedAt": int(time.time() * 1000),
