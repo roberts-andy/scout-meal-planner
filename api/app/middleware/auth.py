@@ -30,19 +30,33 @@ _jwks_fetched_at: float | None = None
 
 async def _get_jwks(force_refresh: bool = False) -> dict:
     global _jwks, _jwks_fetched_at
-    now = time.monotonic()
     cache_expired = (
         _jwks is None
         or _jwks_fetched_at is None
-        or (now - _jwks_fetched_at) >= JWKS_CACHE_TTL_SECONDS
+        or (time.monotonic() - _jwks_fetched_at) >= JWKS_CACHE_TTL_SECONDS
     )
     if force_refresh or cache_expired:
         async with httpx.AsyncClient() as client:
             resp = await client.get(JWKS_URI)
             resp.raise_for_status()
             _jwks = resp.json()
-            _jwks_fetched_at = now
+            _jwks_fetched_at = time.monotonic()
     return _jwks
+
+
+def _decode_and_build_claims(token: str, jwks: dict) -> TokenClaims:
+    payload = jwt.decode(
+        token,
+        jwks,
+        algorithms=["RS256"],
+        audience=CLIENT_ID,
+        issuer=ISSUER,
+    )
+    return TokenClaims(
+        userId=payload.get("sub") or payload.get("oid", ""),
+        email=(payload.get("emails") or [None])[0] or payload.get("preferred_username", ""),
+        displayName=payload.get("name", ""),
+    )
 
 
 @dataclass
@@ -69,34 +83,10 @@ async def validate_token(request: Request) -> TokenClaims | None:
     token = auth_header[7:]
 
     try:
-        jwks = await _get_jwks()
-        payload = jwt.decode(
-            token,
-            jwks,
-            algorithms=["RS256"],
-            audience=CLIENT_ID,
-            issuer=ISSUER,
-        )
-        return TokenClaims(
-            userId=payload.get("sub") or payload.get("oid", ""),
-            email=(payload.get("emails") or [None])[0] or payload.get("preferred_username", ""),
-            displayName=payload.get("name", ""),
-        )
+        return _decode_and_build_claims(token, await _get_jwks())
     except JWTError:
         try:
-            jwks = await _get_jwks(force_refresh=True)
-            payload = jwt.decode(
-                token,
-                jwks,
-                algorithms=["RS256"],
-                audience=CLIENT_ID,
-                issuer=ISSUER,
-            )
-            return TokenClaims(
-                userId=payload.get("sub") or payload.get("oid", ""),
-                email=(payload.get("emails") or [None])[0] or payload.get("preferred_username", ""),
-                displayName=payload.get("name", ""),
-            )
+            return _decode_and_build_claims(token, await _get_jwks(force_refresh=True))
         except JWTError:
             return None
 

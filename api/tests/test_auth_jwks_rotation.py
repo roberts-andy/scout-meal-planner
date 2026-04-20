@@ -51,7 +51,7 @@ async def test_validate_token_retries_with_force_refresh_on_stale_keys(monkeypat
 
 @pytest.mark.asyncio
 async def test_get_jwks_cache_expires_after_ttl(monkeypatch):
-    monkeypatch.setattr(auth, "JWKS_CACHE_TTL_SECONDS", 10)
+    monkeypatch.setattr(auth, "JWKS_CACHE_TTL_SECONDS", 100)
     clock = [100.0]
     network_calls: list[str] = []
 
@@ -80,9 +80,9 @@ async def test_get_jwks_cache_expires_after_ttl(monkeypatch):
     monkeypatch.setattr(auth.httpx, "AsyncClient", lambda: FakeClient())
 
     first = await auth._get_jwks()
-    clock[0] = 105.0
+    clock[0] = 150.0
     second = await auth._get_jwks()
-    clock[0] = 111.0
+    clock[0] = 201.0
     third = await auth._get_jwks()
 
     assert first == second
