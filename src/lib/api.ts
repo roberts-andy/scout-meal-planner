@@ -73,6 +73,13 @@ function buildPaginationPath(path: string, params?: { limit?: number; continuati
   return query.length > 0 ? `${path}?${query}` : path
 }
 
+function withDefaultPagination(params?: { limit?: number; continuationToken?: string }) {
+  return {
+    limit: params?.limit ?? DEFAULT_PAGE_SIZE,
+    continuationToken: params?.continuationToken,
+  }
+}
+
 async function getAllPages<T>(
   fetchPage: (continuationToken?: string) => Promise<PaginatedResponse<T>>,
 ): Promise<T[]> {
@@ -91,7 +98,7 @@ async function getAllPages<T>(
 // Events
 export const eventsApi = {
   getPage: (params?: { limit?: number; continuationToken?: string }) =>
-    request<PaginatedResponse<Event>>(buildPaginationPath('/events', { limit: params?.limit ?? DEFAULT_PAGE_SIZE, continuationToken: params?.continuationToken })),
+    request<PaginatedResponse<Event>>(buildPaginationPath('/events', withDefaultPagination(params))),
   getAll: () => getAllPages<Event>((continuationToken) => eventsApi.getPage({ limit: DEFAULT_PAGE_SIZE, continuationToken })),
   getById: (id: string) => request<Event>(`/events/${id}`),
   create: (event: Event) =>
@@ -132,7 +139,7 @@ export const eventsApi = {
 // Recipes
 export const recipesApi = {
   getPage: (params?: { limit?: number; continuationToken?: string }) =>
-    request<PaginatedResponse<Recipe>>(buildPaginationPath('/recipes', { limit: params?.limit ?? DEFAULT_PAGE_SIZE, continuationToken: params?.continuationToken })),
+    request<PaginatedResponse<Recipe>>(buildPaginationPath('/recipes', withDefaultPagination(params))),
   getAll: () => getAllPages<Recipe>((continuationToken) => recipesApi.getPage({ limit: DEFAULT_PAGE_SIZE, continuationToken })),
   getById: (id: string) => request<Recipe>(`/recipes/${id}`),
   create: (recipe: Recipe) =>
@@ -146,7 +153,7 @@ export const recipesApi = {
 // Feedback
 export const feedbackApi = {
   getPage: (params?: { limit?: number; continuationToken?: string }) =>
-    request<PaginatedResponse<MealFeedback>>(buildPaginationPath('/feedback', { limit: params?.limit ?? DEFAULT_PAGE_SIZE, continuationToken: params?.continuationToken })),
+    request<PaginatedResponse<MealFeedback>>(buildPaginationPath('/feedback', withDefaultPagination(params))),
   getAll: () => getAllPages<MealFeedback>((continuationToken) => feedbackApi.getPage({ limit: DEFAULT_PAGE_SIZE, continuationToken })),
   getByEvent: (eventId: string) =>
     request<MealFeedback[]>(`/feedback/event/${eventId}`),
@@ -174,7 +181,7 @@ export const troopsApi = {
 // Members
 export const membersApi = {
   getPage: (params?: { limit?: number; continuationToken?: string }) =>
-    request<PaginatedResponse<TroopMember>>(buildPaginationPath('/members', { limit: params?.limit ?? DEFAULT_PAGE_SIZE, continuationToken: params?.continuationToken })),
+    request<PaginatedResponse<TroopMember>>(buildPaginationPath('/members', withDefaultPagination(params))),
   getAll: () => getAllPages<TroopMember>((continuationToken) => membersApi.getPage({ limit: DEFAULT_PAGE_SIZE, continuationToken })),
   getMe: () => request<{ troopId: string; userId: string; role: string }>('/members/me'),
   create: (member: { displayName: string; email: string; role: string }) =>

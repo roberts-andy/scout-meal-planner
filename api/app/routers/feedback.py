@@ -26,15 +26,18 @@ async def list_feedback(
     limit: int = Query(default=50, ge=1, le=100),
     continuationToken: str | None = None,
 ):
+    query = "SELECT * FROM c WHERE c.troopId = @troopId"
+    if auth.role != "troopAdmin":
+        query += ' AND (NOT IS_DEFINED(c.moderation.status) OR c.moderation.status = "approved")'
+
     feedback, next_token = await query_items_paginated(
         CONTAINER,
-        "SELECT * FROM c WHERE c.troopId = @troopId",
+        query,
         [{"name": "@troopId", "value": auth.troopId}],
         limit=limit,
         continuation_token=continuationToken,
     )
-    visible = [f for f in feedback if can_view_moderated_content(auth.role, f.get("moderation"))]
-    return {"items": visible, "continuationToken": next_token}
+    return {"items": feedback, "continuationToken": next_token}
 
 
 @router.post("/feedback", status_code=201)

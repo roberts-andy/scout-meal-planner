@@ -33,15 +33,18 @@ async def list_recipes(
     limit: int = Query(default=50, ge=1, le=100),
     continuationToken: str | None = None,
 ):
+    query = "SELECT * FROM c WHERE c.troopId = @troopId"
+    if auth.role != "troopAdmin":
+        query += ' AND (NOT IS_DEFINED(c.moderation.status) OR c.moderation.status = "approved")'
+
     recipes, next_token = await query_items_paginated(
         CONTAINER,
-        "SELECT * FROM c WHERE c.troopId = @troopId",
+        query,
         [{"name": "@troopId", "value": auth.troopId}],
         limit=limit,
         continuation_token=continuationToken,
     )
-    visible = [r for r in recipes if can_view_moderated_content(auth.role, r.get("moderation"))]
-    return {"items": visible, "continuationToken": next_token}
+    return {"items": recipes, "continuationToken": next_token}
 
 
 @router.get("/recipes/{recipe_id}")
