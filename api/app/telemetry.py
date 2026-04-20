@@ -7,6 +7,7 @@ import threading
 from applicationinsights import TelemetryClient
 
 logger = logging.getLogger(__name__)
+AI_INGESTION_TRACK_PATH = "/v2.1/track"
 
 _client: TelemetryClient | None = None
 _client_lock = threading.Lock()
@@ -18,7 +19,11 @@ def _parse_connection_string(connection_string: str) -> tuple[str | None, str | 
         if "=" not in part:
             continue
         key, value = part.split("=", 1)
-        values[key.strip().lower()] = value.strip()
+        cleaned_key = key.strip().lower()
+        cleaned_value = value.strip()
+        if not cleaned_key or not cleaned_value:
+            continue
+        values[cleaned_key] = cleaned_value
     return values.get("instrumentationkey"), values.get("ingestionendpoint")
 
 
@@ -26,7 +31,7 @@ def _configure_endpoint(client: TelemetryClient, endpoint: str | None) -> None:
     if not endpoint:
         return
     try:
-        client.channel.sender.service_endpoint_uri = f"{endpoint.rstrip('/')}/v2.1/track"
+        client.channel.sender.service_endpoint_uri = f"{endpoint.rstrip('/')}{AI_INGESTION_TRACK_PATH}"
     except Exception:
         logger.debug("Unable to override Application Insights endpoint", exc_info=True)
 

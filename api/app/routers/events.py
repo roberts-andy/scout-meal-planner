@@ -27,15 +27,17 @@ router = APIRouter()
 CONTAINER = "events"
 
 
-def _meal_recipe_assignments(event: dict) -> dict[str, str]:
+def _extract_meal_recipe_assignments(event: dict) -> dict[str, str]:
     assignments: dict[str, str] = {}
-    for day_index, day in enumerate(event.get("days") or []):
-        for meal_index, meal in enumerate(day.get("meals") or []):
+    for day in event.get("days") or []:
+        for meal in day.get("meals") or []:
+            meal_id = meal.get("id")
+            if not meal_id:
+                continue
             recipe_id = meal.get("recipeId")
             if not recipe_id:
                 continue
-            meal_key = str(meal.get("id") or f"{day_index}:{meal_index}")
-            assignments[meal_key] = str(recipe_id)
+            assignments[str(meal_id)] = str(recipe_id)
     return assignments
 
 
@@ -95,8 +97,8 @@ async def update_event(event_id: str, body: UpdateEvent, auth: RequireTroopConte
         **audit_update(auth),
     }, auth.troopId)
 
-    previous_assignments = _meal_recipe_assignments(existing)
-    updated_assignments = _meal_recipe_assignments(event)
+    previous_assignments = _extract_meal_recipe_assignments(existing)
+    updated_assignments = _extract_meal_recipe_assignments(event)
     assigned_count = sum(
         1 for meal_key, recipe_id in updated_assignments.items()
         if previous_assignments.get(meal_key) != recipe_id

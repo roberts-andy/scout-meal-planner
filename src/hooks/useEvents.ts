@@ -25,7 +25,7 @@ export function useCreateEvent() {
     onSuccess: (createdEvent) => {
       queryClient.invalidateQueries({ queryKey: ['events'] })
       trackCustomEvent('event_created', {
-        eventId: createdEvent.id,
+        eventId: String(createdEvent.id),
       })
     },
   })
