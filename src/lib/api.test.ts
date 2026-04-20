@@ -169,20 +169,11 @@ describe('feedbackApi', () => {
     expect(mockFetch).toHaveBeenCalledWith('/api/feedback/recipe/recipe-1', expect.anything())
   })
 
-  it('delete includes eventId as query param', async () => {
+  it('delete sends DELETE to /feedback/{id}', async () => {
     mockFetch.mockResolvedValueOnce(emptyResponse())
-    await feedbackApi.delete('fb-1', 'ev-1')
+    await feedbackApi.delete('fb-1')
     expect(mockFetch).toHaveBeenCalledWith(
-      '/api/feedback/fb-1?eventId=ev-1',
-      expect.objectContaining({ method: 'DELETE' }),
-    )
-  })
-
-  it('delete encodes eventId in query param', async () => {
-    mockFetch.mockResolvedValueOnce(emptyResponse())
-    await feedbackApi.delete('fb-1', 'ev with spaces')
-    expect(mockFetch).toHaveBeenCalledWith(
-      '/api/feedback/fb-1?eventId=ev%20with%20spaces',
+      '/api/feedback/fb-1',
       expect.objectContaining({ method: 'DELETE' }),
     )
   })
