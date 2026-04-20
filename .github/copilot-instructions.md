@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Scout Meal Planner — a React + Vite frontend with an Azure Functions v4 (Node.js) API backend, backed by Azure Cosmos DB. Deployed as an Azure Static Web App.
+Scout Meal Planner — a React + Vite frontend with a Python FastAPI backend, backed by Azure Cosmos DB. Deployed as an Azure Static Web App.
 
 ## Setup
 
@@ -10,7 +10,7 @@ Dependencies are auto-installed by `postCreateCommand` in the devcontainer. If y
 
 ```bash
 npm install
-cd api && npm install
+cd api && pip install -r requirements.txt -r requirements-dev.txt
 ```
 
 ## Build
@@ -18,9 +18,6 @@ cd api && npm install
 ```bash
 # Frontend
 npm run build
-
-# API
-cd api && npm run build
 ```
 
 ## Test
@@ -30,7 +27,7 @@ cd api && npm run build
 npm test
 
 # API unit tests
-cd api && npm test
+cd api && python -m pytest
 ```
 
 ## Lint
@@ -42,9 +39,9 @@ npm run lint
 ## Project Structure
 
 - `src/` — React frontend (Vite, Tailwind CSS, Radix UI, TanStack Query)
-- `api/` — Azure Functions v4 API (TypeScript, Cosmos DB)
-- `api/src/functions/` — Individual Azure Function endpoints
-- `api/src/middleware/` — Auth and RBAC middleware
+- `api/` — Python FastAPI backend (Cosmos DB)
+- `api/app/routers/` — Individual API endpoint routers
+- `api/app/middleware/` — Auth, RBAC, and content moderation middleware
 - `infra/` — Bicep infrastructure-as-code
 - `tests/e2e/` — Playwright end-to-end tests
 
@@ -52,11 +49,11 @@ npm run lint
 
 - Node 20 LTS (pinned in `.nvmrc`)
 - Trunk-based branching: all work on short-lived branches off `main`, no `develop` branch
-- TypeScript strict mode everywhere
-- Tests use Vitest (unit) and Playwright (e2e)
-- API schemas defined with Zod in `api/src/schemas.ts`
+- TypeScript strict mode for frontend
+- Frontend tests use Vitest; API tests use pytest
+- API schemas defined with Pydantic in `api/app/schemas.py`
 - Frontend auth via MSAL (Microsoft Entra ID, /consumers endpoint)
-- API auth via JWT validation middleware (`api/src/middleware/auth.ts`)
+- API auth via JWT validation middleware (`api/app/middleware/auth.py`)
 - UI components use shadcn/ui (Radix + Tailwind) in `src/components/ui/`
 - Data fetching uses TanStack Query hooks in `src/hooks/`
 - API client functions live in `src/lib/api.ts`
@@ -68,9 +65,9 @@ When assigned an issue:
 1. Read the issue carefully. If it references other files or features, explore them first.
 2. Create a branch named `issue-<number>-<short-description>` from `main`.
 3. Implement the change following the conventions above.
-4. For API changes: add or update Zod schemas in `api/src/schemas.ts`, add the function in `api/src/functions/`, and write tests alongside (`*.test.ts`).
+4. For API changes: add or update Pydantic schemas in `api/app/schemas.py`, add the router in `api/app/routers/`, and write tests in `api/tests/`.
 5. For frontend changes: use existing UI components from `src/components/ui/`, add hooks in `src/hooks/`, and write tests for non-trivial logic.
-6. Run the full validation: `npm run build && npm test && npm run lint && cd api && npm run build && npm test`.
+6. Run the full validation: `npm run build && npm test && npm run lint && cd api && python -m pytest`.
 7. All builds and tests must pass before opening a PR.
 8. Open a PR targeting `main` with a clear description of what changed and why.
 
@@ -79,7 +76,7 @@ When assigned an issue:
 - Do not modify `infra/` (Bicep) files unless the issue explicitly requests infrastructure changes.
 - Do not commit `.env` files or secrets.
 - Do not add new dependencies without a clear reason stated in the PR description.
-- Do not change the auth middleware (`api/src/middleware/auth.ts`) unless the issue specifically requires it.
+- Do not change the auth middleware (`api/app/middleware/auth.py`) unless the issue specifically requires it.
 
 ## Cosmos DB
 
