@@ -43,7 +43,10 @@ async def test_email_subject_sanitizes_crlf_event_name(monkeypatch):
 
     assert response == {"message": "Shopping list email sent"}
     assert fake_client.sent_message is not None
+    expected_event_name = "Camp  BCC:evil@example.com"
     subject = fake_client.sent_message["content"]["subject"]
-    assert subject == "Shopping List: Camp  BCC:evil@example.com"
+    assert subject == f"Shopping List: {expected_event_name}"
     assert "\r" not in subject
     assert "\n" not in subject
+    first_plain_text_line = fake_client.sent_message["content"]["plainText"].split("\n", 1)[0]
+    assert first_plain_text_line == f"Shopping list for {expected_event_name}"
