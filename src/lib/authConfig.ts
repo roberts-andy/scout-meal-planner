@@ -15,7 +15,7 @@ export const msalConfig: Configuration = {
   },
   system: {
     loggerOptions: {
-      logLevel: LogLevel.Verbose,
+      logLevel: import.meta.env.DEV ? LogLevel.Verbose : LogLevel.Warning,
       loggerCallback: (level, message, containsPii) => {
         if (containsPii) return
         console.log(`[MSAL:${LogLevel[level]}]`, message)
