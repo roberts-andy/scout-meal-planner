@@ -200,6 +200,14 @@ describe('events handler — DELETE', () => {
     vi.mocked(cosmos.remove).mockResolvedValueOnce(undefined)
     const result = await handler(makeReq({ method: 'DELETE', params: { id: 'e1' } }), ctx)
     expect(result.status).toBe(204)
+    expect(cosmos.queryItems).toHaveBeenCalledWith(
+      'feedback',
+      'SELECT c.id FROM c WHERE c.eventId = @eventId AND c.troopId = @troopId',
+      [
+        { name: '@eventId', value: 'e1' },
+        { name: '@troopId', value: 'troop-42' },
+      ],
+    )
     expect(cosmos.remove).toHaveBeenCalledWith('events', 'e1', 'troop-42')
   })
 
