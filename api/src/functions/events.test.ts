@@ -223,9 +223,9 @@ describe('events handler — DELETE', () => {
         { name: '@troopId', value: 'troop-42' },
       ],
     )
-    expect(cosmos.remove).toHaveBeenNthCalledWith(1, 'feedback', 'f1', 'troop-42')
-    expect(cosmos.remove).toHaveBeenNthCalledWith(2, 'feedback', 'f2', 'troop-42')
-    expect(cosmos.remove).toHaveBeenNthCalledWith(3, 'feedback', 'f3', 'troop-42')
-    expect(cosmos.remove).toHaveBeenNthCalledWith(4, 'events', 'e1', 'troop-42')
+    expect(cosmos.remove).toHaveBeenCalledWith('feedback', 'f1', 'troop-42')
+    expect(cosmos.remove).toHaveBeenCalledWith('feedback', 'f2', 'troop-42')
+    expect(cosmos.remove).toHaveBeenCalledWith('feedback', 'f3', 'troop-42')
+    expect(cosmos.remove).toHaveBeenCalledWith('events', 'e1', 'troop-42')
   })
 })
