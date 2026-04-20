@@ -33,7 +33,7 @@ async def test_validate_token_retries_with_force_refresh_on_stale_keys(monkeypat
         return fresh_jwks if force_refresh else stale_jwks
 
     def fake_decode(token, jwks, **_kwargs):
-        if jwks is stale_jwks:
+        if jwks["keys"][0]["kid"] == "stale":
             raise JWTError("stale keys")
         return {"sub": "user-123", "preferred_username": "user@example.com", "name": "User Name"}
 

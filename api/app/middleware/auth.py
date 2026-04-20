@@ -22,7 +22,18 @@ if not CLIENT_ID:
 # Microsoft identity platform /consumers endpoint
 JWKS_URI = "https://login.microsoftonline.com/consumers/discovery/v2.0/keys"
 ISSUER = "https://login.microsoftonline.com/9188040d-6c67-4c5b-b112-36a304b66dad/v2.0"
-JWKS_CACHE_TTL_SECONDS = int(os.environ.get("JWKS_CACHE_TTL_SECONDS", "300"))
+
+
+def _get_jwks_cache_ttl_seconds() -> int:
+    value = os.environ.get("JWKS_CACHE_TTL_SECONDS", "300")
+    try:
+        return int(value)
+    except ValueError:
+        logger.warning("Invalid JWKS_CACHE_TTL_SECONDS value %r; defaulting to 300", value)
+        return 300
+
+
+JWKS_CACHE_TTL_SECONDS = _get_jwks_cache_ttl_seconds()
 
 _jwks: dict | None = None
 _jwks_fetched_at: float | None = None
