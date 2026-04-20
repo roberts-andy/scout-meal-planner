@@ -16,6 +16,7 @@ router = APIRouter()
 EVENTS_CONTAINER = "events"
 RECIPES_CONTAINER = "recipes"
 SHARE_TOKENS_CONTAINER = "share-tokens"
+MAX_TOKEN_GENERATION_RETRIES = 5
 
 
 def _generate_share_token() -> str:
@@ -53,7 +54,7 @@ async def create_event_share(event_id: str, request: Request, auth: RequireTroop
         raise HTTPException(status_code=404, detail="Event not found")
 
     share_token = ""
-    for _ in range(5):
+    for _ in range(MAX_TOKEN_GENERATION_RETRIES):
         candidate = _generate_share_token()
         token_match = await get_by_id(SHARE_TOKENS_CONTAINER, candidate, candidate)
         if not token_match:
@@ -122,7 +123,7 @@ async def get_shared_event(token: str):
 
     event = await get_by_id(EVENTS_CONTAINER, token_mapping["eventId"], token_mapping["troopId"])
     if not event or event.get("shareToken") != token:
-        if event and event.get("shareToken") != token:
+        if event:
             await delete_item(SHARE_TOKENS_CONTAINER, token, token)
         raise HTTPException(status_code=404, detail="Shared event not found")
 
