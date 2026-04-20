@@ -42,8 +42,8 @@ export function useUpdateFeedback() {
 export function useDeleteFeedback() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, eventId }: { id: string; eventId: string }) => feedbackApi.delete(id, eventId),
-    onSuccess: (_data, { id }) => {
+    mutationFn: (id: string) => feedbackApi.delete(id),
+    onSuccess: (_data, id) => {
       queryClient.setQueryData<MealFeedback[]>(['feedback'], (old) =>
         (old || []).filter((f) => f.id !== id)
       )
