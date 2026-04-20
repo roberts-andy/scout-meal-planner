@@ -59,7 +59,7 @@ async def update_event(event_id: str, body: UpdateEvent, auth: RequireTroopConte
         return JSONResponse({"error": "Event not found"}, status_code=404)
     event = await update_item(CONTAINER, event_id, {
         **existing,
-        **body.model_dump(),
+        **body.model_dump(exclude_none=True),
         "id": event_id,
         "troopId": auth.troopId,
         "updatedAt": int(time.time() * 1000),
