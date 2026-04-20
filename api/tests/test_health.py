@@ -17,7 +17,7 @@ async def client():
 
 
 @pytest.mark.asyncio
-async def test_health_endpoint_succeeds_when_connection_healthy(client, monkeypatch):
+async def test_health_returns_healthy_when_db_connected(client, monkeypatch):
     check_database_connection = AsyncMock(return_value=None)
     monkeypatch.setattr(health_router, "check_database_connection", check_database_connection)
 
@@ -29,7 +29,7 @@ async def test_health_endpoint_succeeds_when_connection_healthy(client, monkeypa
 
 
 @pytest.mark.asyncio
-async def test_health_endpoint_returns_unhealthy_when_connectivity_check_fails(client, monkeypatch):
+async def test_health_returns_unhealthy_when_db_fails(client, monkeypatch):
     check_database_connection = AsyncMock(side_effect=RuntimeError("cosmos unavailable"))
     monkeypatch.setattr(health_router, "check_database_connection", check_database_connection)
 

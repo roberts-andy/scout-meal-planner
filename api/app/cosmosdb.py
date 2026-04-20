@@ -138,7 +138,7 @@ async def check_database_connection() -> None:
         return
 
     if not _endpoint and not _connection_string:
-        raise RuntimeError("Cosmos DB configuration missing: set COSMOS_ENDPOINT (preferred) or COSMOS_CONNECTION_STRING")
+        raise RuntimeError("Cosmos DB configuration missing: set COSMOS_ENDPOINT or COSMOS_CONNECTION_STRING")
 
     if _health_check_client is None:
         if _endpoint:
@@ -155,6 +155,27 @@ async def check_database_connection() -> None:
 
     database = _health_check_client.get_database_client(_database_id)
     await database.read()
+
+
+async def close_database_clients() -> None:
+    global _client, _health_check_client, _database, _initialized
+
+    clients_to_close: list[CosmosClient] = []
+
+    if _client is not None:
+        clients_to_close.append(_client)
+        _client = None
+
+    if _health_check_client is not None and _health_check_client not in clients_to_close:
+        clients_to_close.append(_health_check_client)
+    _health_check_client = None
+
+    _database = None
+    _containers.clear()
+    _initialized = False
+
+    for client in clients_to_close:
+        await client.close()
 
 
 def _get_container(name: str) -> ContainerProxy:
