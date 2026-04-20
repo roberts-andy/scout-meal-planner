@@ -25,12 +25,13 @@ export function useAuth(): AuthState {
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
   const [memberLoading, setMemberLoading] = useState(false)
   const [authError, setAuthError] = useState<AuthState['authError']>(null)
+  const [reauthRequired, setReauthRequired] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
 
   const retryMembership = useCallback(() => setRetryCount(c => c + 1), [])
 
   const account = accounts[0] || null
-  const isAuthenticated = !!account
+  const isAuthenticated = !!account && !reauthRequired
   const isLoading = inProgress !== 'none' || memberLoading
 
   const user: AuthUser | null = account
@@ -53,14 +54,23 @@ export function useAuth(): AuthState {
       return response.idToken
     } catch (err) {
       if (err instanceof InteractionRequiredAuthError) {
-        const response = await instance.acquireTokenPopup(loginRequest)
-        return response.idToken
+        try {
+          const response = await instance.acquireTokenPopup(loginRequest)
+          setReauthRequired(false)
+          return response.idToken
+        } catch (popupError) {
+          if (isUserCancelledError(popupError)) {
+            setReauthRequired(true)
+          }
+          throw popupError
+        }
       }
       throw err
     }
   }, [instance, account])
 
   const login = useCallback(async () => {
+    setReauthRequired(false)
     await instance.loginRedirect(loginRequest)
   }, [instance])
 
@@ -75,6 +85,9 @@ export function useAuth(): AuthState {
       setRole(null)
       setNeedsOnboarding(false)
       setAuthError(null)
+      if (!account) {
+        setReauthRequired(false)
+      }
       return
     }
 
@@ -97,6 +110,7 @@ export function useAuth(): AuthState {
           setRole(data.role)
           setNeedsOnboarding(false)
           setAuthError(null)
+          setReauthRequired(false)
         } else if (res.status === 404) {
           setNeedsOnboarding(true)
           setAuthError(null)
@@ -114,6 +128,11 @@ export function useAuth(): AuthState {
         }
       } catch (err) {
         if (cancelled) return
+        if (isInteractionRequiredError(err) || isUserCancelledError(err)) {
+          setReauthRequired(true)
+          setAuthError(null)
+          return
+        }
         setAuthError({
           status: null,
           message: err instanceof Error ? err.message : 'Network error contacting the API',
@@ -126,7 +145,7 @@ export function useAuth(): AuthState {
     return () => {
       cancelled = true
     }
-  }, [isAuthenticated, getAccessToken, retryCount])
+  }, [isAuthenticated, getAccessToken, retryCount, account])
 
   return {
     isAuthenticated,
@@ -141,4 +160,14 @@ export function useAuth(): AuthState {
     login,
     logout,
   }
+}
+
+function isInteractionRequiredError(err: unknown): err is InteractionRequiredAuthError {
+  return err instanceof InteractionRequiredAuthError
+}
+
+function isUserCancelledError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false
+  const errorCode = (err as { errorCode?: unknown }).errorCode
+  return typeof errorCode === 'string' && errorCode === 'user_cancelled'
 }
