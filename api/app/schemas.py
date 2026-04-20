@@ -162,7 +162,20 @@ class CreateEvent(BaseModel):
     link: Optional[str] = None
 
 
-UpdateEvent = CreateEvent
+class UpdateEvent(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    startDate: Optional[str] = Field(default=None, min_length=1)
+    endDate: Optional[str] = Field(default=None, min_length=1)
+    days: Optional[list[EventDay]] = None
+    packedItems: Optional[list[str]] = None
+    purchasedItems: Optional[list[str]] = None
+    notes: Optional[str] = None
+    hike: Optional[bool] = None
+    highAltitude: Optional[bool] = None
+    tentCamping: Optional[bool] = None
+    cabinCamping: Optional[bool] = None
+    description: Optional[str] = None
+    link: Optional[str] = None
 
 
 class TogglePackedItem(BaseModel):
@@ -198,7 +211,16 @@ class CreateRecipe(BaseModel):
     versions: Optional[list[RecipeVersion]] = None
 
 
-UpdateRecipe = CreateRecipe
+class UpdateRecipe(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    description: Optional[str] = None
+    servings: Optional[int] = Field(default=None, ge=1)
+    ingredients: Optional[list[Ingredient]] = None
+    variations: Optional[list[RecipeVariation]] = None
+    tags: Optional[list[str]] = None
+    clonedFrom: Optional[str] = None
+    currentVersion: Optional[int] = Field(default=None, ge=1)
+    versions: Optional[list[RecipeVersion]] = None
 
 
 class CreateFeedback(BaseModel):
