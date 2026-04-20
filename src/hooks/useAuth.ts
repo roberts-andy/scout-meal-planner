@@ -4,6 +4,8 @@ import { loginRequest } from '@/lib/authConfig'
 import { useCallback, useEffect, useState } from 'react'
 import type { AuthUser, TroopRole } from '@/lib/types'
 
+const MSAL_USER_CANCELLED_ERROR = 'user_cancelled'
+
 export interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
@@ -25,12 +27,13 @@ export function useAuth(): AuthState {
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
   const [memberLoading, setMemberLoading] = useState(false)
   const [authError, setAuthError] = useState<AuthState['authError']>(null)
+  const [reauthRequired, setReauthRequired] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
 
   const retryMembership = useCallback(() => setRetryCount(c => c + 1), [])
 
   const account = accounts[0] || null
-  const isAuthenticated = !!account
+  const isAuthenticated = !!account && !reauthRequired
   const isLoading = inProgress !== 'none' || memberLoading
 
   const user: AuthUser | null = account
@@ -53,14 +56,23 @@ export function useAuth(): AuthState {
       return response.idToken
     } catch (err) {
       if (err instanceof InteractionRequiredAuthError) {
-        const response = await instance.acquireTokenPopup(loginRequest)
-        return response.idToken
+        try {
+          const response = await instance.acquireTokenPopup(loginRequest)
+          setReauthRequired(false)
+          return response.idToken
+        } catch (popupError) {
+          if (isUserCancelledError(popupError)) {
+            setReauthRequired(true)
+          }
+          throw popupError
+        }
       }
       throw err
     }
   }, [instance, account])
 
   const login = useCallback(async () => {
+    setReauthRequired(false)
     await instance.loginRedirect(loginRequest)
   }, [instance])
 
@@ -75,6 +87,9 @@ export function useAuth(): AuthState {
       setRole(null)
       setNeedsOnboarding(false)
       setAuthError(null)
+      if (!account) {
+        setReauthRequired(false)
+      }
       return
     }
 
@@ -97,6 +112,7 @@ export function useAuth(): AuthState {
           setRole(data.role)
           setNeedsOnboarding(false)
           setAuthError(null)
+          setReauthRequired(false)
         } else if (res.status === 404) {
           setNeedsOnboarding(true)
           setAuthError(null)
@@ -114,6 +130,11 @@ export function useAuth(): AuthState {
         }
       } catch (err) {
         if (cancelled) return
+        if (err instanceof InteractionRequiredAuthError || isUserCancelledError(err)) {
+          setReauthRequired(true)
+          setAuthError(null)
+          return
+        }
         setAuthError({
           status: null,
           message: err instanceof Error ? err.message : 'Network error contacting the API',
@@ -126,7 +147,7 @@ export function useAuth(): AuthState {
     return () => {
       cancelled = true
     }
-  }, [isAuthenticated, getAccessToken, retryCount])
+  }, [isAuthenticated, getAccessToken, retryCount, account])
 
   return {
     isAuthenticated,
@@ -141,4 +162,11 @@ export function useAuth(): AuthState {
     login,
     logout,
   }
+}
+
+/** Detects MSAL popup cancellation errors (e.g. user closes/cancels the prompt). */
+function isUserCancelledError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false
+  const errorCode = (err as { errorCode?: unknown }).errorCode
+  return typeof errorCode === 'string' && errorCode === MSAL_USER_CANCELLED_ERROR
 }

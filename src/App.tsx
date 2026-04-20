@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { setTokenProvider } from '@/lib/api'
+import { setTokenProvider, setUnauthorizedHandler } from '@/lib/api'
 import { useAuthContext } from '@/components/AuthProvider'
 import { SignIn } from '@/components/SignIn'
 import { TroopOnboarding } from '@/components/TroopOnboarding'
@@ -20,8 +20,14 @@ export default function App() {
   useEffect(() => {
     if (auth.isAuthenticated) {
       setTokenProvider(auth.getAccessToken)
+      setUnauthorizedHandler(() => auth.login())
+      return () => {
+        setUnauthorizedHandler(null)
+      }
+    } else {
+      setUnauthorizedHandler(null)
     }
-  }, [auth.isAuthenticated, auth.getAccessToken])
+  }, [auth.isAuthenticated, auth.getAccessToken, auth.login])
 
   // Not authenticated → show sign-in
   if (!auth.isAuthenticated) {
