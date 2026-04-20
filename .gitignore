@@ -31,6 +31,7 @@ pids
 .file-manifest
 
 .spark-workbench-id
+api.zip
 api/local.settings.json
 api/dist/
 api/node_modules/
