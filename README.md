@@ -6,10 +6,10 @@ A meal planning application for scout troops to plan, organize, and manage meals
 
 ```text
 ┌─────────────────────┐     ┌──────────────────────┐     ┌────────────────────┐
-│  Azure Static Web   │     │  Azure Functions      │     │  Azure Cosmos DB   │
-│  Apps (SWA)         │────▶│  (Flex Consumption)   │────▶│  (Serverless)      │
+│  Azure Static Web   │     │  FastAPI Backend      │     │  Azure Cosmos DB   │
+│  Apps (SWA)         │────▶│  (Azure App Service)  │────▶│  (Serverless)      │
 │                     │     │                       │     │                    │
-│  React 19 SPA       │     │  Node.js 20 LTS / TS  │     │  SQL API           │
+│  React 19 SPA       │     │  Python 3.13          │     │  SQL API           │
 │  Vite + Tailwind    │     │  REST API             │     │  3 containers      │
 └─────────────────────┘     └──────────────────────┘     └────────────────────┘
 ```text
@@ -17,7 +17,7 @@ A meal planning application for scout troops to plan, organize, and manage meals
 | Layer | Technology | Location |
 | ----- | ---------- | -------- |
 | Frontend | React 19, TypeScript, Tailwind CSS, Radix UI, React Query | `src/` |
-| API | Azure Functions v4, Node.js 20 LTS, TypeScript | `api/` |
+| API | FastAPI, Python 3.13 | `api/` |
 | Database | Azure Cosmos DB (serverless, SQL API) | 3 containers: `events`, `recipes`, `feedback` |
 | Hosting | Azure Static Web Apps (Standard) | CDN-distributed SPA |
 | Infrastructure | Bicep (subscription-scoped) | `infra/` |
@@ -69,17 +69,16 @@ scout-meal-planner/
 │   └── styles/
 │       └── theme.css             # CSS custom properties (Radix color tokens)
 │
-├── api/                          # Azure Functions API
-│   ├── host.json                 # Functions runtime config (v2, extension bundle v4)
-│   ├── package.json              # API dependencies (@azure/cosmos, @azure/functions, @azure/identity)
-│   ├── tsconfig.json             # TypeScript config (NodeNext modules, ES2020)
-│   └── src/
-│       ├── index.ts              # Function registration entry point
-│       ├── cosmosdb.ts           # Cosmos DB client (managed identity auth, generic CRUD helpers)
-│       └── functions/
-│           ├── events.ts         # GET/POST/PUT/DELETE /api/events/{id?}
-│           ├── recipes.ts        # GET/POST/PUT/DELETE /api/recipes/{id?}
-│           └── feedback.ts       # CRUD /api/feedback/{id?} + GET /api/feedback/event/{eventId}
+├── api/                          # FastAPI backend
+│   ├── app/                      # Application package
+│   │   ├── main.py               # FastAPI app bootstrap
+│   │   ├── routers/              # API routers (/events, /recipes, /feedback, etc.)
+│   │   ├── middleware/           # Auth, RBAC, moderation middleware
+│   │   ├── cosmosdb.py           # Cosmos DB client + data access helpers
+│   │   └── schemas.py            # Pydantic request/response schemas
+│   ├── tests/                    # Backend unit tests (pytest)
+│   ├── requirements.txt          # Runtime dependencies
+│   └── requirements-dev.txt      # Test/dev dependencies
 │
 ├── infra/                        # Azure infrastructure (Bicep)
 │   ├── main.bicep                # Subscription-scoped deployment orchestrator
