@@ -15,7 +15,7 @@ class MockRequest:
 
 
 @pytest.fixture(autouse=True)
-def reset_auth_state(monkeypatch):
+def reset_auth_cache(monkeypatch):
     monkeypatch.setattr(auth, "_jwks", None)
     monkeypatch.setattr(auth, "_jwks_fetched_at", None)
     monkeypatch.setattr(auth, "CLIENT_ID", "client-id")
