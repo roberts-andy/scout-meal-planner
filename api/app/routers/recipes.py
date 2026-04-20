@@ -19,8 +19,10 @@ CONTAINER = "recipes"
 
 
 def _recipe_moderation_fields(data: CreateRecipe | UpdateRecipe) -> list[ModerationField]:
-    fields: list[ModerationField] = [ModerationField(field="name", text=data.name)]
-    for i, variation in enumerate(data.variations):
+    fields: list[ModerationField] = []
+    if data.name is not None:
+        fields.append(ModerationField(field="name", text=data.name))
+    for i, variation in enumerate(data.variations or []):
         for j, instruction in enumerate(variation.instructions):
             fields.append(ModerationField(field=f"variations[{i}].instructions[{j}]", text=instruction))
     return fields
@@ -72,7 +74,7 @@ async def update_recipe(recipe_id: str, body: UpdateRecipe, auth: RequireTroopCo
     moderation = await moderate_text_fields(_recipe_moderation_fields(body))
     recipe = await update_item(CONTAINER, recipe_id, {
         **existing,
-        **body.model_dump(),
+        **body.model_dump(exclude_unset=True),
         "id": recipe_id,
         "troopId": auth.troopId,
         "moderation": moderation.__dict__,
