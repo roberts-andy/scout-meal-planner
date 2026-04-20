@@ -59,6 +59,19 @@ function toFeatureFlags(value: unknown): Partial<FeatureFlags> {
 
 export async function loadFeatureFlags() {
   try {
+    const response = await fetch('/api/feature-flags', { cache: 'no-store' })
+    if (response.ok) {
+      const apiFlags = toFeatureFlags(await response.json().catch(() => ({})))
+      flags = { ...DEFAULT_FEATURE_FLAGS, ...apiFlags }
+      logFeatureFlagDebug('Loaded API feature flags', flags)
+      return
+    }
+    logFeatureFlagWarn(`Failed to load API feature flags (HTTP ${response.status}); falling back to runtime config`)
+  } catch (error) {
+    logFeatureFlagWarn('Failed to load API feature flags; falling back to runtime config', error)
+  }
+
+  try {
     const response = await fetch('/runtime.config.json', { cache: 'no-store' })
     if (!response.ok) {
       logFeatureFlagWarn(`Failed to load runtime feature flags (HTTP ${response.status})`)

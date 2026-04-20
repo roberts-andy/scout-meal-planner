@@ -3,8 +3,11 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+import pytest_asyncio
 from fastapi import HTTPException
+from httpx import ASGITransport, AsyncClient
 
+from app.main import app
 from app.middleware import moderation
 from app.middleware.auth import TroopContext
 from app.routers import email_shopping_list, feedback, share
@@ -21,6 +24,31 @@ def _make_feedback_body() -> CreateFeedback:
         whatWorked="Prep work",
         whatToChange="Add spice",
     )
+
+
+@pytest_asyncio.fixture
+async def client():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as async_client:
+        yield async_client
+
+
+@pytest.mark.asyncio
+async def test_get_feature_flags_returns_evaluated_backend_flags(client, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("FEATURE_FLAGS_ENV", "dev")
+    monkeypatch.setenv("FEATURE_FLAG_ENABLE_SHARED_LINKS", "true")
+    monkeypatch.setenv("FEATURE_FLAG_ENABLE_PRINT_RECIPES", "false")
+
+    response = await client.get("/api/feature-flags")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "enable-content-moderation": False,
+        "enable-email-shopping-list": False,
+        "enable-shared-links": True,
+        "enable-feedback": True,
+        "enable-print-recipes": False,
+    }
 
 
 @pytest.mark.asyncio
