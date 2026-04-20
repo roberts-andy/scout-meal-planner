@@ -10,7 +10,6 @@ vi.mock('jose', () => ({
 // ── Mock cosmosdb for membership lookups ──
 vi.mock('../cosmosdb.js', () => ({
   queryItems: vi.fn(),
-  update: vi.fn(),
 }))
 
 import { jwtVerify } from 'jose'
