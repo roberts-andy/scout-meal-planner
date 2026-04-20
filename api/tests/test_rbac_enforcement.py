@@ -68,7 +68,7 @@ class EndpointCase:
     method: str
     path: str
     success_status: int
-    denied_role: str
+    denied_role: str | None
     body: dict[str, Any] | None = None
 
 
@@ -79,8 +79,8 @@ RBAC_ENDPOINT_CASES = [
     EndpointCase("get", "/api/events/event-1/share", 200, "scout"),
     EndpointCase("post", "/api/events/event-1/share", 200, "scout"),
     EndpointCase("delete", "/api/events/event-1/share", 204, "scout"),
-    EndpointCase("post", "/api/feedback", 201, "parent", _feedback_payload()),
-    EndpointCase("put", "/api/feedback/feedback-1", 200, "parent", _feedback_payload()),
+    EndpointCase("post", "/api/feedback", 201, None, _feedback_payload()),
+    EndpointCase("put", "/api/feedback/feedback-1", 200, None, _feedback_payload()),
     EndpointCase("delete", "/api/feedback/feedback-1", 204, "scout"),
     EndpointCase("post", "/api/recipes", 201, "scout", _recipe_payload()),
     EndpointCase("put", "/api/recipes/recipe-1", 200, "scout", _recipe_payload()),
@@ -88,21 +88,22 @@ RBAC_ENDPOINT_CASES = [
     EndpointCase("post", "/api/members", 201, "scout", {"displayName": "New Scout", "role": "scout"}),
     EndpointCase("put", "/api/members/member-1", 200, "scout", {"status": "active"}),
     EndpointCase("delete", "/api/members/member-1", 204, "scout"),
-    EndpointCase("delete", "/api/members/member-1/data", 204, "parent"),
-    EndpointCase("put", "/api/troops", 200, "parent", {"name": "Troop Updated"}),
-    EndpointCase("patch", "/api/events/event-1/packed", 200, "parent", {"item": "Stove", "packed": True}),
-    EndpointCase("patch", "/api/events/event-1/purchased", 200, "parent", {"item": "Oats", "purchased": True}),
+    EndpointCase("delete", "/api/members/member-1/data", 204, "adultLeader"),
+    EndpointCase("put", "/api/troops", 200, "adultLeader", {"name": "Troop Updated"}),
+    EndpointCase("patch", "/api/events/event-1/packed", 200, None, {"item": "Stove", "packed": True}),
+    EndpointCase("patch", "/api/events/event-1/purchased", 200, None, {"item": "Oats", "purchased": True}),
     EndpointCase(
         "post",
         "/api/events/event-1/shopping-list/email",
         202,
-        "parent",
+        None,
         {"recipientEmail": "recipient@example.com", "items": [{"name": "Oats", "quantity": 1, "unit": "bag"}]},
     ),
-    EndpointCase("get", "/api/admin/flagged-content", 200, "parent"),
-    EndpointCase("put", "/api/admin/flagged-content/recipe:recipe-1", 200, "parent", {"action": "approve"}),
+    EndpointCase("get", "/api/admin/flagged-content", 200, "adultLeader"),
+    EndpointCase("put", "/api/admin/flagged-content/recipe:recipe-1", 200, "adultLeader", {"action": "approve"}),
     EndpointCase("patch", "/api/troops/troop-1/members/member-1", 200, "scout", {"status": "deactivated"}),
 ]
+RBAC_FORBIDDEN_CASES = [case for case in RBAC_ENDPOINT_CASES if case.denied_role is not None]
 
 
 def _install_default_mocks(monkeypatch: pytest.MonkeyPatch):
@@ -240,7 +241,7 @@ async def _call(client: AsyncClient, case: EndpointCase):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("case", RBAC_ENDPOINT_CASES, ids=[f"{c.method.upper()} {c.path}" for c in RBAC_ENDPOINT_CASES])
+@pytest.mark.parametrize("case", RBAC_FORBIDDEN_CASES, ids=[f"{c.method.upper()} {c.path}" for c in RBAC_FORBIDDEN_CASES])
 async def test_insufficient_roles_receive_403(async_test_client, monkeypatch: pytest.MonkeyPatch, case: EndpointCase):
     _install_default_mocks(monkeypatch)
     _set_auth_role(monkeypatch, case.denied_role)
@@ -258,8 +259,9 @@ async def test_troop_admin_can_access_protected_endpoints(async_test_client, mon
 
 
 @pytest.mark.asyncio
-async def test_unauthenticated_request_returns_401(async_test_client, monkeypatch: pytest.MonkeyPatch):
+@pytest.mark.parametrize("case", RBAC_ENDPOINT_CASES, ids=[f"{c.method.upper()} {c.path}" for c in RBAC_ENDPOINT_CASES])
+async def test_unauthenticated_request_returns_401(async_test_client, monkeypatch: pytest.MonkeyPatch, case: EndpointCase):
     _install_default_mocks(monkeypatch)
     _set_auth_role(monkeypatch, None)
-    response = await async_test_client.post("/api/events", json=_event_payload())
+    response = await _call(async_test_client, case)
     assert response.status_code == 401
