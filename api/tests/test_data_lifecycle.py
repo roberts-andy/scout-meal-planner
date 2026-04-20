@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from azure.cosmos.exceptions import CosmosHttpResponseError
 from fastapi import HTTPException
 
 from app.middleware.auth import TroopContext
@@ -147,8 +148,10 @@ async def test_troop_deletion_ignores_not_found_deletes_and_continues(monkeypatc
         role="troopAdmin",
     )
 
-    class NotFoundError(Exception):
-        status_code = 404
+    def _not_found_error() -> CosmosHttpResponseError:
+        exc = CosmosHttpResponseError(message="already removed")
+        exc.status_code = 404
+        return exc
 
     deleted: list[tuple[str, str]] = []
 
@@ -159,8 +162,8 @@ async def test_troop_deletion_ignores_not_found_deletes_and_continues(monkeypatc
         return [{"id": f"{container}-1"}]
 
     async def fake_delete_item(container: str, item_id: str, _partition_key: str | None = None):
-        if container == "feedback":
-            raise NotFoundError("already removed")
+        if container in {"events", "feedback", "troops"}:
+            raise _not_found_error()
         deleted.append((container, item_id))
 
     monkeypatch.setattr(troops, "get_by_id", fake_get_by_id)
@@ -170,9 +173,10 @@ async def test_troop_deletion_ignores_not_found_deletes_and_continues(monkeypatc
     await troops.delete_troop(auth)
 
     assert ("members", "members-1") in deleted
-    assert ("events", "events-1") in deleted
+    assert ("events", "events-1") not in deleted
+    assert ("feedback", "feedback-1") not in deleted
     assert ("recipes", "recipes-1") in deleted
-    assert ("troops", auth.troopId) in deleted
+    assert ("troops", auth.troopId) not in deleted
 
 
 @pytest.mark.asyncio

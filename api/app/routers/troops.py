@@ -6,6 +6,7 @@ import secrets
 import time
 import uuid
 
+from azure.cosmos.exceptions import CosmosHttpResponseError
 from fastapi import APIRouter, HTTPException
 
 from app.cosmosdb import get_by_id, create_item, update_item, query_items, delete_item
@@ -104,6 +105,15 @@ async def delete_troop(auth: RequireTroopContext):
         for item in items:
             try:
                 await delete_item(container, item["id"], auth.troopId)
+            except CosmosHttpResponseError as exc:
+                if exc.status_code == 404:
+                    continue
+                failures.append({
+                    "container": container,
+                    "operation": "delete",
+                    "id": item.get("id"),
+                    "error": type(exc).__name__,
+                })
             except Exception as exc:
                 if getattr(exc, "status_code", None) == 404:
                     continue
@@ -116,6 +126,9 @@ async def delete_troop(auth: RequireTroopContext):
 
     try:
         await delete_item(CONTAINER, auth.troopId)
+    except CosmosHttpResponseError as exc:
+        if exc.status_code != 404:
+            failures.append({"container": CONTAINER, "operation": "delete", "id": auth.troopId, "error": type(exc).__name__})
     except Exception as exc:
         if getattr(exc, "status_code", None) != 404:
             failures.append({"container": CONTAINER, "operation": "delete", "id": auth.troopId, "error": type(exc).__name__})
