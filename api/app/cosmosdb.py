@@ -116,6 +116,27 @@ async def init_database() -> None:
     _initialized = True
 
 
+async def check_database_connection() -> None:
+    if _database is not None:
+        await _database.read()
+        return
+
+    if not _endpoint and not _connection_string:
+        logger.warning("Neither COSMOS_ENDPOINT nor COSMOS_CONNECTION_STRING is set. Health check cannot verify database.")
+        return
+
+    if _endpoint:
+        client = CosmosClient(_endpoint, credential=DefaultAzureCredential(), transport=_SafeAioHttpTransport())
+    else:
+        client = CosmosClient.from_connection_string(_connection_string, transport=_SafeAioHttpTransport())
+
+    try:
+        database = client.get_database_client(_database_id)
+        await database.read()
+    finally:
+        await client.close()
+
+
 def _get_container(name: str) -> ContainerProxy:
     container = _containers.get(name)
     if not container:
