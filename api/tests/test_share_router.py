@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 import pytest
 from fastapi import HTTPException
 from starlette.requests import Request
@@ -62,12 +60,12 @@ async def test_get_shared_event_uses_share_token_index(monkeypatch):
             },
         ]
 
-    async def fail_if_called(*_args, **_kwargs):
+    async def assert_query_items_not_called(*_args, **_kwargs):
         raise AssertionError("query_items should not be used for share-token lookup")
 
     monkeypatch.setattr(share, "get_by_id", fake_get_by_id)
     monkeypatch.setattr(share, "get_all_by_troop", fake_get_all_by_troop)
-    monkeypatch.setattr(share, "query_items", fail_if_called, raising=False)
+    monkeypatch.setattr(share, "query_items", assert_query_items_not_called, raising=False)
 
     result = await share.get_shared_event("token-1")
 
@@ -87,7 +85,7 @@ async def test_create_event_share_creates_index_and_removes_old_token(monkeypatc
     )
     created_items: list[dict] = []
     deleted_items: list[tuple[str, str, str | None]] = []
-    updated_item = SimpleNamespace(value=None)
+    updated_items: list[dict] = []
 
     async def fake_get_by_id(container_name: str, item_id: str, partition_key_value: str | None = None):
         if container_name == "events":
@@ -102,7 +100,7 @@ async def test_create_event_share_creates_index_and_removes_old_token(monkeypatc
         assert container_name == "events"
         assert item_id == "event-1"
         assert partition_key_value == "troop-1"
-        updated_item.value = item
+        updated_items.append(item)
         return item
 
     async def fake_delete_item(container_name: str, item_id: str, partition_key_value: str | None = None):
@@ -123,7 +121,7 @@ async def test_create_event_share_creates_index_and_removes_old_token(monkeypatc
 
     assert response["shareToken"] == "new-token"
     assert response["shareUrl"].endswith("/share/new-token")
-    assert updated_item.value["shareToken"] == "new-token"
+    assert updated_items[0]["shareToken"] == "new-token"
     assert created_items[0]["eventId"] == "event-1"
     assert created_items[0]["troopId"] == "troop-1"
     assert deleted_items == [("share-tokens", "old-token", "old-token")]
