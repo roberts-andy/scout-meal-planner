@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
@@ -6,11 +7,14 @@ from app.middleware.auth import TokenClaims
 from app.routers import members, troops
 import app.middleware.auth as auth_middleware
 
+INITIAL_TIMESTAMP = 1
 
-@pytest.fixture
-def client():
+
+@pytest_asyncio.fixture
+async def client():
     transport = ASGITransport(app=app)
-    return AsyncClient(transport=transport, base_url="http://test")
+    async with AsyncClient(transport=transport, base_url="http://test") as async_client:
+        yield async_client
 
 
 @pytest.mark.asyncio
@@ -25,7 +29,7 @@ async def test_join_approve_and_authenticate_flow(client, monkeypatch):
             "displayName": "Leader",
             "role": "troopAdmin",
             "status": "active",
-            "joinedAt": 1,
+            "joinedAt": INITIAL_TIMESTAMP,
         }
     ]
 
@@ -34,7 +38,7 @@ async def test_join_approve_and_authenticate_flow(client, monkeypatch):
         if token == "leader-token":
             return TokenClaims(userId="leader-user", email="leader@example.com", displayName="Leader Admin")
         if token == "scout-token":
-            return TokenClaims(userId="scout-user", email="scout@example.com", displayName="Scout Person")
+            return TokenClaims(userId="scout-user", email="scout@example.com", displayName="Scout User")
         return None
 
     async def fake_query_items(container_name, query, parameters=None):
@@ -53,13 +57,13 @@ async def test_join_approve_and_authenticate_flow(client, monkeypatch):
         if "@troopId" in params and "@userId" in params:
             return [m for m in member_records if m["troopId"] == params["@troopId"] and m.get("userId") == params["@userId"]]
 
-        if '@userId' in params and 'c.status = "active"' in query:
+        if "@userId" in params and 'c.status = "active"' in query:
             return [m for m in member_records if m.get("userId") == params["@userId"] and m.get("status") == "active"]
 
-        if '@email' in params and 'c.status = "active"' in query:
+        if "@email" in params and 'c.status = "active"' in query:
             return [
                 m for m in member_records
-                if m.get("email") == params["@email"] and m.get("status") == "active" and m.get("userId", "") == ""
+                if m.get("email") == params["@email"] and m.get("status") == "active" and not m.get("userId")
             ]
 
         return []
@@ -97,7 +101,7 @@ async def test_join_approve_and_authenticate_flow(client, monkeypatch):
     assert joined_member["status"] == "pending"
 
     approve_response = await client.put(
-        f'/api/members/{joined_member["id"]}',
+        f"/api/members/{joined_member['id']}",
         headers={"authorization": "Bearer leader-token"},
         json={"status": "active"},
     )
