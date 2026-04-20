@@ -289,4 +289,19 @@ describe('feedback handler moderation', () => {
     expect(result.status).toBe(204)
     expect(cosmos.remove).toHaveBeenCalledWith('feedback', 'feedback-1', 'troop-42')
   })
+
+  it('allows leader to delete scout feedback via manageEvents override', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(leaderAuth)
+    vi.mocked(cosmos.getById).mockResolvedValueOnce({
+      id: 'feedback-1',
+      troopId: 'troop-42',
+      createdBy: { userId: scoutAuth.userId, displayName: scoutAuth.displayName },
+    })
+    vi.mocked(cosmos.remove).mockResolvedValueOnce(undefined)
+
+    const result = await feedbackHandler(makeReq({ method: 'DELETE', params: { id: 'feedback-1' } }), ctx)
+
+    expect(result.status).toBe(204)
+    expect(cosmos.remove).toHaveBeenCalledWith('feedback', 'feedback-1', 'troop-42')
+  })
 })
