@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
+import time as _time
 from dataclasses import dataclass
 from typing import Annotated
 
@@ -23,15 +25,26 @@ JWKS_URI = "https://login.microsoftonline.com/consumers/discovery/v2.0/keys"
 ISSUER = "https://login.microsoftonline.com/9188040d-6c67-4c5b-b112-36a304b66dad/v2.0"
 
 _jwks: dict | None = None
+_jwks_fetched_at: float = 0
+_JWKS_TTL_SECONDS = 3600
+_JWKS_HTTP_TIMEOUT_SECONDS = 10
+_jwks_lock = asyncio.Lock()
 
 
-async def _get_jwks() -> dict:
-    global _jwks
-    if _jwks is None:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(JWKS_URI)
-            resp.raise_for_status()
-            _jwks = resp.json()
+async def _get_jwks(force_refresh: bool = False) -> dict:
+    global _jwks, _jwks_fetched_at
+    now = _time.monotonic()
+    if _jwks is not None and not force_refresh and (now - _jwks_fetched_at) <= _JWKS_TTL_SECONDS:
+        return _jwks
+
+    async with _jwks_lock:
+        now = _time.monotonic()
+        if _jwks is None or force_refresh or (now - _jwks_fetched_at) > _JWKS_TTL_SECONDS:
+            async with httpx.AsyncClient(timeout=_JWKS_HTTP_TIMEOUT_SECONDS) as client:
+                resp = await client.get(JWKS_URI)
+                resp.raise_for_status()
+                _jwks = resp.json()
+                _jwks_fetched_at = now
     return _jwks
 
 
@@ -67,13 +80,24 @@ async def validate_token(request: Request) -> TokenClaims | None:
             audience=CLIENT_ID,
             issuer=ISSUER,
         )
-        return TokenClaims(
-            userId=payload.get("sub") or payload.get("oid", ""),
-            email=(payload.get("emails") or [None])[0] or payload.get("preferred_username", ""),
-            displayName=payload.get("name", ""),
-        )
     except JWTError:
-        return None
+        try:
+            jwks = await _get_jwks(force_refresh=True)
+            payload = jwt.decode(
+                token,
+                jwks,
+                algorithms=["RS256"],
+                audience=CLIENT_ID,
+                issuer=ISSUER,
+            )
+        except JWTError:
+            return None
+
+    return TokenClaims(
+        userId=payload.get("sub") or payload.get("oid", ""),
+        email=(payload.get("emails") or [None])[0] or payload.get("preferred_username", ""),
+        displayName=payload.get("name", ""),
+    )
 
 
 async def get_troop_context(request: Request) -> TroopContext | None:
