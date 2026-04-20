@@ -30,13 +30,14 @@ interface EventScheduleProps {
 }
 
 export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }: EventScheduleProps) {
+  const getDefaultScoutCount = () => Math.max(1, event.headcount?.scoutCount ?? 8)
   const [isAddMealOpen, setIsAddMealOpen] = useState(false)
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null)
   const [mealType, setMealType] = useState<MealType>('breakfast')
   const [mealCourse, setMealCourse] = useState<MealCourse | undefined>(undefined)
   const [dietaryNotes, setDietaryNotes] = useState('')
   const [recipeId, setRecipeId] = useState<string>('')
-  const [scoutCount, setScoutCount] = useState(8)
+  const [scoutCount, setScoutCount] = useState(getDefaultScoutCount())
   const [isTrailside, setIsTrailside] = useState(false)
   const [isTimeConstrained, setIsTimeConstrained] = useState(false)
   const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null)
@@ -77,6 +78,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
     setMealCourse(undefined)
     setDietaryNotes('')
     setRecipeId('')
+    setScoutCount(getDefaultScoutCount())
     setIsTrailside(false)
     setIsTimeConstrained(false)
   }
@@ -140,6 +142,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
                 <Button
                   onClick={() => {
                     setSelectedDayIndex(dayIndex)
+                    setScoutCount(getDefaultScoutCount())
                     setIsAddMealOpen(true)
                   }}
                   size="sm"

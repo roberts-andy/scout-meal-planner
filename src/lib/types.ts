@@ -124,12 +124,21 @@ export interface EventDay {
   meals: Meal[]
 }
 
+export interface EventHeadcount {
+  scoutCount: number
+  adultCount: number
+  guestCount: number
+}
+
 export interface Event {
   id: string
   troopId: string
   name: string
   startDate: string
   endDate: string
+  departureTime?: string
+  returnTime?: string
+  headcount?: EventHeadcount
   days: EventDay[]
   packedItems?: string[]
   purchasedItems?: string[]
@@ -165,6 +174,9 @@ export interface SharedEvent {
   name: string
   startDate: string
   endDate: string
+  departureTime?: string
+  returnTime?: string
+  headcount?: EventHeadcount
   days: EventDay[]
   hike?: boolean
   highAltitude?: boolean

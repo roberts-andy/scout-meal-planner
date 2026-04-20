@@ -96,4 +96,33 @@ describe('EventSchedule meal flags', () => {
     expect(screen.getByText('Dietary Notes')).toBeInTheDocument()
     expect(screen.getByText('Vegetarian option needed')).toBeInTheDocument()
   })
+
+  it('defaults new meal scout count to event headcount scout count', async () => {
+    const onUpdateEvent = vi.fn()
+    const user = userEvent.setup()
+    const eventWithHeadcount = {
+      ...baseEvent,
+      headcount: {
+        scoutCount: 11,
+        adultCount: 2,
+        guestCount: 1,
+      },
+    }
+
+    render(
+      <EventSchedule
+        event={eventWithHeadcount}
+        recipes={[]}
+        onUpdateEvent={onUpdateEvent}
+        onUpdateRecipe={vi.fn()}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: /add meal/i }))
+    await user.click(screen.getByRole('button', { name: /^add meal$/i }))
+
+    expect(onUpdateEvent).toHaveBeenCalledTimes(1)
+    const updatedEvent = onUpdateEvent.mock.calls[0][0]
+    expect(updatedEvent.days[0].meals.at(-1).scoutCount).toBe(11)
+  })
 })

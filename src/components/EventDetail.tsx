@@ -40,6 +40,7 @@ export function EventDetail({
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [isSharing, setIsSharing] = useState(false)
   const feedbackEnabled = canSubmitEventFeedback(event)
+  const headcount = event.headcount ?? { scoutCount: 0, adultCount: 0, guestCount: 0 }
 
   const buildShareUrl = (token?: string) => token ? `${window.location.origin}/share/${token}` : null
 
@@ -171,6 +172,14 @@ export function EventDetail({
           {event.description && (
             <p className="text-sm text-muted-foreground mt-2 max-w-3xl">{event.description}</p>
           )}
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mt-2">
+            <span>Departure: {event.departureTime || 'Not set'}</span>
+            <span>•</span>
+            <span>Return: {event.returnTime || 'Not set'}</span>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Headcount: {headcount.scoutCount} scouts, {headcount.adultCount} adults, {headcount.guestCount} guests
+          </p>
           <div className="flex flex-wrap items-center gap-2 mt-3">
             <Button variant="outline" size="sm" className="gap-2" onClick={handleCopyShareLink} disabled={isSharing}>
               <Copy size={16} />

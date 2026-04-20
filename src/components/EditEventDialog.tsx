@@ -30,6 +30,11 @@ export function EditEventDialog({
   const [name, setName] = useState(event.name)
   const [description, setDescription] = useState(event.description || '')
   const [link, setLink] = useState(event.link || '')
+  const [departureTime, setDepartureTime] = useState(event.departureTime || '')
+  const [returnTime, setReturnTime] = useState(event.returnTime || '')
+  const [scoutCount, setScoutCount] = useState(event.headcount?.scoutCount ?? 0)
+  const [adultCount, setAdultCount] = useState(event.headcount?.adultCount ?? 0)
+  const [guestCount, setGuestCount] = useState(event.headcount?.guestCount ?? 0)
   const [hike, setHike] = useState(event.hike || false)
   const [highAltitude, setHighAltitude] = useState(event.highAltitude || false)
   const [tentCamping, setTentCamping] = useState(event.tentCamping || false)
@@ -43,6 +48,11 @@ export function EditEventDialog({
     setName(event.name)
     setDescription(event.description || '')
     setLink(event.link || '')
+    setDepartureTime(event.departureTime || '')
+    setReturnTime(event.returnTime || '')
+    setScoutCount(event.headcount?.scoutCount ?? 0)
+    setAdultCount(event.headcount?.adultCount ?? 0)
+    setGuestCount(event.headcount?.guestCount ?? 0)
     setHike(event.hike || false)
     setHighAltitude(event.highAltitude || false)
     setTentCamping(event.tentCamping || false)
@@ -58,6 +68,13 @@ export function EditEventDialog({
       ...event,
       name,
       description,
+      departureTime: departureTime || undefined,
+      returnTime: returnTime || undefined,
+      headcount: {
+        scoutCount,
+        adultCount,
+        guestCount,
+      },
       hike: hike || undefined,
       link: link || undefined,
       tentCamping: tentCamping || undefined,
@@ -110,6 +127,61 @@ export function EditEventDialog({
               onChange={(e) => setLink(e.target.value)}
               placeholder="https://example.com"
             />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-departure-time">Departure Time</Label>
+              <Input
+                id="edit-departure-time"
+                type="time"
+                value={departureTime}
+                onChange={(e) => setDepartureTime(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-return-time">Return Time</Label>
+              <Input
+                id="edit-return-time"
+                type="time"
+                value={returnTime}
+                onChange={(e) => setReturnTime(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label>Expected Headcount</Label>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-headcount-scouts">Scouts</Label>
+                <Input
+                  id="edit-headcount-scouts"
+                  type="number"
+                  min={0}
+                  value={scoutCount}
+                  onChange={(e) => setScoutCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-headcount-adults">Adults</Label>
+                <Input
+                  id="edit-headcount-adults"
+                  type="number"
+                  min={0}
+                  value={adultCount}
+                  onChange={(e) => setAdultCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-headcount-guests">Guests</Label>
+                <Input
+                  id="edit-headcount-guests"
+                  type="number"
+                  min={0}
+                  value={guestCount}
+                  onChange={(e) => setGuestCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                />
+              </div>
+            </div>
           </div>
           <div className="grid gap-3">
             <Label>Trip Type</Label>
