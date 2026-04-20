@@ -5,9 +5,18 @@ import uuid
 from dataclasses import asdict
 
 from fastapi import APIRouter, HTTPException
+from fastapi import Query
 
 from app.audit import audit_create, audit_update
-from app.cosmosdb import get_all_by_troop, get_by_id, create_item, update_item, delete_item, query_items
+from app.cosmosdb import (
+    create_item,
+    delete_item,
+    get_all_by_troop,
+    get_by_id,
+    query_items,
+    query_items_paginated,
+    update_item,
+)
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
 from app.middleware.moderation import moderate_text_fields, can_view_moderated_content, ModerationField
@@ -21,9 +30,23 @@ EVENTS_CONTAINER = "events"
 
 
 @router.get("/feedback")
-async def list_feedback(auth: RequireTroopContext):
-    feedback = await get_all_by_troop(CONTAINER, auth.troopId)
-    return [f for f in feedback if can_view_moderated_content(auth.role, f.get("moderation"))]
+async def list_feedback(
+    auth: RequireTroopContext,
+    limit: int = Query(default=50, ge=1, le=100),
+    continuationToken: str | None = None,
+):
+    query = "SELECT * FROM c WHERE c.troopId = @troopId"
+    if auth.role != "troopAdmin":
+        query += ' AND (NOT IS_DEFINED(c.moderation.status) OR c.moderation.status = "approved")'
+
+    feedback, next_token = await query_items_paginated(
+        CONTAINER,
+        query,
+        [{"name": "@troopId", "value": auth.troopId}],
+        limit=limit,
+        continuation_token=continuationToken,
+    )
+    return {"items": feedback, "continuationToken": next_token}
 
 
 @router.post("/feedback", status_code=201)
@@ -53,7 +76,7 @@ async def update_feedback(feedback_id: str, body: UpdateFeedback, auth: RequireT
     if not existing:
         raise HTTPException(status_code=404, detail="Feedback not found")
     created_by = existing.get("createdBy")
-    created_by_user = created_by["userId"] if isinstance(created_by, dict) else ""
+    created_by_user = created_by.get("userId", "") if isinstance(created_by, dict) else ""
     if created_by_user != auth.userId and not check_permission(auth.role, "manageEvents"):
         forbidden("You can only edit your own feedback")
     moderation = await moderate_text_fields([

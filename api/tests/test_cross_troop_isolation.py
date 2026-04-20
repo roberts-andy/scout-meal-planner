@@ -40,37 +40,45 @@ def troop_a_context():
 
 @pytest.mark.asyncio
 async def test_list_endpoints_return_only_callers_troop_data(client, troop_a_context, monkeypatch):
-    async def fake_get_events(container_name: str, troop_id: str):
+    async def fake_list_events(container_name: str, query: str, parameters: list[dict], *, limit: int, continuation_token):
         assert container_name == "events"
-        assert troop_id == "troop-a"
-        return [{"id": "event-a", "troopId": "troop-a"}]
+        assert "c.troopId = @troopId" in query
+        assert {"name": "@troopId", "value": "troop-a"} in parameters
+        assert limit == 50
+        assert continuation_token is None
+        return [{"id": "event-a", "troopId": "troop-a"}], None
 
-    async def fake_get_recipes(container_name: str, troop_id: str):
+    async def fake_list_recipes(container_name: str, query: str, parameters: list[dict], *, limit: int, continuation_token):
         assert container_name == "recipes"
-        assert troop_id == "troop-a"
-        return [{"id": "recipe-a", "troopId": "troop-a"}]
+        assert "c.troopId = @troopId" in query
+        assert {"name": "@troopId", "value": "troop-a"} in parameters
+        assert limit == 50
+        assert continuation_token is None
+        return [{"id": "recipe-a", "troopId": "troop-a"}], None
 
-    async def fake_query_members(container_name: str, query: str, parameters: list[dict]):
+    async def fake_list_members(container_name: str, query: str, parameters: list[dict], *, limit: int, continuation_token):
         assert container_name == "members"
         assert "c.troopId = @troopId" in query
         assert {"name": "@troopId", "value": "troop-a"} in parameters
-        return [{"id": "member-a", "troopId": "troop-a"}]
+        assert limit == 50
+        assert continuation_token is None
+        return [{"id": "member-a", "troopId": "troop-a"}], None
 
-    monkeypatch.setattr(events, "get_all_by_troop", fake_get_events)
-    monkeypatch.setattr(recipes, "get_all_by_troop", fake_get_recipes)
-    monkeypatch.setattr(members, "query_items", fake_query_members)
+    monkeypatch.setattr(events, "query_items_paginated", fake_list_events)
+    monkeypatch.setattr(recipes, "query_items_paginated", fake_list_recipes)
+    monkeypatch.setattr(members, "query_items_paginated", fake_list_members)
 
     events_response = await client.get("/api/events")
     assert events_response.status_code == 200
-    assert events_response.json() == [{"id": "event-a", "troopId": "troop-a"}]
+    assert events_response.json() == {"items": [{"id": "event-a", "troopId": "troop-a"}], "continuationToken": None}
 
     members_response = await client.get("/api/members")
     assert members_response.status_code == 200
-    assert members_response.json() == [{"id": "member-a", "troopId": "troop-a"}]
+    assert members_response.json() == {"items": [{"id": "member-a", "troopId": "troop-a"}], "continuationToken": None}
 
     recipes_response = await client.get("/api/recipes")
     assert recipes_response.status_code == 200
-    assert recipes_response.json() == [{"id": "recipe-a", "troopId": "troop-a"}]
+    assert recipes_response.json() == {"items": [{"id": "recipe-a", "troopId": "troop-a"}], "continuationToken": None}
 
 
 @pytest.mark.asyncio

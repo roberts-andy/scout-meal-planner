@@ -5,8 +5,9 @@ import time
 import uuid
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi import Query
 
-from app.cosmosdb import query_items, create_item, update_item, delete_item
+from app.cosmosdb import query_items_paginated, query_items, create_item, update_item, delete_item
 from app.middleware.auth import RequireTroopContext, forbidden, get_troop_context
 from app.middleware.roles import check_permission
 from app.schemas import CreateMember, UpdateMember, UpdateTroopMemberStatus
@@ -41,14 +42,20 @@ def _to_first_name(display_name: str) -> str:
 
 
 @router.get("/members")
-async def list_members(auth: RequireTroopContext):
-    members = await query_items(
+async def list_members(
+    auth: RequireTroopContext,
+    limit: int = Query(default=50, ge=1, le=100),
+    continuationToken: str | None = None,
+):
+    members, next_token = await query_items_paginated(
         CONTAINER,
         "SELECT * FROM c WHERE c.troopId = @troopId",
         [{"name": "@troopId", "value": auth.troopId}],
+        limit=limit,
+        continuation_token=continuationToken,
     )
     if not check_permission(auth.role, "manageMembers"):
-        return [
+        redacted_members = [
             {
                 "id": member.get("id"),
                 "displayName": member.get("displayName"),
@@ -57,7 +64,8 @@ async def list_members(auth: RequireTroopContext):
             }
             for member in members
         ]
-    return members
+        return {"items": redacted_members, "continuationToken": next_token}
+    return {"items": members, "continuationToken": next_token}
 
 
 @router.post("/members", status_code=201)

@@ -4,9 +4,10 @@ import logging
 import uuid
 
 from fastapi import APIRouter, HTTPException
+from fastapi import Query
 
 from app.audit import audit_create, audit_update
-from app.cosmosdb import get_all_by_troop, get_by_id, create_item, update_item, delete_item
+from app.cosmosdb import create_item, delete_item, get_all_by_troop, get_by_id, query_items_paginated, update_item
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
 from app.middleware.moderation import moderate_text_fields, can_view_moderated_content, ModerationField
@@ -29,9 +30,23 @@ def _recipe_moderation_fields(data: CreateRecipe | UpdateRecipe) -> list[Moderat
 
 
 @router.get("/recipes")
-async def list_recipes(auth: RequireTroopContext):
-    recipes = await get_all_by_troop(CONTAINER, auth.troopId)
-    return [r for r in recipes if can_view_moderated_content(auth.role, r.get("moderation"))]
+async def list_recipes(
+    auth: RequireTroopContext,
+    limit: int = Query(default=50, ge=1, le=100),
+    continuationToken: str | None = None,
+):
+    query = "SELECT * FROM c WHERE c.troopId = @troopId"
+    if auth.role != "troopAdmin":
+        query += ' AND (NOT IS_DEFINED(c.moderation.status) OR c.moderation.status = "approved")'
+
+    recipes, next_token = await query_items_paginated(
+        CONTAINER,
+        query,
+        [{"name": "@troopId", "value": auth.troopId}],
+        limit=limit,
+        continuation_token=continuationToken,
+    )
+    return {"items": recipes, "continuationToken": next_token}
 
 
 @router.get("/recipes/{recipe_id}")

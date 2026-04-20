@@ -28,14 +28,26 @@ beforeEach(() => {
 // ── Events API ──
 
 describe('eventsApi', () => {
-  it('getAll fetches /events', async () => {
-    const events = [{ id: '1', name: 'Camp' }]
-    mockFetch.mockResolvedValueOnce(jsonResponse(events))
-    const result = await eventsApi.getAll()
-    expect(result).toEqual(events)
-    expect(mockFetch).toHaveBeenCalledWith('/api/events', expect.objectContaining({
+  it('getPage fetches /events with pagination params', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ items: [], continuationToken: null }))
+    const result = await eventsApi.getPage({ limit: 25, continuationToken: 'abc' })
+    expect(result).toEqual({ items: [], continuationToken: null })
+    expect(mockFetch).toHaveBeenCalledWith('/api/events?limit=25&continuationToken=abc', expect.objectContaining({
       headers: { 'Content-Type': 'application/json' },
     }))
+  })
+
+  it('getAll fetches paginated /events until completion', async () => {
+    const events = [{ id: '1', name: 'Camp' }]
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({ items: events, continuationToken: 'next' }))
+      .mockResolvedValueOnce(jsonResponse({ items: [{ id: '2', name: 'Hike' }], continuationToken: null }))
+    const result = await eventsApi.getAll()
+    expect(result).toEqual([{ id: '1', name: 'Camp' }, { id: '2', name: 'Hike' }])
+    expect(mockFetch).toHaveBeenNthCalledWith(1, '/api/events?limit=50', expect.objectContaining({
+      headers: { 'Content-Type': 'application/json' },
+    }))
+    expect(mockFetch).toHaveBeenNthCalledWith(2, '/api/events?limit=50&continuationToken=next', expect.anything())
   })
 
   it('getById fetches /events/{id}', async () => {
@@ -143,10 +155,19 @@ describe('eventsApi', () => {
 // ── Recipes API ──
 
 describe('recipesApi', () => {
-  it('getAll fetches /recipes', async () => {
-    mockFetch.mockResolvedValueOnce(jsonResponse([]))
+  it('getPage fetches /recipes with pagination params', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ items: [], continuationToken: null }))
+    const result = await recipesApi.getPage({ limit: 10, continuationToken: 'next' })
+    expect(result).toEqual({ items: [], continuationToken: null })
+    expect(mockFetch).toHaveBeenCalledWith('/api/recipes?limit=10&continuationToken=next', expect.anything())
+  })
+
+  it('getAll fetches paginated /recipes', async () => {
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({ items: [{ id: 'r1' }], continuationToken: 'next' }))
+      .mockResolvedValueOnce(jsonResponse({ items: [{ id: 'r2' }], continuationToken: null }))
     const result = await recipesApi.getAll()
-    expect(result).toEqual([])
+    expect(result).toEqual([{ id: 'r1' }, { id: 'r2' }])
   })
 
   it('create posts to /recipes', async () => {
@@ -170,6 +191,16 @@ describe('recipesApi', () => {
 // ── Feedback API ──
 
 describe('feedbackApi', () => {
+  it('getAll fetches paginated /feedback', async () => {
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({ items: [{ id: 'f1' }], continuationToken: 'next' }))
+      .mockResolvedValueOnce(jsonResponse({ items: [{ id: 'f2' }], continuationToken: null }))
+    const result = await feedbackApi.getAll()
+    expect(result).toEqual([{ id: 'f1' }, { id: 'f2' }])
+    expect(mockFetch).toHaveBeenNthCalledWith(1, '/api/feedback?limit=50', expect.anything())
+    expect(mockFetch).toHaveBeenNthCalledWith(2, '/api/feedback?limit=50&continuationToken=next', expect.anything())
+  })
+
   it('getByEvent fetches /feedback/event/{eventId}', async () => {
     mockFetch.mockResolvedValueOnce(jsonResponse([]))
     const result = await feedbackApi.getByEvent('ev-1')
@@ -195,6 +226,16 @@ describe('feedbackApi', () => {
 })
 
 describe('membersApi', () => {
+  it('getAll fetches paginated /members', async () => {
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({ items: [{ id: 'm1' }], continuationToken: 'next' }))
+      .mockResolvedValueOnce(jsonResponse({ items: [{ id: 'm2' }], continuationToken: null }))
+    const result = await membersApi.getAll()
+    expect(result).toEqual([{ id: 'm1' }, { id: 'm2' }])
+    expect(mockFetch).toHaveBeenNthCalledWith(1, '/api/members?limit=50', expect.anything())
+    expect(mockFetch).toHaveBeenNthCalledWith(2, '/api/members?limit=50&continuationToken=next', expect.anything())
+  })
+
   it('create posts to /members', async () => {
     const member = { displayName: 'New Member', email: 'new@example.com', role: 'scout' }
     mockFetch.mockResolvedValueOnce(jsonResponse({ id: 'm1', ...member }, 201))

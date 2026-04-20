@@ -5,7 +5,7 @@ import React from 'react'
 
 vi.mock('@/lib/api', () => ({
   eventsApi: {
-    getAll: vi.fn(),
+    getPage: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
@@ -26,19 +26,29 @@ beforeEach(() => {
 })
 
 describe('useEvents', () => {
-  it('fetches events via eventsApi.getAll', async () => {
+  it('fetches first page and can fetch next page on demand', async () => {
     const events = [{ id: 'e1', name: 'Camp' } as any]
-    vi.mocked(eventsApi.getAll).mockResolvedValueOnce(events)
+    vi.mocked(eventsApi.getPage)
+      .mockResolvedValueOnce({ items: events, continuationToken: 'token-1' })
+      .mockResolvedValueOnce({ items: [{ id: 'e2', name: 'Hike' } as any], continuationToken: null })
     const { result } = renderHook(() => useEvents(), { wrapper: wrapper() })
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data).toEqual(events)
+    await waitFor(() => expect(result.current.data).toEqual([{ id: 'e1', name: 'Camp' }]))
+    expect(eventsApi.getPage).toHaveBeenNthCalledWith(1, { continuationToken: undefined })
+
+    await result.current.fetchNextPage()
+
+    await waitFor(() => expect(result.current.data).toEqual([
+      { id: 'e1', name: 'Camp' },
+      { id: 'e2', name: 'Hike' },
+    ]))
+    expect(eventsApi.getPage).toHaveBeenNthCalledWith(2, { continuationToken: 'token-1' })
   })
 })
 
 describe('useCreateEvent', () => {
-  it('appends created event to cache', async () => {
+  it('calls eventsApi.create', async () => {
     const created = { id: 'e2', name: 'New' } as any
-    vi.mocked(eventsApi.getAll).mockResolvedValueOnce([{ id: 'e1' } as any])
+    vi.mocked(eventsApi.getPage).mockResolvedValue({ items: [{ id: 'e1' } as any], continuationToken: null })
     vi.mocked(eventsApi.create).mockResolvedValueOnce(created)
 
     const Wrapper = wrapper()

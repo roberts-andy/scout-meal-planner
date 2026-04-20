@@ -10,6 +10,12 @@ import type {
 } from './types'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
+const DEFAULT_PAGE_SIZE = 50
+
+export interface PaginatedResponse<T> {
+  items: T[]
+  continuationToken: string | null
+}
 
 /** Token provider — set by AuthProvider at startup */
 let _getAccessToken: (() => Promise<string>) | null = null
@@ -70,9 +76,45 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json()
 }
 
+function buildPaginationPath(path: string, params?: { limit?: number; continuationToken?: string }) {
+  const search = new URLSearchParams()
+  if (params?.limit != null) {
+    search.set('limit', String(params.limit))
+  }
+  if (params?.continuationToken) {
+    search.set('continuationToken', params.continuationToken)
+  }
+  const query = search.toString()
+  return query.length > 0 ? `${path}?${query}` : path
+}
+
+function withDefaultPagination(params?: { limit?: number; continuationToken?: string }) {
+  return {
+    limit: params?.limit ?? DEFAULT_PAGE_SIZE,
+    ...(params?.continuationToken ? { continuationToken: params.continuationToken } : {}),
+  }
+}
+
+async function getAllPages<T>(
+  fetchPage: (continuationToken?: string) => Promise<PaginatedResponse<T>>,
+): Promise<T[]> {
+  let continuationToken: string | undefined
+  const items: T[] = []
+
+  do {
+    const page = await fetchPage(continuationToken)
+    items.push(...page.items)
+    continuationToken = page.continuationToken ?? undefined
+  } while (continuationToken)
+
+  return items
+}
+
 // Events
 export const eventsApi = {
-  getAll: () => request<Event[]>('/events'),
+  getPage: (params?: { limit?: number; continuationToken?: string }) =>
+    request<PaginatedResponse<Event>>(buildPaginationPath('/events', withDefaultPagination(params))),
+  getAll: () => getAllPages<Event>((continuationToken) => eventsApi.getPage({ limit: DEFAULT_PAGE_SIZE, continuationToken })),
   getById: (id: string) => request<Event>(`/events/${id}`),
   create: (event: Event) =>
     request<Event>('/events', { method: 'POST', body: JSON.stringify(event) }),
@@ -111,7 +153,9 @@ export const eventsApi = {
 
 // Recipes
 export const recipesApi = {
-  getAll: () => request<Recipe[]>('/recipes'),
+  getPage: (params?: { limit?: number; continuationToken?: string }) =>
+    request<PaginatedResponse<Recipe>>(buildPaginationPath('/recipes', withDefaultPagination(params))),
+  getAll: () => getAllPages<Recipe>((continuationToken) => recipesApi.getPage({ limit: DEFAULT_PAGE_SIZE, continuationToken })),
   getById: (id: string) => request<Recipe>(`/recipes/${id}`),
   create: (recipe: Recipe) =>
     request<Recipe>('/recipes', { method: 'POST', body: JSON.stringify(recipe) }),
@@ -123,7 +167,9 @@ export const recipesApi = {
 
 // Feedback
 export const feedbackApi = {
-  getAll: () => request<MealFeedback[]>('/feedback'),
+  getPage: (params?: { limit?: number; continuationToken?: string }) =>
+    request<PaginatedResponse<MealFeedback>>(buildPaginationPath('/feedback', withDefaultPagination(params))),
+  getAll: () => getAllPages<MealFeedback>((continuationToken) => feedbackApi.getPage({ limit: DEFAULT_PAGE_SIZE, continuationToken })),
   getByEvent: (eventId: string) =>
     request<MealFeedback[]>(`/feedback/event/${eventId}`),
   getByRecipe: (recipeId: string) =>
@@ -149,7 +195,9 @@ export const troopsApi = {
 
 // Members
 export const membersApi = {
-  getAll: () => request<TroopMember[]>('/members'),
+  getPage: (params?: { limit?: number; continuationToken?: string }) =>
+    request<PaginatedResponse<TroopMember>>(buildPaginationPath('/members', withDefaultPagination(params))),
+  getAll: () => getAllPages<TroopMember>((continuationToken) => membersApi.getPage({ limit: DEFAULT_PAGE_SIZE, continuationToken })),
   getMe: () => request<{ troopId: string; userId: string; role: string }>('/members/me'),
   create: (member: { displayName: string; email: string; role: string }) =>
     request<TroopMember>('/members', { method: 'POST', body: JSON.stringify(member) }),

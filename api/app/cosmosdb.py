@@ -246,3 +246,29 @@ async def query_items(container_name: str, query: str, parameters: list[dict] | 
     async for item in container.query_items(query=query, parameters=parameters or []):
         items.append(item)
     return items
+
+
+async def query_items_paginated(
+    container_name: str,
+    query: str,
+    parameters: list[dict] | None = None,
+    limit: int = 50,
+    continuation_token: str | None = None,
+) -> tuple[list[dict], str | None]:
+    container = _get_container(container_name)
+    pager = container.query_items(
+        query=query,
+        parameters=parameters or [],
+        max_item_count=limit,
+    ).by_page(continuation_token=continuation_token)
+
+    items: list[dict] = []
+    next_token: str | None = None
+
+    async for page in pager:
+        async for item in page:
+            items.append(item)
+        next_token = pager.continuation_token
+        break
+
+    return items, next_token
