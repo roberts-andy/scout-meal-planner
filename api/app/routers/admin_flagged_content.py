@@ -92,9 +92,10 @@ async def list_flagged_content(auth: RequireTroopContext):
 
     recipes, feedback = await get_all_by_troop(RECIPES_CONTAINER, auth.troopId), await get_all_by_troop(FEEDBACK_CONTAINER, auth.troopId)
 
+    reviewable_statuses = {"flagged", "pending"}
     flagged = [
-        *[_to_flagged_list_item("recipe", r) for r in recipes if (r.get("moderation") or {}).get("status") == "flagged"],
-        *[_to_flagged_list_item("feedback", f) for f in feedback if (f.get("moderation") or {}).get("status") == "flagged"],
+        *[_to_flagged_list_item("recipe", r) for r in recipes if (r.get("moderation") or {}).get("status") in reviewable_statuses],
+        *[_to_flagged_list_item("feedback", f) for f in feedback if (f.get("moderation") or {}).get("status") in reviewable_statuses],
     ]
     flagged.sort(key=lambda x: x["flaggedAt"], reverse=True)
 
