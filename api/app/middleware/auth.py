@@ -37,7 +37,7 @@ def _get_jwks_cache_ttl_seconds() -> int:
 JWKS_CACHE_TTL_SECONDS = _get_jwks_cache_ttl_seconds()
 
 _jwks: dict | None = None
-_jwks_fetched_at: float = 0
+_jwks_fetched_at: float = 0.0
 _JWKS_HTTP_TIMEOUT_SECONDS = 10
 _jwks_lock = asyncio.Lock()
 
