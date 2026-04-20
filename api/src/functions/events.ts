@@ -72,9 +72,9 @@ async function eventsHandler(req: HttpRequest, context: InvocationContext): Prom
           { name: '@troopId', value: auth.troopId },
         ]
       )
-      for (const feedback of feedbackRecords) {
-        await remove(FEEDBACK_CONTAINER, feedback.id, auth.troopId)
-      }
+      await Promise.all(
+        feedbackRecords.map((feedback) => remove(FEEDBACK_CONTAINER, feedback.id, auth.troopId))
+      )
       await remove(CONTAINER, id, auth.troopId)
       return { status: 204 }
     }
