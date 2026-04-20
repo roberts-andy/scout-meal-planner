@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 import time
 
-from fastapi import APIRouter
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException
+from azure.cosmos.exceptions import CosmosHttpResponseError
 
 from app.cosmosdb import get_by_id, update_item
 from app.middleware.auth import RequireTroopContext, forbidden
@@ -14,7 +13,7 @@ from app.schemas import TogglePurchasedItem
 router = APIRouter()
 
 CONTAINER = "events"
-MAX_CONCURRENCY_RETRIES = 20
+MAX_RETRY_ATTEMPTS = 3
 
 
 @router.patch("/events/{event_id}/purchased")
@@ -22,10 +21,10 @@ async def toggle_purchased(event_id: str, body: TogglePurchasedItem, auth: Requi
     if not check_permission(auth.role, "viewContent"):
         forbidden()
 
-    for attempt in range(MAX_CONCURRENCY_RETRIES):
+    for _ in range(MAX_RETRY_ATTEMPTS):
         existing = await get_by_id(CONTAINER, event_id, auth.troopId)
         if not existing:
-            return JSONResponse({"error": "Event not found"}, status_code=404)
+            raise HTTPException(status_code=404, detail="Event not found")
 
         purchased_items = set(existing.get("purchasedItems") or [])
         if body.purchased:
@@ -34,7 +33,7 @@ async def toggle_purchased(event_id: str, body: TogglePurchasedItem, auth: Requi
             purchased_items.discard(body.item)
 
         try:
-            updated = await update_item(
+            return await update_item(
                 CONTAINER,
                 event_id,
                 {
@@ -46,11 +45,14 @@ async def toggle_purchased(event_id: str, body: TogglePurchasedItem, auth: Requi
                     "updatedBy": {"userId": auth.userId, "displayName": auth.displayName},
                 },
                 auth.troopId,
+                if_match=existing.get("_etag"),
             )
-            return updated
-        except Exception as exc:
-            if getattr(exc, "status_code", None) not in (409, 412):
-                raise
-            if attempt == MAX_CONCURRENCY_RETRIES - 1:
-                return JSONResponse({"error": "Conflict updating event, please retry"}, status_code=409)
-            await asyncio.sleep(0)
+        except CosmosHttpResponseError as exc:
+            if exc.status_code == 412:
+                continue
+            raise
+
+    raise HTTPException(
+        status_code=409,
+        detail="Failed to update purchased items after retries due to concurrent modifications",
+    )
