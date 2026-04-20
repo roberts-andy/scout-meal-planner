@@ -69,3 +69,17 @@ def test_event_headcount_rejects_negative_values():
             days=[],
             headcount={"scoutCount": -1, "adultCount": 0, "guestCount": 0},
         )
+
+
+def test_event_times_validate_hh_mm_format():
+    with pytest.raises(ValidationError):
+        CreateEvent(
+            name="Campout",
+            startDate="2026-07-01",
+            endDate="2026-07-02",
+            days=[],
+            departureTime="8am",
+        )
+
+    with pytest.raises(ValidationError):
+        UpdateEvent(returnTime="25:00")
