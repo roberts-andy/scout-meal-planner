@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from dataclasses import asdict
 
 from fastapi import APIRouter, HTTPException
 
@@ -38,7 +39,7 @@ async def create_feedback(body: CreateFeedback, auth: RequireTroopContext):
         "id": str(uuid.uuid4()),
         "troopId": auth.troopId,
         **body.model_dump(),
-        "moderation": moderation.__dict__,
+        "moderation": asdict(moderation),
         **audit_create(auth),
     })
     return feedback
@@ -65,7 +66,7 @@ async def update_feedback(feedback_id: str, body: UpdateFeedback, auth: RequireT
         **body.model_dump(),
         "id": feedback_id,
         "troopId": auth.troopId,
-        "moderation": moderation.__dict__,
+        "moderation": asdict(moderation),
         **audit_update(auth),
     }, auth.troopId)
     return feedback
