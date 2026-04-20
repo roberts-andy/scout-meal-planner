@@ -29,6 +29,7 @@ _connection_string = os.environ.get("COSMOS_CONNECTION_STRING")
 _database_id = os.environ.get("COSMOS_DATABASE", "scout-meal-planner")
 
 _client: CosmosClient | None = None
+_health_check_client: CosmosClient | None = None
 _database: DatabaseProxy | None = None
 _containers: dict[str, ContainerProxy] = {}
 _initialized = False
@@ -57,8 +58,8 @@ _SEED_MEMBERS = [
         "id": "00000000-0000-0000-0000-00000000000A",
         "troopId": "00000000-0000-0000-0000-000000000001",
         "userId": "",
-        "email": "roberts_andy@hotmail.com",
-        "displayName": "Andy Roberts",
+        "email": "admin@example.com",
+        "displayName": "Seed Admin",
         "role": "troopAdmin",
         "status": "active",
         "joinedAt": int(time.time() * 1000),
@@ -115,6 +116,67 @@ async def init_database() -> None:
 
     await _seed_database()
     _initialized = True
+
+
+async def check_database_connection() -> None:
+    """Perform a read-only Cosmos DB connectivity check.
+
+    Prefer existing initialized handles first (_database, then _client) and
+    only fall back to a cached lightweight client when initialization has not
+    completed. The dedicated fallback client avoids triggering full init_database()
+    side effects during health probes. Raises when configuration is missing or
+    the database cannot be read.
+    """
+    global _health_check_client
+
+    if _database is not None:
+        await _database.read()
+        return
+
+    if _client is not None:
+        database = _client.get_database_client(_database_id)
+        await database.read()
+        return
+
+    if not _endpoint and not _connection_string:
+        raise RuntimeError("Cosmos DB configuration missing: set COSMOS_ENDPOINT or COSMOS_CONNECTION_STRING")
+
+    if _health_check_client is None:
+        if _endpoint:
+            _health_check_client = CosmosClient(
+                _endpoint,
+                credential=DefaultAzureCredential(),
+                transport=_SafeAioHttpTransport(),
+            )
+        else:
+            _health_check_client = CosmosClient.from_connection_string(
+                _connection_string,
+                transport=_SafeAioHttpTransport(),
+            )
+
+    database = _health_check_client.get_database_client(_database_id)
+    await database.read()
+
+
+async def close_database_clients() -> None:
+    global _client, _health_check_client, _database, _initialized
+
+    clients_to_close: list[CosmosClient] = []
+
+    if _client is not None:
+        clients_to_close.append(_client)
+        _client = None
+
+    if _health_check_client is not None and _health_check_client not in clients_to_close:
+        clients_to_close.append(_health_check_client)
+    _health_check_client = None
+
+    _database = None
+    _containers.clear()
+    _initialized = False
+
+    for client in clients_to_close:
+        await client.close()
 
 
 def _get_container(name: str) -> ContainerProxy:
