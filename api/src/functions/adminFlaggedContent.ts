@@ -8,6 +8,7 @@ const RECIPES_CONTAINER = 'recipes'
 const FEEDBACK_CONTAINER = 'feedback'
 
 type ContentType = 'recipe' | 'feedback'
+type ReviewQueueStatus = 'flagged' | 'pending'
 
 interface ModeratedItem {
   id: string
@@ -65,6 +66,11 @@ function toFlaggedListItem(contentType: ContentType, item: ModeratedItem) {
   }
 }
 
+function shouldIncludeInReviewQueue(item: ModeratedItem): boolean {
+  const status = item.moderation?.status as ReviewQueueStatus | undefined
+  return status === 'flagged' || status === 'pending'
+}
+
 function parseReviewTarget(idParam: string): { contentType: ContentType; contentId: string } | null {
   const [type, ...rest] = idParam.split(':')
   if ((type === 'recipe' || type === 'feedback') && rest.length > 0) {
@@ -115,14 +121,14 @@ async function adminFlaggedContentHandler(req: HttpRequest, context: InvocationC
 
       const flagged = [
         ...recipes
-          .filter((item) => item.moderation?.status === 'flagged')
+          .filter(shouldIncludeInReviewQueue)
           .map((item) => toFlaggedListItem('recipe', item)),
         ...feedback
-          .filter((item) => item.moderation?.status === 'flagged')
+          .filter(shouldIncludeInReviewQueue)
           .map((item) => toFlaggedListItem('feedback', item)),
       ].sort((a, b) => b.flaggedAt - a.flaggedAt)
 
-      return { jsonBody: flagged }
+      return { status: 200, jsonBody: flagged }
     }
 
     if (method === 'PUT' && id) {

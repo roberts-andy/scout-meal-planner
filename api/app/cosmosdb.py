@@ -38,6 +38,7 @@ _CONTAINER_DEFINITIONS = [
     {"id": "troops", "partition_key": "/id"},
     {"id": "members", "partition_key": "/troopId"},
     {"id": "events", "partition_key": "/troopId"},
+    {"id": "share-tokens", "partition_key": "/shareToken"},
     {"id": "recipes", "partition_key": "/troopId"},
     {"id": "feedback", "partition_key": "/troopId"},
 ]
