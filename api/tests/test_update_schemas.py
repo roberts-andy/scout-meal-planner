@@ -72,6 +72,7 @@ def test_event_headcount_rejects_negative_values():
 
 
 
+
 def test_event_times_validate_hh_mm_format():
     with pytest.raises(ValidationError):
         CreateEvent(
