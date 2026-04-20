@@ -4,7 +4,7 @@ import logging
 import time
 import uuid
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from app.cosmosdb import query_items, create_item, update_item, delete_item
@@ -76,7 +76,6 @@ async def create_member(body: CreateMember, auth: RequireTroopContext):
             ],
         )
         if existing:
-            from fastapi import HTTPException
             raise HTTPException(status_code=409, detail="Member with this email already exists")
 
     base = {
@@ -118,7 +117,6 @@ async def update_member(member_id: str, body: UpdateMember, auth: RequireTroopCo
         ],
     )
     if not members:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Member not found")
 
     member = members[0]
@@ -130,7 +128,6 @@ async def update_member(member_id: str, body: UpdateMember, auth: RequireTroopCo
             [{"name": "@troopId", "value": auth.troopId}],
         )
         if len(admins) <= 1:
-            from fastapi import HTTPException
             raise HTTPException(status_code=400, detail="Cannot remove the last troop admin")
 
     updated = {
@@ -157,7 +154,6 @@ async def delete_member(member_id: str, auth: RequireTroopContext):
         ],
     )
     if not members:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Member not found")
 
     await delete_item(CONTAINER, member_id, auth.troopId)
@@ -185,7 +181,6 @@ async def delete_member_data(member_id: str, auth: RequireTroopContext):
         ],
     )
     if not members:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Member not found")
 
     member = members[0]
@@ -265,7 +260,6 @@ async def update_troop_member_status(troop_id: str, member_id: str, body: Update
         ],
     )
     if not members:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Member not found")
 
     member = members[0]
@@ -277,7 +271,6 @@ async def update_troop_member_status(troop_id: str, member_id: str, body: Update
             [{"name": "@troopId", "value": troop_id}],
         )
         if len(admins) <= 1:
-            from fastapi import HTTPException
             raise HTTPException(status_code=400, detail="Cannot remove the last troop admin")
 
     updated = {**member, "status": body.status.value}
