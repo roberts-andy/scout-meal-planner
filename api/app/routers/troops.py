@@ -6,7 +6,7 @@ import secrets
 import time
 import uuid
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 from app.cosmosdb import get_by_id, create_item, update_item, query_items, delete_item
@@ -71,7 +71,7 @@ async def update_troop(body: UpdateTroop, auth: RequireTroopContext):
         forbidden()
     existing = await get_by_id(CONTAINER, auth.troopId)
     if not existing:
-        return Response(status_code=404)
+        return JSONResponse({"error": "Troop not found"}, status_code=404)
 
     updated = {**existing, **body.model_dump(), "id": auth.troopId, "updatedAt": int(time.time() * 1000)}
     result = await update_item(CONTAINER, auth.troopId, updated)
@@ -80,6 +80,7 @@ async def update_troop(body: UpdateTroop, auth: RequireTroopContext):
 
 @router.delete("/troops", status_code=204)
 async def delete_troop(auth: RequireTroopContext):
+    """Delete the troop and cascade-delete troop-scoped records."""
     if not check_permission(auth.role, "manageTroop"):
         forbidden()
 

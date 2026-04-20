@@ -6,11 +6,11 @@ from app.middleware.auth import TroopContext
 from app.routers import members, troops
 
 
-def _contains_value(payload, value: str) -> bool:
+def _deeply_contains_value(payload, value: str) -> bool:
     if isinstance(payload, dict):
-        return any(_contains_value(v, value) for v in payload.values())
+        return any(_deeply_contains_value(v, value) for v in payload.values())
     if isinstance(payload, list):
-        return any(_contains_value(v, value) for v in payload)
+        return any(_deeply_contains_value(v, value) for v in payload)
     if isinstance(payload, str):
         return value in payload
     return payload == value
@@ -92,8 +92,8 @@ async def test_member_data_deletion_anonymizes_records_and_scrubs_pii(monkeypatc
     assert event["updatedBy"] == members.DELETED_MEMBER_AUDIT
 
     for payload in [feedback, event]:
-        assert not _contains_value(payload, removed_user_id)
-        assert not _contains_value(payload, removed_email)
+        assert not _deeply_contains_value(payload, removed_user_id)
+        assert not _deeply_contains_value(payload, removed_email)
 
     assert deleted_members == [("members", removed_member_id, auth.troopId)]
 
