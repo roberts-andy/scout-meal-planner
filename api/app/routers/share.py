@@ -27,6 +27,15 @@ def _get_share_url(request: Request, token: str) -> str:
     return f"{base}/share/{token}"
 
 
+async def _delete_share_token_index(token: str) -> None:
+    try:
+        await delete_item(SHARE_TOKENS_CONTAINER, token, token)
+    except Exception as exc:
+        if getattr(exc, "status_code", None) == 404:
+            return
+        raise
+
+
 @router.get("/events/{event_id}/share")
 async def get_event_share(event_id: str, request: Request, auth: RequireTroopContext):
     if not check_permission(auth.role, "manageEvents"):
@@ -73,7 +82,7 @@ async def create_event_share(event_id: str, request: Request, auth: RequireTroop
         }, auth.troopId)
     except Exception:
         try:
-            await delete_item(SHARE_TOKENS_CONTAINER, share_token, share_token)
+            await _delete_share_token_index(share_token)
         except Exception:
             logger.warning(
                 "Failed to rollback share token index after event update error (event_id=%s, share_token=%s)",
@@ -85,9 +94,7 @@ async def create_event_share(event_id: str, request: Request, auth: RequireTroop
 
     if previous_share_token and previous_share_token != share_token:
         try:
-            existing_index = await get_by_id(SHARE_TOKENS_CONTAINER, previous_share_token, previous_share_token)
-            if existing_index:
-                await delete_item(SHARE_TOKENS_CONTAINER, previous_share_token, previous_share_token)
+            await _delete_share_token_index(previous_share_token)
         except Exception:
             logger.warning(
                 "Failed to delete previous share token index (event_id=%s, share_token=%s)",
@@ -121,9 +128,7 @@ async def delete_event_share(event_id: str, auth: RequireTroopContext):
     token = existing.get("shareToken")
     if token:
         try:
-            token_mapping = await get_by_id(SHARE_TOKENS_CONTAINER, token, token)
-            if token_mapping:
-                await delete_item(SHARE_TOKENS_CONTAINER, token, token)
+            await _delete_share_token_index(token)
         except Exception:
             logger.warning(
                 "Failed to delete share token index while revoking link (event_id=%s, share_token=%s)",
@@ -141,11 +146,11 @@ async def get_shared_event(token: str):
 
     event = await get_by_id(EVENTS_CONTAINER, token_mapping["eventId"], token_mapping["troopId"])
     if not event:
-        await delete_item(SHARE_TOKENS_CONTAINER, token, token)
+        await _delete_share_token_index(token)
         raise HTTPException(status_code=404, detail="Shared event not found")
 
     if event.get("shareToken") != token:
-        await delete_item(SHARE_TOKENS_CONTAINER, token, token)
+        await _delete_share_token_index(token)
         raise HTTPException(status_code=404, detail="Shared event not found")
 
     all_recipes = await get_all_by_troop(RECIPES_CONTAINER, event["troopId"])
