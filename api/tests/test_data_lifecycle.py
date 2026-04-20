@@ -11,6 +11,8 @@ def _contains_value(payload, value: str) -> bool:
         return any(_contains_value(v, value) for v in payload.values())
     if isinstance(payload, list):
         return any(_contains_value(v, value) for v in payload)
+    if isinstance(payload, str):
+        return value in payload
     return payload == value
 
 
