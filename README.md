@@ -245,7 +245,7 @@ All endpoints are served under `/api` and proxied through SWA to the Function Ap
 | GET | `/api/feedback/event/{eventId}` | Get feedback for an event |
 | POST | `/api/feedback` | Create feedback |
 | PUT | `/api/feedback/{id}` | Update feedback |
-| DELETE | `/api/feedback/{id}?eventId={eid}` | Delete feedback (requires eventId for partition key) |
+| DELETE | `/api/feedback/{id}` | Delete feedback |
 
 ## Data Model
 

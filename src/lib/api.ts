@@ -117,8 +117,8 @@ export const feedbackApi = {
     request<MealFeedback>('/feedback', { method: 'POST', body: JSON.stringify(feedback) }),
   update: (feedback: MealFeedback) =>
     request<MealFeedback>(`/feedback/${feedback.id}`, { method: 'PUT', body: JSON.stringify(feedback) }),
-  delete: (id: string, eventId: string) =>
-    request<void>(`/feedback/${id}?eventId=${encodeURIComponent(eventId)}`, { method: 'DELETE' }),
+  delete: (id: string) =>
+    request<void>(`/feedback/${id}`, { method: 'DELETE' }),
 }
 
 // Troops
