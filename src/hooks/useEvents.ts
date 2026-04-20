@@ -1,20 +1,36 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { eventsApi } from '@/lib/api'
 import { Event } from '@/lib/types'
 
+const PAGE_SIZE = 50
+
 export function useEvents() {
-  return useQuery({
+  const query = useInfiniteQuery({
     queryKey: ['events'],
-    queryFn: eventsApi.getAll,
+    queryFn: ({ pageParam }) => eventsApi.getPage({ limit: PAGE_SIZE, continuationToken: pageParam ?? undefined }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.continuationToken ?? undefined,
   })
+
+  useEffect(() => {
+    if (query.hasNextPage && !query.isFetchingNextPage) {
+      void query.fetchNextPage()
+    }
+  }, [query.hasNextPage, query.isFetchingNextPage, query.fetchNextPage])
+
+  return {
+    ...query,
+    data: query.data?.pages.flatMap((page) => page.items) ?? [],
+  }
 }
 
 export function useCreateEvent() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (event: Event) => eventsApi.create(event),
-    onSuccess: (newEvent) => {
-      queryClient.setQueryData<Event[]>(['events'], (old) => [...(old || []), newEvent])
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] })
     },
   })
 }
@@ -23,10 +39,8 @@ export function useUpdateEvent() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (event: Event) => eventsApi.update(event),
-    onSuccess: (updated) => {
-      queryClient.setQueryData<Event[]>(['events'], (old) =>
-        (old || []).map((e) => (e.id === updated.id ? updated : e))
-      )
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] })
     },
   })
 }
@@ -35,10 +49,8 @@ export function useDeleteEvent() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => eventsApi.delete(id),
-    onSuccess: (_data, id) => {
-      queryClient.setQueryData<Event[]>(['events'], (old) =>
-        (old || []).filter((e) => e.id !== id)
-      )
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] })
     },
   })
 }

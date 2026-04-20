@@ -4,10 +4,10 @@ import logging
 import time
 import uuid
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
 
-from app.cosmosdb import query_items, create_item, update_item, delete_item
+from app.cosmosdb import query_items_paginated, query_items, create_item, update_item, delete_item
 from app.middleware.auth import RequireTroopContext, forbidden, get_troop_context
 from app.middleware.roles import check_permission
 from app.schemas import CreateMember, UpdateMember, UpdateTroopMemberStatus
@@ -42,13 +42,19 @@ def _to_first_name(display_name: str) -> str:
 
 
 @router.get("/members")
-async def list_members(auth: RequireTroopContext):
-    members = await query_items(
+async def list_members(
+    auth: RequireTroopContext,
+    limit: int = Query(default=50, ge=1, le=100),
+    continuationToken: str | None = None,
+):
+    members, next_token = await query_items_paginated(
         CONTAINER,
         "SELECT * FROM c WHERE c.troopId = @troopId",
         [{"name": "@troopId", "value": auth.troopId}],
+        limit=limit,
+        continuation_token=continuationToken,
     )
-    return members
+    return {"items": members, "continuationToken": next_token}
 
 
 @router.post("/members", status_code=201)
