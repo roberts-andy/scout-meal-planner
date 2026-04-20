@@ -24,8 +24,9 @@ export default function App() {
       return () => {
         setUnauthorizedHandler(null)
       }
+    } else {
+      setUnauthorizedHandler(null)
     }
-    setUnauthorizedHandler(null)
   }, [auth.isAuthenticated, auth.getAccessToken, auth.login])
 
   // Not authenticated → show sign-in

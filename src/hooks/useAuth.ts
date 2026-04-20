@@ -128,7 +128,7 @@ export function useAuth(): AuthState {
         }
       } catch (err) {
         if (cancelled) return
-        if (isInteractionRequiredError(err) || isUserCancelledError(err)) {
+        if (err instanceof InteractionRequiredAuthError || isUserCancelledError(err)) {
           setReauthRequired(true)
           setAuthError(null)
           return
@@ -160,10 +160,6 @@ export function useAuth(): AuthState {
     login,
     logout,
   }
-}
-
-function isInteractionRequiredError(err: unknown): err is InteractionRequiredAuthError {
-  return err instanceof InteractionRequiredAuthError
 }
 
 function isUserCancelledError(err: unknown): boolean {
