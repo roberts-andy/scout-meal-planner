@@ -19,6 +19,7 @@ def reset_auth_state(monkeypatch):
     monkeypatch.setattr(auth, "_jwks", None)
     monkeypatch.setattr(auth, "_jwks_fetched_at", None)
     monkeypatch.setattr(auth, "CLIENT_ID", "client-id")
+    monkeypatch.setattr(auth, "JWKS_CACHE_TTL_SECONDS", 300)
 
 
 @pytest.mark.asyncio

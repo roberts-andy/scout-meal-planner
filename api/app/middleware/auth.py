@@ -54,9 +54,14 @@ def _decode_and_build_claims(token: str, jwks: dict) -> TokenClaims:
     )
     return TokenClaims(
         userId=payload.get("sub") or payload.get("oid", ""),
-        email=(payload.get("emails") or [None])[0] or payload.get("preferred_username", ""),
+        email=_extract_email(payload),
         displayName=payload.get("name", ""),
     )
+
+
+def _extract_email(payload: dict) -> str:
+    # Fallback order: first value in `emails`, then `preferred_username`
+    return (payload.get("emails") or [None])[0] or payload.get("preferred_username", "")
 
 
 @dataclass
