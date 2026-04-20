@@ -267,7 +267,6 @@ resource acrPushRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-
     principalType: 'ServicePrincipal'
   }
 }
-}
 
 // Cosmos DB Built-in Data Contributor role
 var cosmosDataContributorRoleId = '00000000-0000-0000-0000-000000000002'
