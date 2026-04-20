@@ -18,6 +18,24 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
 let flags: FeatureFlags = { ...DEFAULT_FEATURE_FLAGS }
 const loggedEvaluations = new Set<string>()
 
+function logFeatureFlagDebug(message: string, payload?: unknown) {
+  if (!import.meta.env.DEV) return
+  if (payload !== undefined) {
+    console.info(message, payload)
+    return
+  }
+  console.info(message)
+}
+
+function logFeatureFlagWarn(message: string, payload?: unknown) {
+  if (!import.meta.env.DEV) return
+  if (payload !== undefined) {
+    console.warn(message, payload)
+    return
+  }
+  console.warn(message)
+}
+
 function coerceBoolean(value: unknown): boolean | null {
   if (typeof value === 'boolean') return value
   if (typeof value !== 'string') return null
@@ -43,16 +61,16 @@ export async function loadFeatureFlags() {
   try {
     const response = await fetch('/runtime.config.json', { cache: 'no-store' })
     if (!response.ok) {
-      console.warn(`Failed to load runtime feature flags (HTTP ${response.status})`)
+      logFeatureFlagWarn(`Failed to load runtime feature flags (HTTP ${response.status})`)
       return
     }
 
     const runtimeConfig = await response.json().catch(() => ({}))
     const runtimeFlags = toFeatureFlags((runtimeConfig as { featureFlags?: unknown }).featureFlags)
     flags = { ...DEFAULT_FEATURE_FLAGS, ...runtimeFlags }
-    console.info('Loaded runtime feature flags', flags)
+    logFeatureFlagDebug('Loaded runtime feature flags', flags)
   } catch (error) {
-    console.warn('Failed to load runtime feature flags', error)
+    logFeatureFlagWarn('Failed to load runtime feature flags', error)
   }
 }
 
@@ -60,7 +78,7 @@ export function isFeatureEnabled(flag: FeatureFlagKey): boolean {
   const enabled = flags[flag]
   const key = `${flag}:${enabled}`
   if (!loggedEvaluations.has(key)) {
-    console.info('Feature flag evaluated', { flag, enabled })
+    logFeatureFlagDebug('Feature flag evaluated', { flag, enabled })
     loggedEvaluations.add(key)
   }
   return enabled

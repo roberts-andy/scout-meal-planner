@@ -31,7 +31,13 @@ const queryClient = new QueryClient({
 
 const sharedMatch = window.location.pathname.match(/^\/share\/([^/]+)$/)
 
-loadFeatureFlags().finally(() => {
+loadFeatureFlags()
+  .catch((error) => {
+    if (import.meta.env.DEV) {
+      console.warn('Failed to initialize runtime feature flags; using defaults', error)
+    }
+  })
+  .then(() => {
   if (sharedMatch) {
     const token = decodeURIComponent(sharedMatch[1])
     createRoot(document.getElementById('root')!).render(

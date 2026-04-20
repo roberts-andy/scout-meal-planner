@@ -56,7 +56,7 @@ _logged_evaluations: set[tuple[str, bool, str]] = set()
 
 def _normalize_environment(value: str | None) -> str:
     normalized = (value or "").strip().lower()
-    if normalized in ("production", "prd"):
+    if normalized in ("production", "prod", "prd"):
         return "prod"
     if normalized in ("development", "local"):
         return "dev"
