@@ -13,9 +13,14 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 /** Token provider — set by AuthProvider at startup */
 let _getAccessToken: (() => Promise<string>) | null = null
+let _handleUnauthorized: (() => void | Promise<void>) | null = null
 
 export function setTokenProvider(fn: () => Promise<string>) {
   _getAccessToken = fn
+}
+
+export function setUnauthorizedHandler(fn: (() => void | Promise<void>) | null) {
+  _handleUnauthorized = fn
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -32,6 +37,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   })
 
   if (!res.ok) {
+    if (res.status === 401 && _handleUnauthorized) {
+      void Promise.resolve(_handleUnauthorized()).catch((err) => {
+        console.warn('Unauthorized handler failed', err)
+      })
+    }
     const body = await res.json().catch(() => ({}))
     const details = body.details && typeof body.details === 'object'
       ? Object.entries(body.details as Record<string, unknown>)
@@ -42,8 +52,13 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
         )
         .join(', ')
       : ''
-    const detail = body.error
-      ? `${body.error}${details ? `: ${details}` : ''} (HTTP ${res.status})`
+    const message = typeof body.error === 'string'
+      ? body.error
+      : typeof body.detail === 'string'
+        ? body.detail
+        : null
+    const detail = message
+      ? `${message}${details ? `: ${details}` : ''} (HTTP ${res.status})`
       : `Request failed with HTTP ${res.status}`
     const err = new Error(detail) as Error & { status?: number; details?: unknown }
     err.status = res.status
@@ -117,8 +132,8 @@ export const feedbackApi = {
     request<MealFeedback>('/feedback', { method: 'POST', body: JSON.stringify(feedback) }),
   update: (feedback: MealFeedback) =>
     request<MealFeedback>(`/feedback/${feedback.id}`, { method: 'PUT', body: JSON.stringify(feedback) }),
-  delete: (id: string, eventId: string) =>
-    request<void>(`/feedback/${id}?eventId=${encodeURIComponent(eventId)}`, { method: 'DELETE' }),
+  delete: (id: string) =>
+    request<void>(`/feedback/${id}`, { method: 'DELETE' }),
 }
 
 // Troops

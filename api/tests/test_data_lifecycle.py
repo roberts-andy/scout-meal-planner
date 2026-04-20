@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from fastapi import HTTPException
 
 from app.middleware.auth import TroopContext
 from app.routers import members, troops
@@ -134,3 +135,73 @@ async def test_troop_deletion_cascade_deletes_members_events_feedback_and_recipe
         assert (container, f"{container}-2", auth.troopId) in deleted_items
 
     assert ("troops", auth.troopId, None) in deleted_items
+
+
+@pytest.mark.asyncio
+async def test_troop_deletion_ignores_not_found_deletes_and_continues(monkeypatch):
+    auth = TroopContext(
+        userId="admin-1",
+        email="admin@example.com",
+        displayName="Admin",
+        troopId="troop-1",
+        role="troopAdmin",
+    )
+
+    class NotFoundError(Exception):
+        status_code = 404
+
+    deleted: list[tuple[str, str]] = []
+
+    async def fake_get_by_id(_container: str, _item_id: str, _partition_key: str | None = None):
+        return {"id": auth.troopId}
+
+    async def fake_query_items(container: str, _query: str, _parameters: list[dict] | None = None):
+        return [{"id": f"{container}-1"}]
+
+    async def fake_delete_item(container: str, item_id: str, _partition_key: str | None = None):
+        if container == "feedback":
+            raise NotFoundError("already removed")
+        deleted.append((container, item_id))
+
+    monkeypatch.setattr(troops, "get_by_id", fake_get_by_id)
+    monkeypatch.setattr(troops, "query_items", fake_query_items)
+    monkeypatch.setattr(troops, "delete_item", fake_delete_item)
+
+    await troops.delete_troop(auth)
+
+    assert ("members", "members-1") in deleted
+    assert ("events", "events-1") in deleted
+    assert ("recipes", "recipes-1") in deleted
+    assert ("troops", auth.troopId) in deleted
+
+
+@pytest.mark.asyncio
+async def test_troop_deletion_collects_non_404_failures_and_raises(monkeypatch):
+    auth = TroopContext(
+        userId="admin-1",
+        email="admin@example.com",
+        displayName="Admin",
+        troopId="troop-1",
+        role="troopAdmin",
+    )
+
+    async def fake_get_by_id(_container: str, _item_id: str, _partition_key: str | None = None):
+        return {"id": auth.troopId}
+
+    async def fake_query_items(container: str, _query: str, _parameters: list[dict] | None = None):
+        return [{"id": f"{container}-1"}]
+
+    async def fake_delete_item(container: str, _item_id: str, _partition_key: str | None = None):
+        if container == "events":
+            raise RuntimeError("boom")
+
+    monkeypatch.setattr(troops, "get_by_id", fake_get_by_id)
+    monkeypatch.setattr(troops, "query_items", fake_query_items)
+    monkeypatch.setattr(troops, "delete_item", fake_delete_item)
+
+    with pytest.raises(HTTPException) as exc:
+        await troops.delete_troop(auth)
+
+    assert exc.value.status_code == 500
+    assert exc.value.detail["error"] == "Troop deletion failed"
+    assert any(f["container"] == "events" for f in exc.value.detail["failures"])

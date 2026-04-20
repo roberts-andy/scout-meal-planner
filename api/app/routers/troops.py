@@ -7,7 +7,6 @@ import time
 import uuid
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
 
 from app.cosmosdb import get_by_id, create_item, update_item, query_items, delete_item
 from app.middleware.auth import RequireToken, RequireTroopContext, forbidden, get_troop_context, validate_token
@@ -22,7 +21,7 @@ CASCADE_DELETE_CONTAINERS = ("members", "events", "feedback", "recipes")
 
 
 def _generate_invite_code() -> str:
-    return "TROOP-" + secrets.token_hex(2).upper()[:4]
+    return "TROOP-" + secrets.token_hex(4).upper()
 
 
 def _to_first_name(display_name: str) -> str:
@@ -61,7 +60,7 @@ async def create_troop(body: CreateTroop, claims: RequireToken):
 async def get_troop(auth: RequireTroopContext):
     troop = await get_by_id(CONTAINER, auth.troopId)
     if not troop:
-        return JSONResponse({"error": "Troop not found"}, status_code=404)
+        raise HTTPException(status_code=404, detail="Troop not found")
     return troop
 
 
@@ -88,21 +87,42 @@ async def delete_troop(auth: RequireTroopContext):
     if not existing:
         raise HTTPException(status_code=404, detail="Troop not found")
 
-    try:
-        troop_param = [{"name": "@troopId", "value": auth.troopId}]
-        for container in CASCADE_DELETE_CONTAINERS:
+    failures: list[dict] = []
+
+    troop_param = [{"name": "@troopId", "value": auth.troopId}]
+    for container in CASCADE_DELETE_CONTAINERS:
+        try:
             items = await query_items(
                 container,
                 "SELECT c.id FROM c WHERE c.troopId = @troopId",
                 troop_param,
             )
-            for item in items:
-                await delete_item(container, item["id"], auth.troopId)
+        except Exception as exc:
+            failures.append({"container": container, "operation": "query", "error": type(exc).__name__})
+            continue
 
+        for item in items:
+            try:
+                await delete_item(container, item["id"], auth.troopId)
+            except Exception as exc:
+                if getattr(exc, "status_code", None) == 404:
+                    continue
+                failures.append({
+                    "container": container,
+                    "operation": "delete",
+                    "id": item.get("id"),
+                    "error": type(exc).__name__,
+                })
+
+    try:
         await delete_item(CONTAINER, auth.troopId)
-    except Exception:
-        logger.exception("Failed to cascade-delete troop %s", auth.troopId)
-        raise HTTPException(status_code=500, detail="Troop deletion failed")
+    except Exception as exc:
+        if getattr(exc, "status_code", None) != 404:
+            failures.append({"container": CONTAINER, "operation": "delete", "id": auth.troopId, "error": type(exc).__name__})
+
+    if failures:
+        logger.error("Troop %s deletion completed with failures: %s", auth.troopId, failures)
+        raise HTTPException(status_code=500, detail={"error": "Troop deletion failed", "failures": failures})
 
 
 @router.post("/troops/join", status_code=201)
@@ -114,7 +134,7 @@ async def join_troop(body: JoinTroop, claims: RequireToken):
     )
 
     if not troops:
-        return JSONResponse({"error": "Invalid invite code"}, status_code=404)
+        raise HTTPException(status_code=404, detail="Invalid invite code")
 
     troop = troops[0]
 
@@ -128,14 +148,17 @@ async def join_troop(body: JoinTroop, claims: RequireToken):
     )
 
     if existing:
-        return JSONResponse({"error": "Already a member of this troop"}, status_code=409)
+        raise HTTPException(status_code=409, detail="Already a member of this troop")
 
     member = await create_item("members", {
         "id": str(uuid.uuid4()),
         "troopId": troop["id"],
+        "userId": claims.userId,
+        "email": claims.email,
         "displayName": _to_first_name(claims.displayName),
         "role": "scout",
         "status": "pending",
+        "joinedAt": int(time.time() * 1000),
     })
 
     return {"troop": troop, "member": member}

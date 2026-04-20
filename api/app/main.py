@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
-from app.cosmosdb import init_database
+from app.cosmosdb import close_database_clients, init_database
 from app.routers import (
     events,
     event_packed,
@@ -27,11 +27,20 @@ async def lifespan(application: FastAPI):
         await init_database()
     except Exception as exc:
         logger.warning("Cosmos DB unavailable at startup — running without database: %s", exc)
-    yield
+    try:
+        yield
+    finally:
+        try:
+            await close_database_clients()
+        except Exception as exc:
+            logger.warning("Failed to close Cosmos DB client(s): %s", exc)
 
 
 app = FastAPI(title="Scout Meal Planner API", lifespan=lifespan)
 
+# CORS: Not needed. Azure Static Web Apps proxies all /api requests,
+# and local dev uses the SWA CLI proxy. See
+# .copilot-tracking/reviews/code-reviews/main/review.md.
 app.include_router(health.router, prefix="/api")
 app.include_router(events.router, prefix="/api")
 app.include_router(event_packed.router, prefix="/api")

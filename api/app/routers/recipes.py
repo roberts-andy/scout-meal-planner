@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import logging
-import time
 import uuid
 
-from fastapi import APIRouter
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException
 
+from app.audit import audit_create, audit_update
 from app.cosmosdb import get_all_by_troop, get_by_id, create_item, update_item, delete_item
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
@@ -20,8 +19,10 @@ CONTAINER = "recipes"
 
 
 def _recipe_moderation_fields(data: CreateRecipe | UpdateRecipe) -> list[ModerationField]:
-    fields: list[ModerationField] = [ModerationField(field="name", text=data.name)]
-    for i, variation in enumerate(data.variations):
+    fields: list[ModerationField] = []
+    if data.name is not None:
+        fields.append(ModerationField(field="name", text=data.name))
+    for i, variation in enumerate(data.variations or []):
         for j, instruction in enumerate(variation.instructions):
             fields.append(ModerationField(field=f"variations[{i}].instructions[{j}]", text=instruction))
     return fields
@@ -37,9 +38,9 @@ async def list_recipes(auth: RequireTroopContext):
 async def get_recipe(recipe_id: str, auth: RequireTroopContext):
     recipe = await get_by_id(CONTAINER, recipe_id, auth.troopId)
     if not recipe:
-        return JSONResponse({"error": "Recipe not found"}, status_code=404)
+        raise HTTPException(status_code=404, detail="Recipe not found")
     if not can_view_moderated_content(auth.role, recipe.get("moderation")):
-        return JSONResponse({"error": "Recipe not found"}, status_code=404)
+        raise HTTPException(status_code=404, detail="Recipe not found")
     return recipe
 
 
@@ -47,18 +48,13 @@ async def get_recipe(recipe_id: str, auth: RequireTroopContext):
 async def create_recipe(body: CreateRecipe, auth: RequireTroopContext):
     if not check_permission(auth.role, "manageRecipes"):
         forbidden()
-    now = int(time.time() * 1000)
-    audit = {"userId": auth.userId, "displayName": auth.displayName}
     moderation = await moderate_text_fields(_recipe_moderation_fields(body))
     recipe = await create_item(CONTAINER, {
         "id": str(uuid.uuid4()),
         "troopId": auth.troopId,
         **body.model_dump(),
         "moderation": moderation.__dict__,
-        "createdAt": now,
-        "updatedAt": now,
-        "createdBy": audit,
-        "updatedBy": audit,
+        **audit_create(auth),
     })
     return recipe
 
@@ -69,16 +65,15 @@ async def update_recipe(recipe_id: str, body: UpdateRecipe, auth: RequireTroopCo
         forbidden()
     existing = await get_by_id(CONTAINER, recipe_id, auth.troopId)
     if not existing:
-        return JSONResponse({"error": "Recipe not found"}, status_code=404)
+        raise HTTPException(status_code=404, detail="Recipe not found")
     moderation = await moderate_text_fields(_recipe_moderation_fields(body))
     recipe = await update_item(CONTAINER, recipe_id, {
         **existing,
-        **body.model_dump(),
+        **body.model_dump(exclude_unset=True),
         "id": recipe_id,
         "troopId": auth.troopId,
         "moderation": moderation.__dict__,
-        "updatedAt": int(time.time() * 1000),
-        "updatedBy": {"userId": auth.userId, "displayName": auth.displayName},
+        **audit_update(auth),
     }, auth.troopId)
     return recipe
 

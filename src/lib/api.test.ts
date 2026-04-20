@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { eventsApi, recipesApi, feedbackApi, membersApi, shareApi } from './api'
+import { eventsApi, recipesApi, feedbackApi, membersApi, shareApi, setUnauthorizedHandler } from './api'
 
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
@@ -22,6 +22,7 @@ function emptyResponse(status = 204) {
 
 beforeEach(() => {
   mockFetch.mockReset()
+  setUnauthorizedHandler(null)
 })
 
 // ── Events API ──
@@ -93,6 +94,20 @@ describe('eventsApi', () => {
   it('throws on non-ok response', async () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({ error: 'Not found' }, 404))
     await expect(eventsApi.getById('bad')).rejects.toThrow('Not found')
+  })
+
+  it('triggers re-auth handler when API returns 401', async () => {
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
+    mockFetch.mockResolvedValueOnce(jsonResponse({ error: 'Unauthorized' }, 401))
+
+    await expect(eventsApi.getAll()).rejects.toThrow('Unauthorized')
+    expect(onUnauthorized).toHaveBeenCalledTimes(1)
+  })
+
+  it('throws using detail field on non-ok response', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ detail: 'Shared event not found' }, 404))
+    await expect(eventsApi.getById('bad')).rejects.toThrow('Shared event not found')
   })
 
   it('regenerateShare posts to /events/{id}/share', async () => {
@@ -169,20 +184,11 @@ describe('feedbackApi', () => {
     expect(mockFetch).toHaveBeenCalledWith('/api/feedback/recipe/recipe-1', expect.anything())
   })
 
-  it('delete includes eventId as query param', async () => {
+  it('delete sends DELETE to /feedback/{id}', async () => {
     mockFetch.mockResolvedValueOnce(emptyResponse())
-    await feedbackApi.delete('fb-1', 'ev-1')
+    await feedbackApi.delete('fb-1')
     expect(mockFetch).toHaveBeenCalledWith(
-      '/api/feedback/fb-1?eventId=ev-1',
-      expect.objectContaining({ method: 'DELETE' }),
-    )
-  })
-
-  it('delete encodes eventId in query param', async () => {
-    mockFetch.mockResolvedValueOnce(emptyResponse())
-    await feedbackApi.delete('fb-1', 'ev with spaces')
-    expect(mockFetch).toHaveBeenCalledWith(
-      '/api/feedback/fb-1?eventId=ev%20with%20spaces',
+      '/api/feedback/fb-1',
       expect.objectContaining({ method: 'DELETE' }),
     )
   })
