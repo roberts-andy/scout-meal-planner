@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
+from dataclasses import asdict
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
@@ -41,7 +42,7 @@ async def create_feedback(body: CreateFeedback, auth: RequireTroopContext):
         "id": str(uuid.uuid4()),
         "troopId": auth.troopId,
         **body.model_dump(),
-        "moderation": moderation.__dict__,
+        "moderation": asdict(moderation),
         "createdAt": now,
         "updatedAt": now,
         "createdBy": audit,
@@ -67,7 +68,7 @@ async def update_feedback(feedback_id: str, body: UpdateFeedback, auth: RequireT
         **body.model_dump(),
         "id": feedback_id,
         "troopId": auth.troopId,
-        "moderation": moderation.__dict__,
+        "moderation": asdict(moderation),
         "updatedAt": int(time.time() * 1000),
         "updatedBy": {"userId": auth.userId, "displayName": auth.displayName},
     }, auth.troopId)
