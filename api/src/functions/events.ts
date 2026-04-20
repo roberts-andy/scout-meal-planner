@@ -1,10 +1,11 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
-import { getAllByTroop, getById, create, update, remove } from '../cosmosdb.js'
+import { getAllByTroop, getById, create, update, remove, queryItems } from '../cosmosdb.js'
 import { getTroopContext, unauthorized, forbidden } from '../middleware/auth.js'
 import { checkPermission } from '../middleware/roles.js'
 import { createEventSchema, updateEventSchema, validationError } from '../schemas.js'
 
 const CONTAINER = 'events'
+const FEEDBACK_CONTAINER = 'feedback'
 
 async function eventsHandler(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const id = req.params.id
@@ -63,6 +64,17 @@ async function eventsHandler(req: HttpRequest, context: InvocationContext): Prom
 
     if (method === 'DELETE' && id) {
       if (!checkPermission(auth.role, 'manageEvents')) return forbidden()
+      const feedbackRecords = await queryItems<{ id: string }>(
+        FEEDBACK_CONTAINER,
+        'SELECT c.id FROM c WHERE c.eventId = @eventId AND c.troopId = @troopId',
+        [
+          { name: '@eventId', value: id },
+          { name: '@troopId', value: auth.troopId },
+        ]
+      )
+      for (const feedback of feedbackRecords) {
+        await remove(FEEDBACK_CONTAINER, feedback.id, auth.troopId)
+      }
       await remove(CONTAINER, id, auth.troopId)
       return { status: 204 }
     }
