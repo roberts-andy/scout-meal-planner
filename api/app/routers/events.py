@@ -10,6 +10,7 @@ from app.audit import audit_create, audit_update
 from app.cosmosdb import (
     create_item,
     delete_item,
+    get_all_by_troop,
     get_by_id,
     query_items,
     query_items_paginated,

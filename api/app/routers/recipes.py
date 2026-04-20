@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi import Query
 
 from app.audit import audit_create, audit_update
-from app.cosmosdb import create_item, delete_item, get_by_id, query_items_paginated, update_item
+from app.cosmosdb import create_item, delete_item, get_all_by_troop, get_by_id, query_items_paginated, update_item
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
 from app.middleware.moderation import moderate_text_fields, can_view_moderated_content, ModerationField
