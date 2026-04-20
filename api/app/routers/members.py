@@ -5,7 +5,6 @@ import time
 import uuid
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import JSONResponse
 
 from app.cosmosdb import query_items, create_item, update_item, delete_item
 from app.middleware.auth import RequireTroopContext, forbidden, get_troop_context
@@ -163,7 +162,7 @@ async def delete_member(member_id: str, auth: RequireTroopContext):
 async def member_me(request: Request):
     auth = await get_troop_context(request)
     if not auth:
-        return JSONResponse({"error": "No troop membership found"}, status_code=404)
+        raise HTTPException(status_code=404, detail="No troop membership found")
     return {"troopId": auth.troopId, "userId": auth.userId, "role": auth.role}
 
 

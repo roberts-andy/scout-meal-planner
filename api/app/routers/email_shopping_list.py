@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 EVENTS_CONTAINER = "events"
+MAX_SUBJECT_EVENT_NAME_LENGTH = 200
 
 _email_client: EmailClient | None = None
 
@@ -50,6 +51,7 @@ async def email_shopping_list(event_id: str, body: EmailShoppingList, auth: Requ
         raise HTTPException(status_code=500, detail="Email service not configured")
 
     event_name = existing_event.get("name") or "Unnamed Event"
+    safe_event_name = str(event_name).replace("\n", " ").replace("\r", " ")[:MAX_SUBJECT_EVENT_NAME_LENGTH]
 
     text_rows = "\n".join(f"- {item.name}: {item.quantity} {item.unit}" for item in body.items)
     html_rows = "".join(
@@ -63,10 +65,10 @@ async def email_shopping_list(event_id: str, body: EmailShoppingList, auth: Requ
         "senderAddress": from_email,
         "recipients": {"to": [{"address": body.recipientEmail}]},
         "content": {
-            "subject": f"Shopping List: {event_name}",
-            "plainText": f"Shopping list for {event_name}\n\n{text_rows}",
+            "subject": f"Shopping List: {safe_event_name}",
+            "plainText": f"Shopping list for {safe_event_name}\n\n{text_rows}",
             "html": (
-                f"<h2>Shopping list for {html.escape(event_name)}</h2>"
+                f"<h2>Shopping list for {html.escape(safe_event_name)}</h2>"
                 f'<table style="border-collapse:collapse;">'
                 f'<thead><tr><th style="padding:4px 8px;text-align:left;">Item</th>'
                 f'<th style="padding:4px 8px;text-align:right;">Quantity</th>'
