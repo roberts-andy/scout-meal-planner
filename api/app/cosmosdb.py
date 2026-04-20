@@ -138,7 +138,7 @@ async def check_database_connection() -> None:
         return
 
     if not _endpoint and not _connection_string:
-        raise RuntimeError("Cosmos DB configuration missing: set COSMOS_ENDPOINT (preferred) or COSMOS_CONNECTION_STRING.")
+        raise RuntimeError("Cosmos DB configuration missing: set COSMOS_ENDPOINT (preferred) or COSMOS_CONNECTION_STRING")
 
     if _health_check_client is None:
         if _endpoint:
