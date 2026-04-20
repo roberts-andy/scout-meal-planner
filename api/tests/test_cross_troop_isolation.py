@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pytest
+import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
@@ -9,14 +10,17 @@ from app.middleware.auth import TroopContext, require_troop_context
 from app.routers import event_packed, event_purchased, events, feedback, members, recipes, share
 
 
-@pytest.fixture
-def client():
+@pytest_asyncio.fixture
+async def client():
     transport = ASGITransport(app=app)
-    return AsyncClient(transport=transport, base_url="http://test")
+    async with AsyncClient(transport=transport, base_url="http://test") as async_client:
+        yield async_client
 
 
 @pytest.fixture
 def troop_a_context():
+    previous = app.dependency_overrides.get(require_troop_context)
+
     async def _override():
         return TroopContext(
             userId="user-a",
@@ -28,7 +32,10 @@ def troop_a_context():
 
     app.dependency_overrides[require_troop_context] = _override
     yield
-    app.dependency_overrides.pop(require_troop_context, None)
+    if previous is None:
+        app.dependency_overrides.pop(require_troop_context, None)
+    else:
+        app.dependency_overrides[require_troop_context] = previous
 
 
 @pytest.mark.asyncio
