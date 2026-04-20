@@ -48,6 +48,16 @@ async def list_members(auth: RequireTroopContext):
         "SELECT * FROM c WHERE c.troopId = @troopId",
         [{"name": "@troopId", "value": auth.troopId}],
     )
+    if not check_permission(auth.role, "manageMembers"):
+        return [
+            {
+                "id": member.get("id"),
+                "displayName": member.get("displayName"),
+                "role": member.get("role"),
+                "status": member.get("status"),
+            }
+            for member in members
+        ]
     return members
 
 
