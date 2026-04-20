@@ -13,9 +13,14 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 /** Token provider — set by AuthProvider at startup */
 let _getAccessToken: (() => Promise<string>) | null = null
+let _handleUnauthorized: (() => void | Promise<void>) | null = null
 
 export function setTokenProvider(fn: () => Promise<string>) {
   _getAccessToken = fn
+}
+
+export function setUnauthorizedHandler(fn: (() => void | Promise<void>) | null) {
+  _handleUnauthorized = fn
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -32,6 +37,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   })
 
   if (!res.ok) {
+    if (res.status === 401 && _handleUnauthorized) {
+      void Promise.resolve(_handleUnauthorized()).catch((err) => {
+        console.warn('Unauthorized handler failed', err)
+      })
+    }
     const body = await res.json().catch(() => ({}))
     const details = body.details && typeof body.details === 'object'
       ? Object.entries(body.details as Record<string, unknown>)

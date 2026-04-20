@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import logging
-import time
 import uuid
 
 from fastapi import APIRouter, HTTPException
 
+from app.audit import audit_create, audit_update
 from app.cosmosdb import get_all_by_troop, get_by_id, create_item, update_item, delete_item, query_items
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
@@ -29,8 +29,6 @@ async def list_feedback(auth: RequireTroopContext):
 async def create_feedback(body: CreateFeedback, auth: RequireTroopContext):
     if not check_permission(auth.role, "submitFeedback"):
         forbidden()
-    now = int(time.time() * 1000)
-    audit = {"userId": auth.userId, "displayName": auth.displayName}
     moderation = await moderate_text_fields([
         ModerationField(field="comments", text=body.comments),
         ModerationField(field="whatWorked", text=body.whatWorked),
@@ -41,10 +39,7 @@ async def create_feedback(body: CreateFeedback, auth: RequireTroopContext):
         "troopId": auth.troopId,
         **body.model_dump(),
         "moderation": moderation.__dict__,
-        "createdAt": now,
-        "updatedAt": now,
-        "createdBy": audit,
-        "updatedBy": audit,
+        **audit_create(auth),
     })
     return feedback
 
@@ -71,8 +66,7 @@ async def update_feedback(feedback_id: str, body: UpdateFeedback, auth: RequireT
         "id": feedback_id,
         "troopId": auth.troopId,
         "moderation": moderation.__dict__,
-        "updatedAt": int(time.time() * 1000),
-        "updatedBy": {"userId": auth.userId, "displayName": auth.displayName},
+        **audit_update(auth),
     }, auth.troopId)
     return feedback
 
