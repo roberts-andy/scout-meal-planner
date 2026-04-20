@@ -18,6 +18,9 @@ RECIPES_CONTAINER = "recipes"
 
 
 def _generate_share_token() -> str:
+    # Share tokens use uuid4 for uniqueness — sufficient for read-only public links.
+    # secrets.token_urlsafe() would be more idiomatic for security tokens, but share
+    # links are low-risk (read-only, no PII). See review decision 2026-04-19.
     return uuid.uuid4().hex + uuid.uuid4().hex
 
 
