@@ -155,6 +155,34 @@ describe('getTroopContext', () => {
       [{ name: '@userId', value: 'user-1' }],
     )
   })
+
+  it('resolves troop context for a joined member once approved to active', async () => {
+    vi.mocked(jwtVerify).mockResolvedValueOnce({
+      payload: { sub: 'user-join', name: 'Join Scout', preferred_username: 'join@example.com' },
+      protectedHeader: {} as any,
+      key: {} as any,
+    })
+    vi.mocked(queryItems).mockResolvedValueOnce([
+      {
+        troopId: 'troop-join',
+        role: 'scout',
+        userId: 'user-join',
+        email: 'join@example.com',
+        status: 'active',
+      },
+    ])
+
+    const result = await getTroopContext(makeRequest('Bearer valid'), ctx)
+
+    expect(result).toEqual({
+      userId: 'user-join',
+      email: 'join@example.com',
+      displayName: 'Join Scout',
+      troopId: 'troop-join',
+      role: 'scout',
+    })
+    expect(queryItems).toHaveBeenCalledTimes(1)
+  })
 })
 
 // ── response helpers ──
