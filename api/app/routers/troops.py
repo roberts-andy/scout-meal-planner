@@ -86,19 +86,23 @@ async def delete_troop(auth: RequireTroopContext):
 
     existing = await get_by_id(CONTAINER, auth.troopId)
     if not existing:
-        return JSONResponse({"error": "Troop not found"}, status_code=404)
+        raise HTTPException(status_code=404, detail="Troop not found")
 
-    troop_param = [{"name": "@troopId", "value": auth.troopId}]
-    for container in CASCADE_DELETE_CONTAINERS:
-        items = await query_items(
-            container,
-            "SELECT c.id FROM c WHERE c.troopId = @troopId",
-            troop_param,
-        )
-        for item in items:
-            await delete_item(container, item["id"], auth.troopId)
+    try:
+        troop_param = [{"name": "@troopId", "value": auth.troopId}]
+        for container in CASCADE_DELETE_CONTAINERS:
+            items = await query_items(
+                container,
+                "SELECT c.id FROM c WHERE c.troopId = @troopId",
+                troop_param,
+            )
+            for item in items:
+                await delete_item(container, item["id"], auth.troopId)
 
-    await delete_item(CONTAINER, auth.troopId)
+        await delete_item(CONTAINER, auth.troopId)
+    except Exception:
+        logger.exception("Failed to cascade-delete troop %s", auth.troopId)
+        raise HTTPException(status_code=500, detail="Troop deletion failed")
 
 
 @router.post("/troops/join", status_code=201)
