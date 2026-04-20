@@ -4,10 +4,10 @@ import logging
 import time
 import uuid
 
-from fastapi import APIRouter, Query
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException
+from fastapi import Query
 
-from app.cosmosdb import query_items_paginated, get_by_id, create_item, update_item, delete_item
+from app.cosmosdb import query_items_paginated, get_by_id, create_item, update_item, delete_item, query_items
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
 from app.schemas import CreateEvent, UpdateEvent
@@ -38,7 +38,7 @@ async def list_events(
 async def get_event(event_id: str, auth: RequireTroopContext):
     event = await get_by_id(CONTAINER, event_id, auth.troopId)
     if not event:
-        return JSONResponse({"error": "Event not found"}, status_code=404)
+        raise HTTPException(status_code=404, detail="Event not found")
     return event
 
 
@@ -66,10 +66,10 @@ async def update_event(event_id: str, body: UpdateEvent, auth: RequireTroopConte
         forbidden()
     existing = await get_by_id(CONTAINER, event_id, auth.troopId)
     if not existing:
-        return JSONResponse({"error": "Event not found"}, status_code=404)
+        raise HTTPException(status_code=404, detail="Event not found")
     event = await update_item(CONTAINER, event_id, {
         **existing,
-        **body.model_dump(),
+        **body.model_dump(exclude_unset=True),
         "id": event_id,
         "troopId": auth.troopId,
         "updatedAt": int(time.time() * 1000),
@@ -82,4 +82,14 @@ async def update_event(event_id: str, body: UpdateEvent, auth: RequireTroopConte
 async def delete_event(event_id: str, auth: RequireTroopContext):
     if not check_permission(auth.role, "manageEvents"):
         forbidden()
+    feedback_items = await query_items(
+        "feedback",
+        "SELECT * FROM c WHERE c.eventId = @eventId AND c.troopId = @troopId",
+        [
+            {"name": "@eventId", "value": event_id},
+            {"name": "@troopId", "value": auth.troopId},
+        ],
+    )
+    for feedback_item in feedback_items:
+        await delete_item("feedback", feedback_item["id"], feedback_item["troopId"])
     await delete_item(CONTAINER, event_id, auth.troopId)

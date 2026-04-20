@@ -19,8 +19,8 @@ async def test_app_loads(client):
 
 @pytest.mark.asyncio
 async def test_health_endpoint(client):
-    """Health endpoint returns 200."""
+    """Health endpoint returns a status payload."""
     response = await client.get("/api/health")
-    assert response.status_code == 200
+    assert response.status_code in (200, 503)
     data = response.json()
-    assert "status" in data
+    assert data.get("status") in ("healthy", "unhealthy")

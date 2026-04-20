@@ -4,8 +4,8 @@ import logging
 import time
 import uuid
 
-from fastapi import APIRouter, Query
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException
+from fastapi import Query
 
 from app.cosmosdb import query_items_paginated, get_by_id, create_item, update_item, delete_item
 from app.middleware.auth import RequireTroopContext, forbidden
@@ -20,8 +20,10 @@ CONTAINER = "recipes"
 
 
 def _recipe_moderation_fields(data: CreateRecipe | UpdateRecipe) -> list[ModerationField]:
-    fields: list[ModerationField] = [ModerationField(field="name", text=data.name)]
-    for i, variation in enumerate(data.variations):
+    fields: list[ModerationField] = []
+    if data.name is not None:
+        fields.append(ModerationField(field="name", text=data.name))
+    for i, variation in enumerate(data.variations or []):
         for j, instruction in enumerate(variation.instructions):
             fields.append(ModerationField(field=f"variations[{i}].instructions[{j}]", text=instruction))
     return fields
@@ -51,9 +53,9 @@ async def list_recipes(
 async def get_recipe(recipe_id: str, auth: RequireTroopContext):
     recipe = await get_by_id(CONTAINER, recipe_id, auth.troopId)
     if not recipe:
-        return JSONResponse({"error": "Recipe not found"}, status_code=404)
+        raise HTTPException(status_code=404, detail="Recipe not found")
     if not can_view_moderated_content(auth.role, recipe.get("moderation")):
-        return JSONResponse({"error": "Recipe not found"}, status_code=404)
+        raise HTTPException(status_code=404, detail="Recipe not found")
     return recipe
 
 
@@ -83,11 +85,11 @@ async def update_recipe(recipe_id: str, body: UpdateRecipe, auth: RequireTroopCo
         forbidden()
     existing = await get_by_id(CONTAINER, recipe_id, auth.troopId)
     if not existing:
-        return JSONResponse({"error": "Recipe not found"}, status_code=404)
+        raise HTTPException(status_code=404, detail="Recipe not found")
     moderation = await moderate_text_fields(_recipe_moderation_fields(body))
     recipe = await update_item(CONTAINER, recipe_id, {
         **existing,
-        **body.model_dump(),
+        **body.model_dump(exclude_unset=True),
         "id": recipe_id,
         "troopId": auth.troopId,
         "moderation": moderation.__dict__,

@@ -107,6 +107,11 @@ describe('eventsApi', () => {
     await expect(eventsApi.getById('bad')).rejects.toThrow('Not found')
   })
 
+  it('throws using detail field on non-ok response', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ detail: 'Shared event not found' }, 404))
+    await expect(eventsApi.getById('bad')).rejects.toThrow('Shared event not found')
+  })
+
   it('regenerateShare posts to /events/{id}/share', async () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({ shareToken: 't', shareUrl: 'https://example.com/share/t' }))
     await eventsApi.regenerateShare('1')
@@ -200,20 +205,11 @@ describe('feedbackApi', () => {
     expect(mockFetch).toHaveBeenCalledWith('/api/feedback/recipe/recipe-1', expect.anything())
   })
 
-  it('delete includes eventId as query param', async () => {
+  it('delete sends DELETE to /feedback/{id}', async () => {
     mockFetch.mockResolvedValueOnce(emptyResponse())
-    await feedbackApi.delete('fb-1', 'ev-1')
+    await feedbackApi.delete('fb-1')
     expect(mockFetch).toHaveBeenCalledWith(
-      '/api/feedback/fb-1?eventId=ev-1',
-      expect.objectContaining({ method: 'DELETE' }),
-    )
-  })
-
-  it('delete encodes eventId in query param', async () => {
-    mockFetch.mockResolvedValueOnce(emptyResponse())
-    await feedbackApi.delete('fb-1', 'ev with spaces')
-    expect(mockFetch).toHaveBeenCalledWith(
-      '/api/feedback/fb-1?eventId=ev%20with%20spaces',
+      '/api/feedback/fb-1',
       expect.objectContaining({ method: 'DELETE' }),
     )
   })

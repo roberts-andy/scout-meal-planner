@@ -4,7 +4,7 @@ import logging
 import time
 import uuid
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 
 from app.cosmosdb import get_by_id, get_all_by_troop, update_item, query_items
 from app.middleware.auth import RequireTroopContext, forbidden
@@ -33,7 +33,6 @@ async def get_event_share(event_id: str, request: Request, auth: RequireTroopCon
 
     existing = await get_by_id(EVENTS_CONTAINER, event_id, auth.troopId)
     if not existing:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Event not found")
 
     token = existing.get("shareToken")
@@ -50,7 +49,6 @@ async def create_event_share(event_id: str, request: Request, auth: RequireTroop
 
     existing = await get_by_id(EVENTS_CONTAINER, event_id, auth.troopId)
     if not existing:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Event not found")
 
     share_token = _generate_share_token()
@@ -75,7 +73,6 @@ async def delete_event_share(event_id: str, auth: RequireTroopContext):
 
     existing = await get_by_id(EVENTS_CONTAINER, event_id, auth.troopId)
     if not existing:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Event not found")
 
     next_event = {k: v for k, v in existing.items() if k not in ("shareToken", "shareTokenUpdatedAt")}
@@ -94,7 +91,6 @@ async def get_shared_event(token: str):
         [{"name": "@token", "value": token}],
     )
     if not events:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Shared event not found")
 
     event = events[0]
