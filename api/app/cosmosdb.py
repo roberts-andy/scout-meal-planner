@@ -5,6 +5,7 @@ import os
 import time
 
 from azure.core.pipeline.transport import AioHttpTransport
+from azure.core import MatchConditions
 from azure.cosmos.aio import CosmosClient, DatabaseProxy, ContainerProxy
 from azure.identity.aio import DefaultAzureCredential
 
@@ -158,7 +159,17 @@ async def create_item(container_name: str, item: dict) -> dict:
 
 async def update_item(container_name: str, item_id: str, item: dict, partition_key_value: str | None = None) -> dict:
     container = _get_container(container_name)
-    return await container.replace_item(item_id, item, partition_key=partition_key_value or item_id)
+    payload = dict(item)
+    etag = payload.pop("_etag", None)
+    if etag:
+        return await container.replace_item(
+            item_id,
+            payload,
+            partition_key=partition_key_value or item_id,
+            etag=etag,
+            match_condition=MatchConditions.IfNotModified,
+        )
+    return await container.replace_item(item_id, payload, partition_key=partition_key_value or item_id)
 
 
 async def delete_item(container_name: str, item_id: str, partition_key_value: str | None = None) -> None:
