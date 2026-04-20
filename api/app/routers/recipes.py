@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import logging
-import time
 import uuid
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
+from app.audit import audit_create, audit_update
 from app.cosmosdb import get_all_by_troop, get_by_id, create_item, update_item, delete_item
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
@@ -47,18 +47,13 @@ async def get_recipe(recipe_id: str, auth: RequireTroopContext):
 async def create_recipe(body: CreateRecipe, auth: RequireTroopContext):
     if not check_permission(auth.role, "manageRecipes"):
         forbidden()
-    now = int(time.time() * 1000)
-    audit = {"userId": auth.userId, "displayName": auth.displayName}
     moderation = await moderate_text_fields(_recipe_moderation_fields(body))
     recipe = await create_item(CONTAINER, {
         "id": str(uuid.uuid4()),
         "troopId": auth.troopId,
         **body.model_dump(),
         "moderation": moderation.__dict__,
-        "createdAt": now,
-        "updatedAt": now,
-        "createdBy": audit,
-        "updatedBy": audit,
+        **audit_create(auth),
     })
     return recipe
 
@@ -77,8 +72,7 @@ async def update_recipe(recipe_id: str, body: UpdateRecipe, auth: RequireTroopCo
         "id": recipe_id,
         "troopId": auth.troopId,
         "moderation": moderation.__dict__,
-        "updatedAt": int(time.time() * 1000),
-        "updatedBy": {"userId": auth.userId, "displayName": auth.displayName},
+        **audit_update(auth),
     }, auth.troopId)
     return recipe
 

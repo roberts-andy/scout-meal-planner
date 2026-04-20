@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import logging
-import time
 import uuid
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
+from app.audit import audit_create, audit_update
 from app.cosmosdb import get_all_by_troop, get_by_id, create_item, update_item, delete_item
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
@@ -36,16 +36,11 @@ async def get_event(event_id: str, auth: RequireTroopContext):
 async def create_event(body: CreateEvent, auth: RequireTroopContext):
     if not check_permission(auth.role, "manageEvents"):
         forbidden()
-    now = int(time.time() * 1000)
-    audit = {"userId": auth.userId, "displayName": auth.displayName}
     event = await create_item(CONTAINER, {
         "id": str(uuid.uuid4()),
         "troopId": auth.troopId,
         **body.model_dump(),
-        "createdAt": now,
-        "updatedAt": now,
-        "createdBy": audit,
-        "updatedBy": audit,
+        **audit_create(auth),
     })
     return event
 
@@ -62,8 +57,7 @@ async def update_event(event_id: str, body: UpdateEvent, auth: RequireTroopConte
         **body.model_dump(),
         "id": event_id,
         "troopId": auth.troopId,
-        "updatedAt": int(time.time() * 1000),
-        "updatedBy": {"userId": auth.userId, "displayName": auth.displayName},
+        **audit_update(auth),
     }, auth.troopId)
     return event
 
