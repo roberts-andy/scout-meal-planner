@@ -52,6 +52,9 @@ async function feedbackHandler(req: HttpRequest, context: InvocationContext): Pr
       if (!parsed.success) return validationError(parsed.error)
       const existing = await getById(CONTAINER, id, auth.troopId)
       if (!existing) return { status: 404, jsonBody: { error: 'Feedback not found' } }
+      const isOwner = existing.createdBy?.userId === auth.userId
+      const canManageEvents = checkPermission(auth.role, 'manageEvents')
+      if (!isOwner && !canManageEvents) return forbidden()
       const moderation = await moderateTextFields([
         { field: 'comments', text: parsed.data.comments },
         { field: 'whatWorked', text: parsed.data.whatWorked },
@@ -70,7 +73,11 @@ async function feedbackHandler(req: HttpRequest, context: InvocationContext): Pr
     }
 
     if (method === 'DELETE' && id) {
-      if (!checkPermission(auth.role, 'manageEvents')) return forbidden()
+      const existing = await getById(CONTAINER, id, auth.troopId)
+      if (!existing) return { status: 404, jsonBody: { error: 'Feedback not found' } }
+      const isOwner = existing.createdBy?.userId === auth.userId
+      const canManageEvents = checkPermission(auth.role, 'manageEvents')
+      if (!isOwner && !canManageEvents) return forbidden()
       await remove(CONTAINER, id, auth.troopId)
       return { status: 204 }
     }
