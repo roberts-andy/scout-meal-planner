@@ -4,9 +4,18 @@ import logging
 import uuid
 
 from fastapi import APIRouter, HTTPException
+from fastapi import Query
 
 from app.audit import audit_create, audit_update
-from app.cosmosdb import get_all_by_troop, get_by_id, create_item, update_item, delete_item, query_items
+from app.cosmosdb import (
+    create_item,
+    delete_item,
+    get_all_by_troop,
+    get_by_id,
+    query_items,
+    query_items_paginated,
+    update_item,
+)
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
 from app.schemas import CreateEvent, UpdateEvent
@@ -18,9 +27,19 @@ CONTAINER = "events"
 
 
 @router.get("/events")
-async def list_events(auth: RequireTroopContext):
-    events = await get_all_by_troop(CONTAINER, auth.troopId)
-    return events
+async def list_events(
+    auth: RequireTroopContext,
+    limit: int = Query(default=50, ge=1, le=100),
+    continuationToken: str | None = None,
+):
+    items, next_token = await query_items_paginated(
+        CONTAINER,
+        "SELECT * FROM c WHERE c.troopId = @troopId",
+        [{"name": "@troopId", "value": auth.troopId}],
+        limit=limit,
+        continuation_token=continuationToken,
+    )
+    return {"items": items, "continuationToken": next_token}
 
 
 @router.get("/events/{event_id}")

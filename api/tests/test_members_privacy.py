@@ -34,8 +34,8 @@ async def test_list_members_redacts_pii_for_non_manage_members_role(client, monk
         }
     ]
 
-    async def fake_query_items(*_args, **_kwargs):
-        return stored_members
+    async def fake_query_items_paginated(*_args, **_kwargs):
+        return stored_members, None
 
     async def fake_require_troop_context():
         return TroopContext(
@@ -46,20 +46,23 @@ async def test_list_members_redacts_pii_for_non_manage_members_role(client, monk
             role="scout",
         )
 
-    monkeypatch.setattr(members_router, "query_items", fake_query_items)
+    monkeypatch.setattr(members_router, "query_items_paginated", fake_query_items_paginated)
     app.dependency_overrides[auth.require_troop_context] = fake_require_troop_context
 
     response = await client.get("/api/members")
 
     assert response.status_code == 200
-    assert response.json() == [
-        {
-            "id": "m1",
-            "displayName": "Leader One",
-            "role": "adultLeader",
-            "status": "active",
-        }
-    ]
+    assert response.json() == {
+        "items": [
+            {
+                "id": "m1",
+                "displayName": "Leader One",
+                "role": "adultLeader",
+                "status": "active",
+            }
+        ],
+        "continuationToken": None,
+    }
 
 
 @pytest.mark.asyncio
@@ -76,8 +79,8 @@ async def test_list_members_returns_full_record_for_manage_members_role(client, 
         }
     ]
 
-    async def fake_query_items(*_args, **_kwargs):
-        return stored_members
+    async def fake_query_items_paginated(*_args, **_kwargs):
+        return stored_members, None
 
     async def fake_require_troop_context():
         return TroopContext(
@@ -88,10 +91,13 @@ async def test_list_members_returns_full_record_for_manage_members_role(client, 
             role="troopAdmin",
         )
 
-    monkeypatch.setattr(members_router, "query_items", fake_query_items)
+    monkeypatch.setattr(members_router, "query_items_paginated", fake_query_items_paginated)
     app.dependency_overrides[auth.require_troop_context] = fake_require_troop_context
 
     response = await client.get("/api/members")
 
     assert response.status_code == 200
-    assert response.json() == stored_members
+    assert response.json() == {
+        "items": stored_members,
+        "continuationToken": None,
+    }
