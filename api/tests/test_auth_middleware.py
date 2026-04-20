@@ -24,7 +24,7 @@ async def test_validate_token_retries_with_forced_jwks_refresh(monkeypatch):
 
     decode_calls = 0
 
-    def fake_decode(token, jwks, algorithms, audience, issuer):  # noqa: ANN001
+    def fake_decode(token: str, jwks: dict, algorithms: list[str], audience: str | None, issuer: str):
         nonlocal decode_calls
         decode_calls += 1
         if jwks == stale_jwks:
@@ -49,6 +49,7 @@ async def test_get_jwks_cache_expires_after_ttl(monkeypatch):
     requested_urls: list[str] = []
     timeout_values: list[int] = []
     fetch_count = 0
+    # t=0 initial fetch (pre/post lock), t=10 still cached, t=3700 expired (pre/post lock)
     monotonic_values = iter([0.0, 0.0, 10.0, 3700.0, 3700.0])
 
     class FakeResponse:
@@ -79,7 +80,7 @@ async def test_get_jwks_cache_expires_after_ttl(monkeypatch):
 
     monkeypatch.setattr(auth, "_jwks", None)
     monkeypatch.setattr(auth, "_jwks_fetched_at", 0.0)
-    monkeypatch.setattr(auth._time, "monotonic", lambda: next(monotonic_values, 3700.0))
+    monkeypatch.setattr("app.middleware.auth._time.monotonic", lambda: next(monotonic_values, 3700.0))
     monkeypatch.setattr(auth.httpx, "AsyncClient", FakeAsyncClient)
 
     first = await auth._get_jwks()
