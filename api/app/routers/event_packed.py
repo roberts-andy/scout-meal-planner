@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import time
 
-from fastapi import APIRouter
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException
 from azure.cosmos.exceptions import CosmosHttpResponseError
 
 from app.cosmosdb import get_by_id, update_item
@@ -25,7 +24,7 @@ async def toggle_packed(event_id: str, body: TogglePackedItem, auth: RequireTroo
     for _ in range(MAX_RETRY_ATTEMPTS):
         existing = await get_by_id(CONTAINER, event_id, auth.troopId)
         if not existing:
-            return JSONResponse({"error": "Event not found"}, status_code=404)
+            raise HTTPException(status_code=404, detail="Event not found")
 
         packed_items = set(existing.get("packedItems") or [])
         if body.packed:
@@ -53,7 +52,7 @@ async def toggle_packed(event_id: str, body: TogglePackedItem, auth: RequireTroo
                 continue
             raise
 
-    return JSONResponse(
-        {"error": "Failed to update packed items after retries due to concurrent modifications"},
+    raise HTTPException(
         status_code=409,
+        detail="Failed to update packed items after retries due to concurrent modifications",
     )
