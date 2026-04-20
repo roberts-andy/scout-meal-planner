@@ -164,8 +164,9 @@ def _install_default_mocks(monkeypatch: pytest.MonkeyPatch):
 
     monkeypatch.setattr(share, "get_by_id", fake_get_by_id)
     monkeypatch.setattr(share, "get_all_by_troop", fake_get_all_by_troop)
+    monkeypatch.setattr(share, "create_item", fake_create_item)
     monkeypatch.setattr(share, "update_item", fake_update_item)
-    monkeypatch.setattr(share, "query_items", fake_query_items)
+    monkeypatch.setattr(share, "delete_item", fake_delete_item)
 
     monkeypatch.setattr(feedback, "get_by_id", fake_get_by_id)
     monkeypatch.setattr(feedback, "get_all_by_troop", fake_get_all_by_troop)
