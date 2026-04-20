@@ -25,7 +25,7 @@ from app.routers import (
 
 
 @pytest.fixture
-def client():
+def async_test_client():
     transport = ASGITransport(app=app)
     return AsyncClient(transport=transport, base_url="http://test")
 
@@ -240,25 +240,25 @@ async def _call(client: AsyncClient, case: EndpointCase):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("case", RBAC_ENDPOINT_CASES, ids=[f"{c.method.upper()} {c.path}" for c in RBAC_ENDPOINT_CASES])
-async def test_insufficient_roles_receive_403(client, monkeypatch: pytest.MonkeyPatch, case: EndpointCase):
+async def test_insufficient_roles_receive_403(async_test_client, monkeypatch: pytest.MonkeyPatch, case: EndpointCase):
     _install_default_mocks(monkeypatch)
     _set_auth_role(monkeypatch, case.denied_role)
-    response = await _call(client, case)
+    response = await _call(async_test_client, case)
     assert response.status_code == 403
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("case", RBAC_ENDPOINT_CASES, ids=[f"{c.method.upper()} {c.path}" for c in RBAC_ENDPOINT_CASES])
-async def test_troop_admin_can_access_protected_endpoints(client, monkeypatch: pytest.MonkeyPatch, case: EndpointCase):
+async def test_troop_admin_can_access_protected_endpoints(async_test_client, monkeypatch: pytest.MonkeyPatch, case: EndpointCase):
     _install_default_mocks(monkeypatch)
     _set_auth_role(monkeypatch, "troopAdmin")
-    response = await _call(client, case)
+    response = await _call(async_test_client, case)
     assert response.status_code == case.success_status
 
 
 @pytest.mark.asyncio
-async def test_unauthenticated_request_returns_401(client, monkeypatch: pytest.MonkeyPatch):
+async def test_unauthenticated_request_returns_401(async_test_client, monkeypatch: pytest.MonkeyPatch):
     _install_default_mocks(monkeypatch)
     _set_auth_role(monkeypatch, None)
-    response = await client.post("/api/events", json=_event_payload())
+    response = await async_test_client.post("/api/events", json=_event_payload())
     assert response.status_code == 401
