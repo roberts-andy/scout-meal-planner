@@ -33,7 +33,7 @@ describe('useEvents', () => {
       .mockResolvedValueOnce({ items: [{ id: 'e2', name: 'Hike' } as any], continuationToken: null })
     const { result } = renderHook(() => useEvents(), { wrapper: wrapper() })
     await waitFor(() => expect(result.current.data).toEqual([{ id: 'e1', name: 'Camp' }]))
-    expect(eventsApi.getPage).toHaveBeenNthCalledWith(1, { limit: 50, continuationToken: undefined })
+    expect(eventsApi.getPage).toHaveBeenNthCalledWith(1, { continuationToken: undefined })
 
     await result.current.fetchNextPage()
 
@@ -41,7 +41,7 @@ describe('useEvents', () => {
       { id: 'e1', name: 'Camp' },
       { id: 'e2', name: 'Hike' },
     ]))
-    expect(eventsApi.getPage).toHaveBeenNthCalledWith(2, { limit: 50, continuationToken: 'token-1' })
+    expect(eventsApi.getPage).toHaveBeenNthCalledWith(2, { continuationToken: 'token-1' })
   })
 })
 

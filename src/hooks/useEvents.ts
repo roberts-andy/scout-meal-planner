@@ -2,12 +2,11 @@ import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-q
 import { eventsApi } from '@/lib/api'
 import { Event } from '@/lib/types'
 
-const PAGE_SIZE = 50
 
 export function useEvents() {
   const query = useInfiniteQuery({
     queryKey: ['events'],
-    queryFn: ({ pageParam }) => eventsApi.getPage({ limit: PAGE_SIZE, continuationToken: pageParam ?? undefined }),
+    queryFn: ({ pageParam }) => eventsApi.getPage({ continuationToken: pageParam ?? undefined }),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.continuationToken ?? undefined,
   })
