@@ -14,7 +14,9 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
+import { useAuthContext } from '@/components/AuthProvider'
 import { format, eachDayOfInterval } from 'date-fns'
+import { toast } from 'sonner'
 import type { DateRange } from 'react-day-picker'
 
 interface CreateEventDialogProps {
@@ -24,6 +26,7 @@ interface CreateEventDialogProps {
 }
 
 export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateEventDialogProps) {
+  const { troopId } = useAuthContext()
   const [name, setName] = useState('')
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const [description, setDescription] = useState('')
@@ -35,6 +38,10 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
 
   const handleSubmit = () => {
     if (!name || !dateRange?.from || !dateRange?.to) return
+    if (!troopId) {
+      toast.error('You must be in a troop to create an event.')
+      return
+    }
 
     const days: EventDay[] = eachDayOfInterval({
       start: dateRange.from,
@@ -46,7 +53,7 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
 
     const newEvent: Event = {
       id: `event-${Date.now()}`,
-      troopId: '',
+      troopId,
       name,
       startDate: format(dateRange.from, 'yyyy-MM-dd'),
       endDate: format(dateRange.to, 'yyyy-MM-dd'),
@@ -179,7 +186,7 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={!name || !dateRange?.from || !dateRange?.to}>
+          <Button onClick={handleSubmit} disabled={!name || !dateRange?.from || !dateRange?.to || !troopId}>
             Create Event
           </Button>
         </DialogFooter>

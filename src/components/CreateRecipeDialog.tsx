@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Trash } from '@phosphor-icons/react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import { useAuthContext } from '@/components/AuthProvider'
+import { toast } from 'sonner'
 
 interface CreateRecipeDialogProps {
   open: boolean
@@ -28,6 +30,7 @@ interface CreateRecipeDialogProps {
 }
 
 export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initialRecipe, eventId, eventName, isEventActive }: CreateRecipeDialogProps) {
+  const { troopId } = useAuthContext()
   const [name, setName] = useState(initialRecipe?.name || '')
   const [description, setDescription] = useState(initialRecipe?.description || '')
   const [servings, setServings] = useState(initialRecipe?.servings || 4)
@@ -205,9 +208,13 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
 
       onCreateRecipe(recipe)
     } else {
+      if (!troopId) {
+        toast.error('You must be in a troop to create a recipe.')
+        return
+      }
       const recipe: Recipe = {
         id: `recipe-${Date.now()}`,
-        troopId: '',
+        troopId,
         name,
         description: description || undefined,
         servings,
@@ -435,7 +442,7 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={!name || ingredients.length === 0}>
+          <Button onClick={handleSubmit} disabled={!name || ingredients.length === 0 || (!isEditing && !troopId)}>
             {isEditing ? 'Save Changes' : 'Create Recipe'}
           </Button>
         </DialogFooter>
