@@ -21,7 +21,7 @@ CONTAINER = "troops"
 
 
 def _generate_invite_code() -> str:
-    return "TROOP-" + secrets.token_hex(2).upper()[:4]
+    return "TROOP-" + secrets.token_hex(4).upper()
 
 
 def _to_first_name(display_name: str) -> str:
