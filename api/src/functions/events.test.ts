@@ -19,6 +19,7 @@ vi.mock('../cosmosdb.js', () => ({
   getById: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
+  queryItems: vi.fn(),
   remove: vi.fn(),
 }))
 
@@ -195,9 +196,44 @@ describe('events handler — DELETE', () => {
 
   it('removes scoped to caller troopId', async () => {
     vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+    vi.mocked(cosmos.queryItems).mockResolvedValueOnce([])
     vi.mocked(cosmos.remove).mockResolvedValueOnce(undefined)
     const result = await handler(makeReq({ method: 'DELETE', params: { id: 'e1' } }), ctx)
     expect(result.status).toBe(204)
+    expect(cosmos.queryItems).toHaveBeenCalledWith(
+      'feedback',
+      'SELECT c.id FROM c WHERE c.eventId = @eventId AND c.troopId = @troopId',
+      [
+        { name: '@eventId', value: 'e1' },
+        { name: '@troopId', value: 'troop-42' },
+      ],
+    )
+    expect(cosmos.remove).toHaveBeenCalledWith('events', 'e1', 'troop-42')
+  })
+
+  it('deletes all feedback for the event before deleting the event', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(adminAuth)
+    vi.mocked(cosmos.queryItems).mockResolvedValueOnce([
+      { id: 'f1' },
+      { id: 'f2' },
+      { id: 'f3' },
+    ])
+    vi.mocked(cosmos.remove).mockResolvedValue(undefined)
+
+    const result = await handler(makeReq({ method: 'DELETE', params: { id: 'e1' } }), ctx)
+
+    expect(result.status).toBe(204)
+    expect(cosmos.queryItems).toHaveBeenCalledWith(
+      'feedback',
+      'SELECT c.id FROM c WHERE c.eventId = @eventId AND c.troopId = @troopId',
+      [
+        { name: '@eventId', value: 'e1' },
+        { name: '@troopId', value: 'troop-42' },
+      ],
+    )
+    expect(cosmos.remove).toHaveBeenCalledWith('feedback', 'f1', 'troop-42')
+    expect(cosmos.remove).toHaveBeenCalledWith('feedback', 'f2', 'troop-42')
+    expect(cosmos.remove).toHaveBeenCalledWith('feedback', 'f3', 'troop-42')
     expect(cosmos.remove).toHaveBeenCalledWith('events', 'e1', 'troop-42')
   })
 })
