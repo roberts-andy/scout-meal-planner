@@ -151,7 +151,7 @@ async def require_token(request: Request) -> TokenClaims:
     claims = await validate_token(request)
     if not claims:
         unauthorized()
-    return claims  # type: ignore[return-value]
+    return claims
 
 
 # FastAPI dependency: require troop membership
@@ -159,7 +159,7 @@ async def require_troop_context(request: Request) -> TroopContext:
     ctx = await get_troop_context(request)
     if not ctx:
         unauthorized()
-    return ctx  # type: ignore[return-value]
+    return ctx
 
 
 # Annotated types for dependency injection
