@@ -104,9 +104,11 @@ describe('moderation failure path', () => {
     expect(createResult.jsonBody).toEqual(expect.objectContaining({
       moderation: expect.objectContaining({ status: 'pending' }),
     }))
+    expect(ctx.warn).toHaveBeenCalledWith(expect.stringContaining('Content moderation check failed'))
 
     const listResult = await adminFlaggedContentHandler(makeReq({ method: 'GET' }), ctx)
 
+    expect(listResult.status).toBe(200)
     expect(listResult.jsonBody).toEqual(expect.arrayContaining([
       expect.objectContaining({
         contentType: 'recipe',

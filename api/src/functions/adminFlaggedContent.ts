@@ -128,7 +128,7 @@ async function adminFlaggedContentHandler(req: HttpRequest, context: InvocationC
           .map((item) => toFlaggedListItem('feedback', item)),
       ].sort((a, b) => b.flaggedAt - a.flaggedAt)
 
-      return { jsonBody: flagged }
+      return { status: 200, jsonBody: flagged }
     }
 
     if (method === 'PUT' && id) {
