@@ -207,6 +207,7 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
     } else {
       const recipe: Recipe = {
         id: `recipe-${Date.now()}`,
+        troopId: '',
         name,
         description: description || undefined,
         servings,

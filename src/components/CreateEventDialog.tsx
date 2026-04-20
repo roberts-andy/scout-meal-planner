@@ -46,6 +46,7 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
 
     const newEvent: Event = {
       id: `event-${Date.now()}`,
+      troopId: '',
       name,
       startDate: format(dateRange.from, 'yyyy-MM-dd'),
       endDate: format(dateRange.to, 'yyyy-MM-dd'),
