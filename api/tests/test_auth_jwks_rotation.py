@@ -67,6 +67,9 @@ async def test_get_jwks_cache_expires_after_ttl(monkeypatch):
             return self._payload
 
     class FakeClient:
+        def __init__(self, *, timeout):
+            assert timeout == 10
+
         async def __aenter__(self):
             return self
 
@@ -77,8 +80,8 @@ async def test_get_jwks_cache_expires_after_ttl(monkeypatch):
             network_calls.append(url)
             return FakeResponse({"keys": [{"kid": f"kid-{len(network_calls)}"}]})
 
-    monkeypatch.setattr(auth.time, "monotonic", lambda: clock[0])
-    monkeypatch.setattr(auth.httpx, "AsyncClient", lambda: FakeClient())
+    monkeypatch.setattr("app.middleware.auth._time.monotonic", lambda: clock[0])
+    monkeypatch.setattr(auth.httpx, "AsyncClient", FakeClient)
 
     first = await auth._get_jwks()
     clock[0] = 150.0

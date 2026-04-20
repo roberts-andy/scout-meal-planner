@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
-import time
+import time as _time
 from dataclasses import dataclass
 from typing import Annotated
 
@@ -36,22 +37,25 @@ def _get_jwks_cache_ttl_seconds() -> int:
 JWKS_CACHE_TTL_SECONDS = _get_jwks_cache_ttl_seconds()
 
 _jwks: dict | None = None
-_jwks_fetched_at: float | None = None
+_jwks_fetched_at: float = 0
+_JWKS_HTTP_TIMEOUT_SECONDS = 10
+_jwks_lock = asyncio.Lock()
 
 
 async def _get_jwks(force_refresh: bool = False) -> dict:
     global _jwks, _jwks_fetched_at
-    cache_expired = (
-        _jwks is None
-        or _jwks_fetched_at is None
-        or (time.monotonic() - _jwks_fetched_at) >= JWKS_CACHE_TTL_SECONDS
-    )
-    if force_refresh or cache_expired:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(JWKS_URI)
-            resp.raise_for_status()
-            _jwks = resp.json()
-            _jwks_fetched_at = time.monotonic()
+    now = _time.monotonic()
+    if _jwks is not None and not force_refresh and (now - _jwks_fetched_at) <= JWKS_CACHE_TTL_SECONDS:
+        return _jwks
+
+    async with _jwks_lock:
+        now = _time.monotonic()
+        if _jwks is None or force_refresh or (now - _jwks_fetched_at) > JWKS_CACHE_TTL_SECONDS:
+            async with httpx.AsyncClient(timeout=_JWKS_HTTP_TIMEOUT_SECONDS) as client:
+                resp = await client.get(JWKS_URI)
+                resp.raise_for_status()
+                _jwks = resp.json()
+                _jwks_fetched_at = now
     return _jwks
 
 
