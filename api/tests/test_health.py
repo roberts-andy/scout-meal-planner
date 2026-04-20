@@ -2,16 +2,18 @@
 from unittest.mock import AsyncMock
 
 import pytest
+import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.routers import health as health_router
 
 
-@pytest.fixture
-def client():
+@pytest_asyncio.fixture
+async def client():
     transport = ASGITransport(app=app)
-    return AsyncClient(transport=transport, base_url="http://test")
+    async with AsyncClient(transport=transport, base_url="http://test") as async_client:
+        yield async_client
 
 
 @pytest.mark.asyncio

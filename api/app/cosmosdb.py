@@ -122,8 +122,7 @@ async def check_database_connection() -> None:
         return
 
     if not _endpoint and not _connection_string:
-        logger.warning("Neither COSMOS_ENDPOINT nor COSMOS_CONNECTION_STRING is set. Health check cannot verify database.")
-        return
+        raise RuntimeError("Neither COSMOS_ENDPOINT nor COSMOS_CONNECTION_STRING is set.")
 
     if _endpoint:
         client = CosmosClient(_endpoint, credential=DefaultAzureCredential(), transport=_SafeAioHttpTransport())
