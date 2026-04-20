@@ -118,6 +118,12 @@ async def init_database() -> None:
 
 
 async def check_database_connection() -> None:
+    """Perform a read-only Cosmos DB connectivity check.
+
+    Prefer existing initialized handles first (_database, then _client) and
+    only fall back to a cached lightweight client when initialization has not
+    completed. Raises when configuration is missing or the database cannot be read.
+    """
     global _health_check_client
 
     if _database is not None:
@@ -130,7 +136,7 @@ async def check_database_connection() -> None:
         return
 
     if not _endpoint and not _connection_string:
-        raise RuntimeError("Database configuration missing: either COSMOS_ENDPOINT or COSMOS_CONNECTION_STRING must be set.")
+        raise RuntimeError("Cosmos DB configuration missing: either COSMOS_ENDPOINT or COSMOS_CONNECTION_STRING must be set.")
 
     if _health_check_client is None:
         if _endpoint:
