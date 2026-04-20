@@ -46,7 +46,7 @@ describe('useEvents', () => {
 })
 
 describe('useCreateEvent', () => {
-  it('appends created event to cache', async () => {
+  it('calls eventsApi.create', async () => {
     const created = { id: 'e2', name: 'New' } as any
     vi.mocked(eventsApi.getPage).mockResolvedValue({ items: [{ id: 'e1' } as any], continuationToken: null })
     vi.mocked(eventsApi.create).mockResolvedValueOnce(created)

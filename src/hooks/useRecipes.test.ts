@@ -34,7 +34,7 @@ describe('useRecipes', () => {
     const { result } = renderHook(() => useRecipes(), { wrapper: wrapper() })
 
     await waitFor(() => expect(result.current.data).toEqual([{ id: 'r1', name: 'Pancakes' }]))
-    expect(recipesApi.getPage).toHaveBeenNthCalledWith(1, { limit: 50, continuationToken: undefined })
+    expect(recipesApi.getPage).toHaveBeenNthCalledWith(1, { continuationToken: undefined })
 
     await result.current.fetchNextPage()
 
@@ -42,7 +42,7 @@ describe('useRecipes', () => {
       { id: 'r1', name: 'Pancakes' },
       { id: 'r2', name: 'Chili' },
     ]))
-    expect(recipesApi.getPage).toHaveBeenNthCalledWith(2, { limit: 50, continuationToken: 'token-1' })
+    expect(recipesApi.getPage).toHaveBeenNthCalledWith(2, { continuationToken: 'token-1' })
   })
 })
 

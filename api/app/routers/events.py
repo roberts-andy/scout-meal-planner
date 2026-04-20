@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import logging
-import time
 import uuid
 
 from fastapi import APIRouter, HTTPException
 from fastapi import Query
 
-from app.cosmosdb import query_items_paginated, get_by_id, create_item, update_item, delete_item, query_items
+from app.audit import audit_create, audit_update
+from app.cosmosdb import (
+    create_item,
+    delete_item,
+    get_by_id,
+    query_items,
+    query_items_paginated,
+    update_item,
+)
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
 from app.schemas import CreateEvent, UpdateEvent
@@ -46,16 +53,11 @@ async def get_event(event_id: str, auth: RequireTroopContext):
 async def create_event(body: CreateEvent, auth: RequireTroopContext):
     if not check_permission(auth.role, "manageEvents"):
         forbidden()
-    now = int(time.time() * 1000)
-    audit = {"userId": auth.userId, "displayName": auth.displayName}
     event = await create_item(CONTAINER, {
         "id": str(uuid.uuid4()),
         "troopId": auth.troopId,
         **body.model_dump(),
-        "createdAt": now,
-        "updatedAt": now,
-        "createdBy": audit,
-        "updatedBy": audit,
+        **audit_create(auth),
     })
     return event
 
@@ -72,8 +74,7 @@ async def update_event(event_id: str, body: UpdateEvent, auth: RequireTroopConte
         **body.model_dump(exclude_unset=True),
         "id": event_id,
         "troopId": auth.troopId,
-        "updatedAt": int(time.time() * 1000),
-        "updatedBy": {"userId": auth.userId, "displayName": auth.displayName},
+        **audit_update(auth),
     }, auth.troopId)
     return event
 

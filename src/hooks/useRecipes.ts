@@ -2,12 +2,10 @@ import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-q
 import { recipesApi } from '@/lib/api'
 import { Recipe } from '@/lib/types'
 
-const PAGE_SIZE = 50
-
 export function useRecipes() {
   const query = useInfiniteQuery({
     queryKey: ['recipes'],
-    queryFn: ({ pageParam }) => recipesApi.getPage({ limit: PAGE_SIZE, continuationToken: pageParam ?? undefined }),
+    queryFn: ({ pageParam }) => recipesApi.getPage({ continuationToken: pageParam ?? undefined }),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.continuationToken ?? undefined,
   })
