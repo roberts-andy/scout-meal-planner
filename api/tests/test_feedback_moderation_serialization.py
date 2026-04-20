@@ -23,6 +23,7 @@ def _make_auth():
     return SimpleNamespace(
         userId="user-1",
         displayName="Scout User",
+        email="scout@example.com",
         troopId="troop-1",
         role="scout",
     )

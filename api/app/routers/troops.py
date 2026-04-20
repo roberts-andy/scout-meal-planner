@@ -104,9 +104,12 @@ async def join_troop(body: JoinTroop, claims: RequireToken):
     member = await create_item("members", {
         "id": str(uuid.uuid4()),
         "troopId": troop["id"],
+        "userId": claims.userId,
+        "email": claims.email,
         "displayName": _to_first_name(claims.displayName),
         "role": "scout",
         "status": "pending",
+        "joinedAt": int(time.time() * 1000),
     })
 
     return {"troop": troop, "member": member}
