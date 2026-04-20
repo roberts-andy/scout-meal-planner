@@ -61,7 +61,7 @@ async def test_get_jwks_cache_expires_after_ttl(monkeypatch):
             self._payload = payload
 
         def raise_for_status(self):
-            return None
+            pass
 
         def json(self):
             return self._payload
