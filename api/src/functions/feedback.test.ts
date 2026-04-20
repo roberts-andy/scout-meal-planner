@@ -78,6 +78,22 @@ const scoutAuth = {
   role: 'scout',
 }
 
+const scoutBAuthor = {
+  userId: 'user-3',
+  email: 'scout-b@example.com',
+  displayName: 'Scout B',
+  troopId: 'troop-42',
+  role: 'scout',
+}
+
+const leaderAuth = {
+  userId: 'user-4',
+  email: 'leader@example.com',
+  displayName: 'Leader',
+  troopId: 'troop-42',
+  role: 'adultLeader',
+}
+
 const validFeedbackBody = {
   eventId: 'event-1',
   mealId: 'meal-1',
@@ -177,5 +193,100 @@ describe('feedback handler moderation', () => {
         eventDate: '2026-06-10',
       },
     ])
+  })
+
+  it('returns 403 when scout tries to update another scout feedback', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(scoutBAuthor)
+    vi.mocked(cosmos.getById).mockResolvedValueOnce({
+      id: 'feedback-1',
+      troopId: 'troop-42',
+      createdBy: { userId: scoutAuth.userId, displayName: scoutAuth.displayName },
+    })
+
+    const result = await feedbackHandler(makeReq({ method: 'PUT', params: { id: 'feedback-1' }, body: validFeedbackBody }), ctx)
+
+    expect(result.status).toBe(403)
+    expect(cosmos.update).not.toHaveBeenCalled()
+  })
+
+  it('allows scout to update own feedback', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(scoutAuth)
+    vi.mocked(cosmos.getById).mockResolvedValueOnce({
+      id: 'feedback-1',
+      troopId: 'troop-42',
+      createdBy: { userId: scoutAuth.userId, displayName: scoutAuth.displayName },
+    })
+    vi.mocked(moderateTextFields).mockResolvedValueOnce({
+      status: 'approved',
+      flaggedFields: [],
+      checkedAt: 123,
+      provider: 'azure-content-safety',
+    })
+    vi.mocked(cosmos.update).mockResolvedValueOnce({
+      id: 'feedback-1',
+      troopId: 'troop-42',
+      createdBy: { userId: scoutAuth.userId, displayName: scoutAuth.displayName },
+      updatedBy: { userId: scoutAuth.userId, displayName: scoutAuth.displayName },
+    } as any)
+
+    const result = await feedbackHandler(makeReq({ method: 'PUT', params: { id: 'feedback-1' }, body: validFeedbackBody }), ctx)
+
+    expect(result.jsonBody.id).toBe('feedback-1')
+    expect(cosmos.update).toHaveBeenCalledOnce()
+  })
+
+  it('allows leader to update scout feedback via manageEvents override', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(leaderAuth)
+    vi.mocked(cosmos.getById).mockResolvedValueOnce({
+      id: 'feedback-1',
+      troopId: 'troop-42',
+      createdBy: { userId: scoutAuth.userId, displayName: scoutAuth.displayName },
+    })
+    vi.mocked(moderateTextFields).mockResolvedValueOnce({
+      status: 'approved',
+      flaggedFields: [],
+      checkedAt: 123,
+      provider: 'azure-content-safety',
+    })
+    vi.mocked(cosmos.update).mockResolvedValueOnce({
+      id: 'feedback-1',
+      troopId: 'troop-42',
+      createdBy: { userId: scoutAuth.userId, displayName: scoutAuth.displayName },
+      updatedBy: { userId: leaderAuth.userId, displayName: leaderAuth.displayName },
+    } as any)
+
+    const result = await feedbackHandler(makeReq({ method: 'PUT', params: { id: 'feedback-1' }, body: validFeedbackBody }), ctx)
+
+    expect(result.jsonBody.id).toBe('feedback-1')
+    expect(cosmos.update).toHaveBeenCalledOnce()
+  })
+
+  it('returns 403 when scout tries to delete another scout feedback', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(scoutBAuthor)
+    vi.mocked(cosmos.getById).mockResolvedValueOnce({
+      id: 'feedback-1',
+      troopId: 'troop-42',
+      createdBy: { userId: scoutAuth.userId, displayName: scoutAuth.displayName },
+    })
+
+    const result = await feedbackHandler(makeReq({ method: 'DELETE', params: { id: 'feedback-1' } }), ctx)
+
+    expect(result.status).toBe(403)
+    expect(cosmos.remove).not.toHaveBeenCalled()
+  })
+
+  it('allows scout to delete own feedback', async () => {
+    vi.mocked(getTroopContext).mockResolvedValueOnce(scoutAuth)
+    vi.mocked(cosmos.getById).mockResolvedValueOnce({
+      id: 'feedback-1',
+      troopId: 'troop-42',
+      createdBy: { userId: scoutAuth.userId, displayName: scoutAuth.displayName },
+    })
+    vi.mocked(cosmos.remove).mockResolvedValueOnce(undefined)
+
+    const result = await feedbackHandler(makeReq({ method: 'DELETE', params: { id: 'feedback-1' } }), ctx)
+
+    expect(result.status).toBe(204)
+    expect(cosmos.remove).toHaveBeenCalledWith('feedback', 'feedback-1', 'troop-42')
   })
 })
