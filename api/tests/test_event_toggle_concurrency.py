@@ -93,3 +93,63 @@ async def test_toggle_purchased_retries_on_etag_conflict_and_preserves_both_upda
     assert set(state["purchasedItems"]) == {"beans-can", "salt-tsp"}
     assert len(if_match_values) == 3
     assert all(value is not None for value in if_match_values)
+
+
+@pytest.mark.asyncio
+async def test_toggle_packed_ten_concurrent_items_all_persist(monkeypatch: pytest.MonkeyPatch):
+    """Fire 10 concurrent packed toggles and verify all 10 items persist."""
+    state = {"id": "event-10", "troopId": "troop-1", "packedItems": [], "_etag": "etag-1"}
+    barrier = asyncio.Barrier(10)
+
+    async def fake_get_by_id(_container: str, _item_id: str, _pk: str):
+        await barrier.wait()
+        return deepcopy(state)
+
+    async def fake_update_item(_container: str, _item_id: str, item: dict, _pk: str, if_match: str | None = None):
+        if if_match != state["_etag"]:
+            raise _PreconditionFailed()
+        next_state = deepcopy(item)
+        next_state["_etag"] = f"etag-{int(state['_etag'].split('-')[1]) + 1}"
+        state.update(next_state)
+        return deepcopy(state)
+
+    monkeypatch.setattr(event_packed, "get_by_id", fake_get_by_id)
+    monkeypatch.setattr(event_packed, "update_item", fake_update_item)
+
+    items = [f"item-{i}" for i in range(10)]
+    auth = SimpleNamespace(role="scout", troopId="troop-1", userId="user-1", displayName="Scout One")
+    await asyncio.gather(
+        *(event_packed.toggle_packed("event-10", TogglePackedItem(item=name, packed=True), auth) for name in items)
+    )
+
+    assert set(state["packedItems"]) == set(items), f"Expected all 10 items, got {state['packedItems']}"
+
+
+@pytest.mark.asyncio
+async def test_toggle_purchased_ten_concurrent_items_all_persist(monkeypatch: pytest.MonkeyPatch):
+    """Fire 10 concurrent purchased toggles and verify all 10 items persist."""
+    state = {"id": "event-11", "troopId": "troop-1", "purchasedItems": [], "_etag": "etag-1"}
+    barrier = asyncio.Barrier(10)
+
+    async def fake_get_by_id(_container: str, _item_id: str, _pk: str):
+        await barrier.wait()
+        return deepcopy(state)
+
+    async def fake_update_item(_container: str, _item_id: str, item: dict, _pk: str, if_match: str | None = None):
+        if if_match != state["_etag"]:
+            raise _PreconditionFailed()
+        next_state = deepcopy(item)
+        next_state["_etag"] = f"etag-{int(state['_etag'].split('-')[1]) + 1}"
+        state.update(next_state)
+        return deepcopy(state)
+
+    monkeypatch.setattr(event_purchased, "get_by_id", fake_get_by_id)
+    monkeypatch.setattr(event_purchased, "update_item", fake_update_item)
+
+    items = [f"supply-{i}" for i in range(10)]
+    auth = SimpleNamespace(role="scout", troopId="troop-1", userId="user-2", displayName="Scout Two")
+    await asyncio.gather(
+        *(event_purchased.toggle_purchased("event-11", TogglePurchasedItem(item=name, purchased=True), auth) for name in items)
+    )
+
+    assert set(state["purchasedItems"]) == set(items), f"Expected all 10 items, got {state['purchasedItems']}"
