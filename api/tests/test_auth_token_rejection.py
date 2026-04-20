@@ -42,7 +42,7 @@ async def test_require_token_rejects_wrong_authorization_scheme():
     ],
 )
 async def test_require_token_rejects_invalid_bearer_tokens(monkeypatch, header: str, decode_error: JWTError):
-    async def fake_get_jwks():
+    async def fake_get_jwks(force_refresh: bool = False):
         return {"keys": []}
 
     def fake_decode(*_args, **_kwargs):
