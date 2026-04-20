@@ -50,6 +50,7 @@ async def email_shopping_list(event_id: str, body: EmailShoppingList, auth: Requ
         raise HTTPException(status_code=500, detail="Email service not configured")
 
     event_name = existing_event.get("name") or "Unnamed Event"
+    safe_event_name = str(event_name).replace("\n", " ").replace("\r", " ")[:200]
 
     text_rows = "\n".join(f"- {item.name}: {item.quantity} {item.unit}" for item in body.items)
     html_rows = "".join(
@@ -63,7 +64,7 @@ async def email_shopping_list(event_id: str, body: EmailShoppingList, auth: Requ
         "senderAddress": from_email,
         "recipients": {"to": [{"address": body.recipientEmail}]},
         "content": {
-            "subject": f"Shopping List: {event_name}",
+            "subject": f"Shopping List: {safe_event_name}",
             "plainText": f"Shopping list for {event_name}\n\n{text_rows}",
             "html": (
                 f"<h2>Shopping list for {html.escape(event_name)}</h2>"
