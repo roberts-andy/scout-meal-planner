@@ -10,6 +10,10 @@ describe('EventSchedule meal flags', () => {
     name: 'Summer Camp',
     startDate: '2026-07-01',
     endDate: '2026-07-01',
+    powerAvailable: true,
+    runningWater: true,
+    trailerAccess: true,
+    expectedWeather: 'Windy',
     days: [{ date: '2026-07-01', meals: [] }],
     createdAt: 1,
     updatedAt: 1,
@@ -29,6 +33,8 @@ describe('EventSchedule meal flags', () => {
     )
 
     await user.click(screen.getByRole('button', { name: /add meal/i }))
+    expect(screen.getByText(/Trip logistics for recipe selection:/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Weather: Windy/i).length).toBeGreaterThan(0)
 
     const trailside = screen.getByRole('checkbox', { name: /trailside/i })
     const timeConstrained = screen.getByRole('checkbox', { name: /time-constrained/i })

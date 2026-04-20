@@ -24,6 +24,30 @@ def test_update_event_validates_constraints_when_field_is_set():
         UpdateEvent(name="")
 
 
+def test_create_event_accepts_new_logistics_fields():
+    body = CreateEvent(
+        name="Campout",
+        startDate="2026-07-01",
+        endDate="2026-07-02",
+        days=[{"date": "2026-07-01", "meals": []}],
+        powerAvailable=True,
+        runningWater=False,
+        trailerAccess=True,
+        expectedWeather="Rain likely",
+    )
+    assert body.model_dump()["powerAvailable"] is True
+    assert body.model_dump()["runningWater"] is False
+    assert body.model_dump()["trailerAccess"] is True
+    assert body.model_dump()["expectedWeather"] == "Rain likely"
+
+
+def test_update_event_rejects_invalid_logistics_field_types():
+    with pytest.raises(ValidationError):
+        UpdateEvent(powerAvailable=[])
+    with pytest.raises(ValidationError):
+        UpdateEvent(expectedWeather={})
+
+
 def test_update_recipe_validates_constraints_when_field_is_set():
     with pytest.raises(ValidationError):
         UpdateRecipe(servings=0)

@@ -158,6 +158,10 @@ class CreateEvent(BaseModel):
     highAltitude: Optional[bool] = None
     tentCamping: Optional[bool] = None
     cabinCamping: Optional[bool] = None
+    powerAvailable: Optional[bool] = None
+    runningWater: Optional[bool] = None
+    trailerAccess: Optional[bool] = None
+    expectedWeather: Optional[str] = None
     description: Optional[str] = None
     link: Optional[str] = None
 
@@ -174,6 +178,10 @@ class UpdateEvent(BaseModel):
     highAltitude: Optional[bool] = None
     tentCamping: Optional[bool] = None
     cabinCamping: Optional[bool] = None
+    powerAvailable: Optional[bool] = None
+    runningWater: Optional[bool] = None
+    trailerAccess: Optional[bool] = None
+    expectedWeather: Optional[str] = None
     description: Optional[str] = None
     link: Optional[str] = None
 

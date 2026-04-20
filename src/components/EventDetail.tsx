@@ -152,7 +152,7 @@ export function EventDetail({
             <p className="text-muted-foreground">
               {event.days.length} days • {event.days.reduce((acc, day) => acc + day.meals.length, 0)} meals planned
             </p>
-            {(event.hike || event.highAltitude || event.tentCamping || event.cabinCamping) && (
+            {(event.hike || event.highAltitude || event.tentCamping || event.cabinCamping || event.powerAvailable || event.runningWater || event.trailerAccess || event.expectedWeather) && (
               <>
                 <span className="text-muted-foreground">•</span>
                 <div className="flex flex-wrap gap-1.5">
@@ -160,6 +160,10 @@ export function EventDetail({
                   {event.highAltitude && <Badge variant="secondary" className="text-xs">High Altitude</Badge>}
                   {event.tentCamping && <Badge variant="secondary" className="text-xs">Tent Camping</Badge>}
                   {event.cabinCamping && <Badge variant="secondary" className="text-xs">Cabin Camping</Badge>}
+                  {event.powerAvailable && <Badge variant="secondary" className="text-xs">Power Available</Badge>}
+                  {event.runningWater && <Badge variant="secondary" className="text-xs">Running Water</Badge>}
+                  {event.trailerAccess && <Badge variant="secondary" className="text-xs">Trailer Access</Badge>}
+                  {event.expectedWeather && <Badge variant="outline" className="text-xs">Weather: {event.expectedWeather}</Badge>}
                 </div>
               </>
             )}
