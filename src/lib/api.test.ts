@@ -95,6 +95,11 @@ describe('eventsApi', () => {
     await expect(eventsApi.getById('bad')).rejects.toThrow('Not found')
   })
 
+  it('throws using detail field on non-ok response', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ detail: 'Shared event not found' }, 404))
+    await expect(eventsApi.getById('bad')).rejects.toThrow('Shared event not found')
+  })
+
   it('regenerateShare posts to /events/{id}/share', async () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({ shareToken: 't', shareUrl: 'https://example.com/share/t' }))
     await eventsApi.regenerateShare('1')

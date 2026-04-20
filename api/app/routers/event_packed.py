@@ -3,7 +3,6 @@ from __future__ import annotations
 import time
 
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse
 
 from app.cosmosdb import get_by_id, update_item
 from app.middleware.auth import RequireTroopContext, forbidden
@@ -22,7 +21,8 @@ async def toggle_packed(event_id: str, body: TogglePackedItem, auth: RequireTroo
 
     existing = await get_by_id(CONTAINER, event_id, auth.troopId)
     if not existing:
-        return JSONResponse({"error": "Event not found"}, status_code=404)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Event not found")
 
     packed_items = set(existing.get("packedItems") or [])
     if body.packed:

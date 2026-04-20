@@ -5,7 +5,6 @@ import time
 import uuid
 
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse
 
 from app.cosmosdb import get_all_by_troop, get_by_id, create_item, update_item, delete_item, query_items
 from app.middleware.auth import RequireTroopContext, forbidden
@@ -56,7 +55,8 @@ async def update_feedback(feedback_id: str, body: UpdateFeedback, auth: RequireT
         forbidden()
     existing = await get_by_id(CONTAINER, feedback_id, auth.troopId)
     if not existing:
-        return JSONResponse({"error": "Feedback not found"}, status_code=404)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Feedback not found")
     moderation = await moderate_text_fields([
         ModerationField(field="comments", text=body.comments),
         ModerationField(field="whatWorked", text=body.whatWorked),

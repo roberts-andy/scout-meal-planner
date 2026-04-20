@@ -7,7 +7,6 @@ import time
 import uuid
 
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse
 
 from app.cosmosdb import get_by_id, create_item, update_item, query_items
 from app.middleware.auth import RequireToken, RequireTroopContext, forbidden, get_troop_context, validate_token
@@ -60,7 +59,8 @@ async def create_troop(body: CreateTroop, claims: RequireToken):
 async def get_troop(auth: RequireTroopContext):
     troop = await get_by_id(CONTAINER, auth.troopId)
     if not troop:
-        return JSONResponse({"error": "Troop not found"}, status_code=404)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Troop not found")
     return troop
 
 
@@ -70,7 +70,8 @@ async def update_troop(body: UpdateTroop, auth: RequireTroopContext):
         forbidden()
     existing = await get_by_id(CONTAINER, auth.troopId)
     if not existing:
-        return JSONResponse({"error": "Troop not found"}, status_code=404)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Troop not found")
 
     updated = {**existing, **body.model_dump(), "id": auth.troopId, "updatedAt": int(time.time() * 1000)}
     result = await update_item(CONTAINER, auth.troopId, updated)
@@ -86,7 +87,8 @@ async def join_troop(body: JoinTroop, claims: RequireToken):
     )
 
     if not troops:
-        return JSONResponse({"error": "Invalid invite code"}, status_code=404)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Invalid invite code")
 
     troop = troops[0]
 
@@ -100,7 +102,8 @@ async def join_troop(body: JoinTroop, claims: RequireToken):
     )
 
     if existing:
-        return JSONResponse({"error": "Already a member of this troop"}, status_code=409)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=409, detail="Already a member of this troop")
 
     member = await create_item("members", {
         "id": str(uuid.uuid4()),

@@ -42,8 +42,13 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
         )
         .join(', ')
       : ''
-    const detail = body.error
-      ? `${body.error}${details ? `: ${details}` : ''} (HTTP ${res.status})`
+    const message = typeof body.error === 'string'
+      ? body.error
+      : typeof body.detail === 'string'
+        ? body.detail
+        : null
+    const detail = message
+      ? `${message}${details ? `: ${details}` : ''} (HTTP ${res.status})`
       : `Request failed with HTTP ${res.status}`
     const err = new Error(detail) as Error & { status?: number; details?: unknown }
     err.status = res.status

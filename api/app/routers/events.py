@@ -5,7 +5,6 @@ import time
 import uuid
 
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse
 
 from app.cosmosdb import get_all_by_troop, get_by_id, create_item, update_item, delete_item
 from app.middleware.auth import RequireTroopContext, forbidden
@@ -28,7 +27,8 @@ async def list_events(auth: RequireTroopContext):
 async def get_event(event_id: str, auth: RequireTroopContext):
     event = await get_by_id(CONTAINER, event_id, auth.troopId)
     if not event:
-        return JSONResponse({"error": "Event not found"}, status_code=404)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Event not found")
     return event
 
 
@@ -56,7 +56,8 @@ async def update_event(event_id: str, body: UpdateEvent, auth: RequireTroopConte
         forbidden()
     existing = await get_by_id(CONTAINER, event_id, auth.troopId)
     if not existing:
-        return JSONResponse({"error": "Event not found"}, status_code=404)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Event not found")
     event = await update_item(CONTAINER, event_id, {
         **existing,
         **body.model_dump(),

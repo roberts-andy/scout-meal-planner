@@ -5,7 +5,6 @@ import time
 import uuid
 
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse
 
 from app.cosmosdb import get_all_by_troop, get_by_id, create_item, update_item, delete_item
 from app.middleware.auth import RequireTroopContext, forbidden
@@ -37,9 +36,11 @@ async def list_recipes(auth: RequireTroopContext):
 async def get_recipe(recipe_id: str, auth: RequireTroopContext):
     recipe = await get_by_id(CONTAINER, recipe_id, auth.troopId)
     if not recipe:
-        return JSONResponse({"error": "Recipe not found"}, status_code=404)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Recipe not found")
     if not can_view_moderated_content(auth.role, recipe.get("moderation")):
-        return JSONResponse({"error": "Recipe not found"}, status_code=404)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Recipe not found")
     return recipe
 
 
@@ -69,7 +70,8 @@ async def update_recipe(recipe_id: str, body: UpdateRecipe, auth: RequireTroopCo
         forbidden()
     existing = await get_by_id(CONTAINER, recipe_id, auth.troopId)
     if not existing:
-        return JSONResponse({"error": "Recipe not found"}, status_code=404)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Recipe not found")
     moderation = await moderate_text_fields(_recipe_moderation_fields(body))
     recipe = await update_item(CONTAINER, recipe_id, {
         **existing,
