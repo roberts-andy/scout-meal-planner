@@ -4,15 +4,15 @@ When reviewing pull requests, check for:
 
 ### Correctness
 - TypeScript strict mode compliance — no `any` casts, no `@ts-ignore`
-- Zod schemas in `api/src/schemas.ts` validate all API inputs; no raw `req.body` access
+- Pydantic schemas in `api/app/schemas.py` validate all API inputs; no raw request body access
 - TanStack Query hooks follow existing patterns in `src/hooks/`
 - Frontend components use shadcn/ui primitives from `src/components/ui/`
 - `date-fns` for date operations, not raw `Date` manipulation
 
 ### Testing
-- API functions have corresponding `*.test.ts` files in `api/src/functions/`
+- API routers have corresponding tests in `api/tests/`
 - Non-trivial frontend logic has unit tests
-- Tests use Vitest, not Jest
+- Frontend tests use Vitest; API tests use pytest
 
 ### Conventions
 - No changes to `infra/` unless the issue explicitly requires it
@@ -25,12 +25,12 @@ When reviewing pull requests, check for:
 Flag any of the following as blocking issues:
 
 ### Authentication & Authorization
-- API endpoints must call `validateToken()` or `getTroopContext()` before any data access
-- Role checks via `checkPermission()` must guard write operations
+- API endpoints must call `validate_token()` or `get_troop_context()` before any data access
+- Role checks via `check_permission()` must guard write operations
 - No hard-coded secrets, tokens, or connection strings
 
 ### Input Validation
-- All user input must pass through Zod schemas before use
+- All user input must pass through Pydantic schemas before use
 - No string interpolation in Cosmos DB queries — use parameterized queries only
 - URL and path inputs must be validated; no open redirects
 

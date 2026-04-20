@@ -7,19 +7,16 @@ steps:
     run: npm ci
 
   - name: Install API dependencies
-    run: cd api && npm ci
+    run: cd api && pip install -r requirements.txt -r requirements-dev.txt
 
   - name: Build frontend
     run: npm run build
-
-  - name: Build API
-    run: cd api && npm run build
 
   - name: Run frontend tests
     run: npm test
 
   - name: Run API tests
-    run: cd api && npm test
+    run: cd api && python -m pytest
 
   - name: Lint
     run: npm run lint
