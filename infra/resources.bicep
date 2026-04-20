@@ -16,24 +16,20 @@ param repositoryUrl string
 @description('GitHub branch')
 param repositoryBranch string
 
-@description('Name of the Function App')
-param functionAppName string
+@description('Name of the Container App')
+param containerAppName string
 
-@description('Name of the Storage Account for Function App')
-param storageAccountName string
+@description('Name of the Container Apps Environment')
+param containerAppEnvName string
+
+@description('Name of the Azure Container Registry')
+param containerRegistryName string
 
 @description('Object ID of the GitHub Actions service principal for deployment')
 param deployerPrincipalId string = ''
 
 @description('Client ID of the pre-created Entra app registration for MSAL sign-in')
 param entraClientId string
-
-@description('Maximum instance count for Flex Consumption scaling')
-param maximumInstanceCount int = 100
-
-@description('Instance memory in MB for Flex Consumption')
-@allowed([512, 2048, 4096])
-param instanceMemoryMB int = 2048
 
 @description('Name of the Azure AI Content Safety account')
 param contentSafetyAccountName string
@@ -151,162 +147,138 @@ resource membersContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/co
   }
 }
 
-// Deployment container name for Flex Consumption
-var deploymentStorageContainerName = 'app-package-${take(functionAppName, 32)}'
-
-// Storage Account for Function App
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
-  name: storageAccountName
+// Azure Container Registry
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
+  name: containerRegistryName
   location: location
   sku: {
-    name: 'Standard_LRS'
-  }
-  kind: 'StorageV2'
-  properties: {
-    allowSharedKeyAccess: false
-    minimumTlsVersion: 'TLS1_2'
-    publicNetworkAccess: 'Enabled'
-  }
-}
-
-// Blob services
-resource blobServices 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
-  parent: storageAccount
-  name: 'default'
-}
-
-// Deployment blob container for Flex Consumption
-resource deployContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
-  parent: blobServices
-  name: deploymentStorageContainerName
-}
-
-// App Service Plan — Flex Consumption
-resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
-  name: '${functionAppName}-plan'
-  location: location
-  sku: {
-    name: 'FC1'
-    tier: 'FlexConsumption'
+    name: 'Basic'
   }
   properties: {
-    reserved: true
+    adminUserEnabled: false
   }
 }
 
-// Function App — Flex Consumption with managed identity
-resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
-  name: functionAppName
+// Log Analytics Workspace for Container Apps Environment
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
+  name: '${containerAppEnvName}-logs'
   location: location
-  kind: 'functionapp,linux'
+  properties: {
+    sku: {
+      name: 'PerGB2018'
+    }
+    retentionInDays: 30
+  }
+}
+
+// Container Apps Environment
+resource containerAppEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
+  name: containerAppEnvName
+  location: location
+  properties: {
+    appLogsConfiguration: {
+      destination: 'log-analytics'
+      logAnalyticsConfiguration: {
+        customerId: logAnalytics.properties.customerId
+        sharedKey: logAnalytics.listKeys().primarySharedKey
+      }
+    }
+  }
+}
+
+// Container App — FastAPI backend
+resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
+  name: containerAppName
+  location: location
   identity: {
     type: 'SystemAssigned'
   }
   properties: {
-    serverFarmId: appServicePlan.id
-    functionAppConfig: {
-      deployment: {
-        storage: {
-          type: 'blobContainer'
-          value: '${storageAccount.properties.primaryEndpoints.blob}${deploymentStorageContainerName}'
-          authentication: {
-            type: 'SystemAssignedIdentity'
-          }
+    managedEnvironmentId: containerAppEnv.id
+    configuration: {
+      ingress: {
+        external: true
+        targetPort: 8000
+        transport: 'auto'
+        allowInsecure: false
+      }
+      registries: [
+        {
+          server: containerRegistry.properties.loginServer
+          identity: 'system'
         }
-      }
-      scaleAndConcurrency: {
-        maximumInstanceCount: maximumInstanceCount
-        instanceMemoryMB: instanceMemoryMB
-      }
-      runtime: {
-        name: 'node'
-        version: '22'
-      }
-    }
-    siteConfig: {
-      appSettings: [
-        { name: 'AzureWebJobsStorage__credential', value: 'managedidentity' }
-        { name: 'AzureWebJobsStorage__blobServiceUri', value: 'https://${storageAccount.name}.blob.${environment().suffixes.storage}' }
-        { name: 'AzureWebJobsStorage__queueServiceUri', value: 'https://${storageAccount.name}.queue.${environment().suffixes.storage}' }
-        { name: 'AzureWebJobsStorage__tableServiceUri', value: 'https://${storageAccount.name}.table.${environment().suffixes.storage}' }
-        { name: 'COSMOS_ENDPOINT', value: cosmosAccount.properties.documentEndpoint }
-        { name: 'COSMOS_DATABASE', value: cosmosDatabaseName }
-        { name: 'ENTRA_CLIENT_ID', value: entraClientId }
-        { name: 'CONTENT_SAFETY_ENDPOINT', value: contentSafety.properties.endpoint }
-        { name: 'ACS_ENDPOINT', value: communicationService.properties.hostName }
-        { name: 'ACS_FROM_EMAIL', value: 'DoNotReply@${emailDomain.properties.fromSenderDomain}' }
       ]
     }
-    httpsOnly: true
+    template: {
+      containers: [
+        {
+          name: 'api'
+          image: '${containerRegistry.properties.loginServer}/${containerAppName}:latest'
+          resources: {
+            cpu: json('0.25')
+            memory: '0.5Gi'
+          }
+          env: [
+            { name: 'COSMOS_ENDPOINT', value: cosmosAccount.properties.documentEndpoint }
+            { name: 'COSMOS_DATABASE', value: cosmosDatabaseName }
+            { name: 'ENTRA_CLIENT_ID', value: entraClientId }
+            { name: 'CONTENT_SAFETY_ENDPOINT', value: contentSafety.properties.endpoint }
+            { name: 'ACS_ENDPOINT', value: communicationService.properties.hostName }
+            { name: 'ACS_FROM_EMAIL', value: 'DoNotReply@${emailDomain.properties.fromSenderDomain}' }
+          ]
+        }
+      ]
+      scale: {
+        minReplicas: 0
+        maxReplicas: 5
+        rules: [
+          {
+            name: 'http-scaling'
+            http: {
+              metadata: {
+                concurrentRequests: '50'
+              }
+            }
+          }
+        ]
+      }
+    }
   }
+}
+
+// ACR Pull role for Container App managed identity
+resource acrPullRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(containerRegistry.id, containerApp.id, '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+  scope: containerRegistry
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+    principalId: containerApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// ACR Push role for deployer SP (to push container images)
+resource acrPushRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployerPrincipalId != '') {
+  name: guid(containerRegistry.id, deployerPrincipalId, '8311e382-0749-4cb8-b61a-304f252e45ec')
+  scope: containerRegistry
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '8311e382-0749-4cb8-b61a-304f252e45ec')
+    principalId: deployerPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
 }
 
 // Cosmos DB Built-in Data Contributor role
 var cosmosDataContributorRoleId = '00000000-0000-0000-0000-000000000002'
 
-// Storage RBAC roles for Function App managed identity
-// Storage Blob Data Owner
-resource storageBlobRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storageAccount.id, functionApp.id, 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b')
-  scope: storageAccount
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b')
-    principalId: functionApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// Storage Queue Data Contributor
-resource storageQueueRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storageAccount.id, functionApp.id, '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
-  scope: storageAccount
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
-    principalId: functionApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// Storage Table Data Contributor
-resource storageTableRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storageAccount.id, functionApp.id, '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3')
-  scope: storageAccount
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3')
-    principalId: functionApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// Storage Blob Data Owner for deployer SP (to upload deployment packages)
-resource deployerBlobRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployerPrincipalId != '') {
-  name: guid(storageAccount.id, deployerPrincipalId, 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b')
-  scope: storageAccount
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b')
-    principalId: deployerPrincipalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// Storage Account Contributor for deployer SP (to manage firewall rules during deployment)
-resource deployerStorageContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployerPrincipalId != '') {
-  name: guid(storageAccount.id, deployerPrincipalId, '17d1049b-9a84-46fb-8f53-869881c3d3ab')
-  scope: storageAccount
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '17d1049b-9a84-46fb-8f53-869881c3d3ab')
-    principalId: deployerPrincipalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// Assign Cosmos DB data contributor role to Function App managed identity
+// Assign Cosmos DB data contributor role to Container App managed identity
 resource cosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = {
   parent: cosmosAccount
-  name: guid(cosmosAccount.id, functionApp.id, cosmosDataContributorRoleId)
+  name: guid(cosmosAccount.id, containerApp.id, cosmosDataContributorRoleId)
   properties: {
     roleDefinitionId: '${cosmosAccount.id}/sqlRoleDefinitions/${cosmosDataContributorRoleId}'
-    principalId: functionApp.identity.principalId
+    principalId: containerApp.identity.principalId
     scope: cosmosAccount.id
   }
 }
@@ -329,12 +301,12 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
   }
 }
 
-// Link Function App as SWA backend
+// Link Container App as SWA backend
 resource swaBackend 'Microsoft.Web/staticSites/linkedBackends@2023-12-01' = {
   parent: staticWebApp
   name: 'backend'
   properties: {
-    backendResourceId: functionApp.id
+    backendResourceId: containerApp.id
     region: location
   }
 }
@@ -353,13 +325,13 @@ resource contentSafety 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   }
 }
 
-// Cognitive Services User role for Function App managed identity
+// Cognitive Services User role for Container App managed identity
 resource contentSafetyRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(contentSafety.id, functionApp.id, 'a97b65f3-24c7-4388-baec-2e87135dc908')
+  name: guid(contentSafety.id, containerApp.id, 'a97b65f3-24c7-4388-baec-2e87135dc908')
   scope: contentSafety
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'a97b65f3-24c7-4388-baec-2e87135dc908')
-    principalId: functionApp.identity.principalId
+    principalId: containerApp.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -395,20 +367,22 @@ resource communicationService 'Microsoft.Communication/communicationServices@202
   }
 }
 
-// Contributor role for Function App managed identity on ACS
+// Contributor role for Container App managed identity on ACS
 resource acsRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(communicationService.id, functionApp.id, 'b24988ac-6180-42a0-ab88-20f7382dd24c')
+  name: guid(communicationService.id, containerApp.id, 'b24988ac-6180-42a0-ab88-20f7382dd24c')
   scope: communicationService
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
-    principalId: functionApp.identity.principalId
+    principalId: containerApp.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
 
 output staticWebAppUrl string = staticWebApp.properties.defaultHostname
 output cosmosAccountEndpoint string = cosmosAccount.properties.documentEndpoint
-output functionAppName string = functionApp.name
+output containerAppName string = containerApp.name
+output containerAppFqdn string = containerApp.properties.configuration.ingress.fqdn
+output containerRegistryLoginServer string = containerRegistry.properties.loginServer
 output entraClientId string = entraClientId
 output contentSafetyEndpoint string = contentSafety.properties.endpoint
 output acsEndpoint string = communicationService.properties.hostName
