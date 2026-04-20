@@ -84,7 +84,7 @@ jobs:
           config_file_location: /
           skip_app_build: true
 
-  # ── API → Container App (needs Azure Login — push/dispatch only, OIDC creds don't match PR subject) ──
+  # ── API → App Service (needs Azure Login — push/dispatch only) ──
   deploy_api:
     needs: changes
     if: |
@@ -93,8 +93,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Deploy API
     env:
-      ACR_NAME: crscoutmealplanner
-      CONTAINER_APP_NAME: ca-scout-meal-planner
+      APP_NAME: app-scout-meal-planner-api
       RESOURCE_GROUP: rg-scout-meal-planner
     steps:
       - uses: actions/checkout@v4
@@ -106,22 +105,16 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Login to ACR
-        run: az acr login --name $ACR_NAME
-
-      - name: Build and push container image
+      - name: Deploy to App Service
         run: |
-          IMAGE="${ACR_NAME}.azurecr.io/${CONTAINER_APP_NAME}:${{ github.sha }}"
-          docker build -t "$IMAGE" -t "${ACR_NAME}.azurecr.io/${CONTAINER_APP_NAME}:latest" api/
-          docker push "$IMAGE"
-          docker push "${ACR_NAME}.azurecr.io/${CONTAINER_APP_NAME}:latest"
-
-      - name: Deploy to Container App
-        run: |
-          az containerapp update \
-            --name $CONTAINER_APP_NAME \
+          cd api
+          zip -r ../api.zip . -x '.git/*' '__pycache__/*' '*.pyc' 'node_modules/*' 'src/*' 'dist/*' '.funcignore' 'tsconfig.json' 'package*.json'
+          cd ..
+          az webapp deploy \
+            --name $APP_NAME \
             --resource-group $RESOURCE_GROUP \
-            --image "${ACR_NAME}.azurecr.io/${CONTAINER_APP_NAME}:${{ github.sha }}"
+            --src-path api.zip \
+            --type zip
 
   # ── PR cleanup ──
   close_pull_request:

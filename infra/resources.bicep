@@ -16,17 +16,11 @@ param repositoryUrl string
 @description('GitHub branch')
 param repositoryBranch string
 
-@description('Name of the Container App')
-param containerAppName string
+@description('Name of the App Service Plan')
+param appServicePlanName string
 
-@description('Name of the Container Apps Environment')
-param containerAppEnvName string
-
-@description('Name of the Azure Container Registry')
-param containerRegistryName string
-
-@description('Object ID of the GitHub Actions service principal for deployment')
-param deployerPrincipalId string = ''
+@description('Name of the API Web App')
+param apiAppName string
 
 @description('Client ID of the pre-created Entra app registration for MSAL sign-in')
 param entraClientId string
@@ -147,137 +141,57 @@ resource membersContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/co
   }
 }
 
-// Azure Container Registry
-resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
-  name: containerRegistryName
+// App Service Plan — Linux B1
+resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
+  name: appServicePlanName
   location: location
+  kind: 'linux'
   sku: {
-    name: 'Basic'
+    name: 'B1'
+    tier: 'Basic'
   }
   properties: {
-    adminUserEnabled: false
+    reserved: true // Required for Linux
   }
 }
 
-// Log Analytics Workspace for Container Apps Environment
-resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
-  name: '${containerAppEnvName}-logs'
-  location: location
-  properties: {
-    sku: {
-      name: 'PerGB2018'
-    }
-    retentionInDays: 30
-  }
-}
-
-// Container Apps Environment
-resource containerAppEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
-  name: containerAppEnvName
-  location: location
-  properties: {
-    appLogsConfiguration: {
-      destination: 'log-analytics'
-      logAnalyticsConfiguration: {
-        customerId: logAnalytics.properties.customerId
-        sharedKey: logAnalytics.listKeys().primarySharedKey
-      }
-    }
-  }
-}
-
-// Container App — FastAPI backend
-resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
-  name: containerAppName
+// Web App — Python FastAPI
+resource apiApp 'Microsoft.Web/sites@2023-12-01' = {
+  name: apiAppName
   location: location
   identity: {
     type: 'SystemAssigned'
   }
   properties: {
-    managedEnvironmentId: containerAppEnv.id
-    configuration: {
-      ingress: {
-        external: true
-        targetPort: 8000
-        transport: 'auto'
-        allowInsecure: false
-      }
-      registries: [
-        {
-          server: containerRegistry.properties.loginServer
-          identity: 'system'
-        }
+    serverFarmId: appServicePlan.id
+    httpsOnly: true
+    siteConfig: {
+      linuxFxVersion: 'PYTHON|3.12'
+      appCommandLine: 'uvicorn app.main:app --host 0.0.0.0 --port 8000'
+      appSettings: [
+        { name: 'COSMOS_ENDPOINT', value: cosmosAccount.properties.documentEndpoint }
+        { name: 'COSMOS_DATABASE', value: cosmosDatabaseName }
+        { name: 'ENTRA_CLIENT_ID', value: entraClientId }
+        { name: 'CONTENT_SAFETY_ENDPOINT', value: contentSafety.properties.endpoint }
+        { name: 'ACS_ENDPOINT', value: communicationService.properties.hostName }
+        { name: 'ACS_FROM_EMAIL', value: 'DoNotReply@${emailDomain.properties.fromSenderDomain}' }
+        { name: 'SCM_DO_BUILD_DURING_DEPLOYMENT', value: 'true' }
+        { name: 'WEBSITES_PORT', value: '8000' }
       ]
     }
-    template: {
-      containers: [
-        {
-          name: 'api'
-          image: '${containerRegistry.properties.loginServer}/${containerAppName}:latest'
-          resources: {
-            cpu: json('0.25')
-            memory: '0.5Gi'
-          }
-          env: [
-            { name: 'COSMOS_ENDPOINT', value: cosmosAccount.properties.documentEndpoint }
-            { name: 'COSMOS_DATABASE', value: cosmosDatabaseName }
-            { name: 'ENTRA_CLIENT_ID', value: entraClientId }
-            { name: 'CONTENT_SAFETY_ENDPOINT', value: contentSafety.properties.endpoint }
-            { name: 'ACS_ENDPOINT', value: communicationService.properties.hostName }
-            { name: 'ACS_FROM_EMAIL', value: 'DoNotReply@${emailDomain.properties.fromSenderDomain}' }
-          ]
-        }
-      ]
-      scale: {
-        minReplicas: 0
-        maxReplicas: 5
-        rules: [
-          {
-            name: 'http-scaling'
-            http: {
-              metadata: {
-                concurrentRequests: '50'
-              }
-            }
-          }
-        ]
-      }
-    }
-  }
-}
-
-// ACR Pull role for Container App managed identity
-resource acrPullRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(containerRegistry.id, containerApp.id, '7f951dda-4ed3-4680-a7ca-43fe172d538d')
-  scope: containerRegistry
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
-    principalId: containerApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// ACR Push role for deployer SP (to push container images)
-resource acrPushRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployerPrincipalId != '') {
-  name: guid(containerRegistry.id, deployerPrincipalId, '8311e382-0749-4cb8-b61a-304f252e45ec')
-  scope: containerRegistry
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '8311e382-0749-4cb8-b61a-304f252e45ec')
-    principalId: deployerPrincipalId
-    principalType: 'ServicePrincipal'
   }
 }
 
 // Cosmos DB Built-in Data Contributor role
 var cosmosDataContributorRoleId = '00000000-0000-0000-0000-000000000002'
 
-// Assign Cosmos DB data contributor role to Container App managed identity
+// Assign Cosmos DB data contributor role to Web App managed identity
 resource cosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = {
   parent: cosmosAccount
-  name: guid(cosmosAccount.id, containerApp.id, cosmosDataContributorRoleId)
+  name: guid(cosmosAccount.id, apiApp.id, cosmosDataContributorRoleId)
   properties: {
     roleDefinitionId: '${cosmosAccount.id}/sqlRoleDefinitions/${cosmosDataContributorRoleId}'
-    principalId: containerApp.identity.principalId
+    principalId: apiApp.identity.principalId
     scope: cosmosAccount.id
   }
 }
@@ -300,12 +214,12 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
   }
 }
 
-// Link Container App as SWA backend
+// Link Web App as SWA backend
 resource swaBackend 'Microsoft.Web/staticSites/linkedBackends@2023-12-01' = {
   parent: staticWebApp
   name: 'backend'
   properties: {
-    backendResourceId: containerApp.id
+    backendResourceId: apiApp.id
     region: location
   }
 }
@@ -324,13 +238,13 @@ resource contentSafety 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   }
 }
 
-// Cognitive Services User role for Container App managed identity
+// Cognitive Services User role for Web App managed identity
 resource contentSafetyRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(contentSafety.id, containerApp.id, 'a97b65f3-24c7-4388-baec-2e87135dc908')
+  name: guid(contentSafety.id, apiApp.id, 'a97b65f3-24c7-4388-baec-2e87135dc908')
   scope: contentSafety
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'a97b65f3-24c7-4388-baec-2e87135dc908')
-    principalId: containerApp.identity.principalId
+    principalId: apiApp.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -366,22 +280,21 @@ resource communicationService 'Microsoft.Communication/communicationServices@202
   }
 }
 
-// Contributor role for Container App managed identity on ACS
+// Contributor role for Web App managed identity on ACS
 resource acsRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(communicationService.id, containerApp.id, 'b24988ac-6180-42a0-ab88-20f7382dd24c')
+  name: guid(communicationService.id, apiApp.id, 'b24988ac-6180-42a0-ab88-20f7382dd24c')
   scope: communicationService
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
-    principalId: containerApp.identity.principalId
+    principalId: apiApp.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
 
 output staticWebAppUrl string = staticWebApp.properties.defaultHostname
 output cosmosAccountEndpoint string = cosmosAccount.properties.documentEndpoint
-output containerAppName string = containerApp.name
-output containerAppFqdn string = containerApp.properties.configuration.ingress.fqdn
-output containerRegistryLoginServer string = containerRegistry.properties.loginServer
+output apiAppName string = apiApp.name
+output apiAppDefaultHostname string = apiApp.properties.defaultHostName
 output entraClientId string = entraClientId
 output contentSafetyEndpoint string = contentSafety.properties.endpoint
 output acsEndpoint string = communicationService.properties.hostName
