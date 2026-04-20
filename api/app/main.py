@@ -39,7 +39,8 @@ async def lifespan(application: FastAPI):
 app = FastAPI(title="Scout Meal Planner API", lifespan=lifespan)
 
 # CORS: Not needed. Azure Static Web Apps proxies all /api requests,
-# and local dev uses the SWA CLI proxy. See review decision 2026-04-19.
+# and local dev uses the SWA CLI proxy. See
+# .copilot-tracking/reviews/code-reviews/main/review.md.
 app.include_router(health.router, prefix="/api")
 app.include_router(events.router, prefix="/api")
 app.include_router(event_packed.router, prefix="/api")
