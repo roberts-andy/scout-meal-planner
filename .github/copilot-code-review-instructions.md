@@ -42,3 +42,13 @@ Flag any of the following as blocking issues:
 ### Dependencies
 - Flag new dependencies for known vulnerabilities
 - Flag dependencies that are unmaintained or have low adoption
+
+### Concurrency & Data Integrity
+- Read-modify-write operations on Cosmos DB must use ETag-based optimistic concurrency
+- Parent entity deletes must cascade to child records
+- Update endpoints must use `exclude_unset=True` to preserve server-managed fields
+
+### Authorization Depth
+- Role-based permission alone is insufficient for user-owned resources — require ownership checks
+- New member records must include identity fields from token claims
+- Endpoints returning user data must strip PII for non-admin roles
