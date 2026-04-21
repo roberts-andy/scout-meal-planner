@@ -103,6 +103,16 @@ export function EventDetail({
     }
   }
 
+  const handleCopyVisibleShareLink = async () => {
+    if (!shareUrl) return
+    const copied = await copyToClipboard(shareUrl)
+    if (copied) {
+      toast.success('Share link copied')
+    } else {
+      toast.error('Failed to copy share link')
+    }
+  }
+
   const handleRegenerate = async () => {
     setIsSharing(true)
     try {
@@ -188,24 +198,36 @@ export function EventDetail({
           </div>
           <p className="text-sm text-muted-foreground mt-1">Headcount: {headcount}</p>
           {sharedLinksEnabled && (
-            <div className="flex flex-wrap items-center gap-2 mt-3">
-              <Button variant="outline" size="sm" className="gap-2" onClick={handleCopyShareLink} disabled={isSharing}>
-                <Copy size={16} />
-                {shareUrl ? 'Copy Share Link' : 'Create Share Link'}
-              </Button>
+            <>
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                <Button variant="outline" size="sm" className="gap-2" onClick={handleCopyShareLink} disabled={isSharing}>
+                  <Copy size={16} />
+                  {shareUrl ? 'Copy Share Link' : 'Create Share Link'}
+                </Button>
+                {shareUrl && (
+                  <>
+                    <Button variant="outline" size="sm" className="gap-2" onClick={handleRegenerate} disabled={isSharing}>
+                      <ArrowsClockwise size={16} />
+                      Regenerate
+                    </Button>
+                    <Button variant="ghost" size="sm" className="gap-2" onClick={handleRevoke} disabled={isSharing}>
+                      <XCircle size={16} />
+                      Revoke
+                    </Button>
+                  </>
+                )}
+              </div>
               {shareUrl && (
-                <>
-                  <Button variant="outline" size="sm" className="gap-2" onClick={handleRegenerate} disabled={isSharing}>
-                    <ArrowsClockwise size={16} />
-                    Regenerate
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <span className="text-sm text-muted-foreground">Share Link:</span>
+                  <code className="rounded bg-muted px-2 py-1 text-sm font-mono break-all max-w-full">{shareUrl}</code>
+                  <Button variant="ghost" size="sm" className="gap-2" onClick={handleCopyVisibleShareLink} disabled={isSharing}>
+                    <Copy size={16} />
+                    Copy
                   </Button>
-                  <Button variant="ghost" size="sm" className="gap-2" onClick={handleRevoke} disabled={isSharing}>
-                    <XCircle size={16} />
-                    Revoke
-                  </Button>
-                </>
+                </div>
               )}
-            </div>
+            </>
           )}
           {event.link && (
             <a 

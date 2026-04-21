@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { EventDetail } from './EventDetail'
+import { eventsApi } from '@/lib/api'
 import { __setFeatureFlagsForTests } from '@/lib/featureFlags'
 
 vi.mock('@/lib/api', () => ({
@@ -46,6 +47,13 @@ describe('EventDetail feedback tab date gate', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  beforeEach(() => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', {
+      clipboard: { writeText },
+    })
   })
 
   it('disables feedback tab for future events', () => {
@@ -161,5 +169,34 @@ describe('EventDetail feedback tab date gate', () => {
     expect(screen.getByText('Departure: Not set')).toBeInTheDocument()
     expect(screen.getByText('Return: Not set')).toBeInTheDocument()
     expect(screen.getByText('Headcount: Not set')).toBeInTheDocument()
+  })
+
+  it('displays generated share link inline and copies via visible Copy button', async () => {
+    vi.useRealTimers()
+    const shareUrl = 'https://example.test/share/abc123'
+    vi.mocked(eventsApi.getShare).mockResolvedValue({ shareToken: 'abc123', shareUrl })
+    vi.setSystemTime(new Date('2026-07-02T12:00:00Z'))
+
+    render(
+      <EventDetail
+        event={baseEvent}
+        recipes={[]}
+        feedback={[]}
+        onUpdateEvent={vi.fn()}
+        onBack={vi.fn()}
+        onAddFeedback={vi.fn()}
+        onUpdateFeedback={vi.fn()}
+        onDeleteFeedback={vi.fn()}
+        onUpdateRecipe={vi.fn()}
+      />
+    )
+
+    expect(await screen.findByText('Share Link:')).toBeInTheDocument()
+    expect(screen.getByText(shareUrl)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(shareUrl)
+    })
   })
 })
