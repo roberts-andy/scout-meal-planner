@@ -33,7 +33,11 @@ CONTAINER = "events"
 def _extract_meal_recipe_assignments(event: dict) -> dict[str, str]:
     assignments: dict[str, str] = {}
     for day in event.get("days") or []:
+        if not isinstance(day, dict):
+            continue
         for meal in day.get("meals") or []:
+            if not isinstance(meal, dict):
+                continue
             meal_id = meal.get("id")
             if not meal_id:
                 continue
