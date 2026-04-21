@@ -7,6 +7,7 @@ import { Plus, Calendar, Trash } from '@phosphor-icons/react'
 import { format } from 'date-fns'
 import { CreateEventDialog } from './CreateEventDialog'
 import { motion } from 'framer-motion'
+import { collectExistingEventTags } from '@/lib/eventTags'
 
 interface EventListProps {
   events: Event[]
@@ -15,17 +16,9 @@ interface EventListProps {
   onDeleteEvent: (eventId: string) => void
 }
 
-function collectEventTags(events: Event[]) {
-  return Array.from(
-    new Set(
-      events.flatMap((event) => event.tags ?? []).map((tag) => tag.trim()).filter(Boolean)
-    )
-  ).sort((a, b) => a.localeCompare(b))
-}
-
 export function EventList({ events, onSelectEvent, onCreateEvent, onDeleteEvent }: EventListProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const existingTags = collectEventTags(events)
+  const existingTags = collectExistingEventTags(events)
 
   if (events.length === 0) {
     return (

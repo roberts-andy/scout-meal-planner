@@ -13,6 +13,7 @@ import { EditEventDialog } from './EditEventDialog'
 import { toast } from 'sonner'
 import { canSubmitEventFeedback } from '@/lib/helpers'
 import { isFeatureEnabled } from '@/lib/featureFlags'
+import { collectExistingEventTags } from '@/lib/eventTags'
 
 interface EventDetailProps {
   event: Event
@@ -47,9 +48,7 @@ export function EventDetail({
   const headcount = event.headcount
     ? `${event.headcount.scoutCount} scouts, ${event.headcount.adultCount} adults, ${event.headcount.guestCount} guests`
     : 'Not set'
-  const existingTags = Array.from(
-    new Set(allEvents.flatMap((existingEvent) => existingEvent.tags ?? []).map((tag) => tag.trim()).filter(Boolean))
-  ).sort((a, b) => a.localeCompare(b))
+  const existingTags = collectExistingEventTags(allEvents)
 
   const buildShareUrl = (token?: string) => token ? `${window.location.origin}/share/${token}` : null
 

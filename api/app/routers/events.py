@@ -16,6 +16,7 @@ from app.cosmosdb import (
     query_items_paginated,
     update_item,
 )
+from app.event_tags import with_migrated_tags
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
 from app.schemas import CreateEvent, UpdateEvent
@@ -25,39 +26,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 CONTAINER = "events"
-LEGACY_CHARACTERISTICS = {
-    "hike": "Hike",
-    "highAltitude": "High Altitude",
-    "tentCamping": "Tent Camping",
-    "cabinCamping": "Cabin Camping",
-}
-
-
-def _with_migrated_tags(event: dict) -> dict:
-    normalized_tags: list[str] = []
-    seen: set[str] = set()
-
-    for raw_tag in event.get("tags") or []:
-        tag = str(raw_tag).strip()
-        if not tag:
-            continue
-        key = tag.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        normalized_tags.append(tag)
-
-    for field_name, label in LEGACY_CHARACTERISTICS.items():
-        if event.get(field_name):
-            key = label.lower()
-            if key not in seen:
-                seen.add(key)
-                normalized_tags.append(label)
-
-    return {
-        **event,
-        "tags": normalized_tags,
-    }
 
 
 def _extract_meal_recipe_assignments(event: dict) -> dict[str, str]:
@@ -87,7 +55,7 @@ async def list_events(
         limit=limit,
         continuation_token=continuationToken,
     )
-    return {"items": [_with_migrated_tags(event) for event in items], "continuationToken": next_token}
+    return {"items": [with_migrated_tags(event) for event in items], "continuationToken": next_token}
 
 
 @router.get("/events/{event_id}")
@@ -95,7 +63,7 @@ async def get_event(event_id: str, auth: RequireTroopContext):
     event = await get_by_id(CONTAINER, event_id, auth.troopId)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    return _with_migrated_tags(event)
+    return with_migrated_tags(event)
 
 
 @router.post("/events", status_code=201)
@@ -120,7 +88,7 @@ async def create_event(body: CreateEvent, auth: RequireTroopContext):
             "troopId": auth.troopId,
             "assignmentCount": str(assigned_count),
         })
-    return _with_migrated_tags(event)
+    return with_migrated_tags(event)
 
 
 @router.put("/events/{event_id}")
@@ -150,7 +118,7 @@ async def update_event(event_id: str, body: UpdateEvent, auth: RequireTroopConte
             "troopId": auth.troopId,
             "assignmentCount": str(assigned_count),
         })
-    return _with_migrated_tags(event)
+    return with_migrated_tags(event)
 
 
 @router.delete("/events/{event_id}", status_code=204)

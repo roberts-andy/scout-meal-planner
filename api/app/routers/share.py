@@ -7,6 +7,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, Request
 
 from app.cosmosdb import create_item, delete_item, get_by_id, get_all_by_troop, update_item
+from app.event_tags import get_event_tags
 from app.feature_flags import FLAG_ENABLE_SHARED_LINKS, is_feature_enabled
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
@@ -18,12 +19,6 @@ router = APIRouter()
 EVENTS_CONTAINER = "events"
 RECIPES_CONTAINER = "recipes"
 SHARE_TOKENS_CONTAINER = "share-tokens"
-LEGACY_CHARACTERISTICS = {
-    "hike": "Hike",
-    "highAltitude": "High Altitude",
-    "tentCamping": "Tent Camping",
-    "cabinCamping": "Cabin Camping",
-}
 
 
 def _require_shared_links_enabled() -> None:
@@ -50,29 +45,6 @@ async def _delete_share_token_index(token: str) -> None:
         if getattr(exc, "status_code", None) == 404:
             return
         raise
-
-
-def _get_event_tags(event: dict) -> list[str]:
-    tags: list[str] = []
-    seen: set[str] = set()
-
-    for raw_tag in event.get("tags") or []:
-        tag = str(raw_tag).strip()
-        if not tag:
-            continue
-        key = tag.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        tags.append(tag)
-
-    for field_name, label in LEGACY_CHARACTERISTICS.items():
-        if event.get(field_name):
-            key = label.lower()
-            if key not in seen:
-                seen.add(key)
-                tags.append(label)
-    return tags
 
 
 @router.get("/events/{event_id}/share")
@@ -242,7 +214,7 @@ async def get_shared_event(token: str):
             "name": event.get("name"),
             "startDate": event.get("startDate"),
             "endDate": event.get("endDate"),
-            "tags": _get_event_tags(event),
+            "tags": get_event_tags(event),
             "powerAvailable": event.get("powerAvailable"),
             "runningWater": event.get("runningWater"),
             "trailerAccess": event.get("trailerAccess"),
