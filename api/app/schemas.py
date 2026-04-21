@@ -5,6 +5,8 @@ from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
+TIME_24H_PATTERN = r"^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
+
 
 # ── Shared enums ──
 
@@ -126,6 +128,12 @@ class EventDay(BaseModel):
     meals: list[Meal]
 
 
+class EventHeadcount(BaseModel):
+    scoutCount: int = Field(default=0, ge=0)
+    adultCount: int = Field(default=0, ge=0)
+    guestCount: int = Field(default=0, ge=0)
+
+
 class FeedbackRating(BaseModel):
     taste: float = Field(ge=1, le=5)
     difficulty: float = Field(ge=1, le=5)
@@ -150,6 +158,9 @@ class CreateEvent(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     startDate: str = Field(min_length=1)
     endDate: str = Field(min_length=1)
+    departureTime: Optional[str] = Field(default=None, pattern=TIME_24H_PATTERN)
+    returnTime: Optional[str] = Field(default=None, pattern=TIME_24H_PATTERN)
+    headcount: EventHeadcount = Field(default_factory=EventHeadcount)
     days: list[EventDay]
     packedItems: Optional[list[str]] = None
     purchasedItems: Optional[list[str]] = None
@@ -170,6 +181,9 @@ class UpdateEvent(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=200)
     startDate: Optional[str] = Field(default=None, min_length=1)
     endDate: Optional[str] = Field(default=None, min_length=1)
+    departureTime: Optional[str] = Field(default=None, pattern=TIME_24H_PATTERN)
+    returnTime: Optional[str] = Field(default=None, pattern=TIME_24H_PATTERN)
+    headcount: Optional[EventHeadcount] = None
     days: Optional[list[EventDay]] = None
     packedItems: Optional[list[str]] = None
     purchasedItems: Optional[list[str]] = None

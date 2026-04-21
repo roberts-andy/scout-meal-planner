@@ -22,6 +22,13 @@ const baseEvent = {
   name: 'Campout',
   startDate: '2026-07-01',
   endDate: '2026-07-01',
+  departureTime: '08:00',
+  returnTime: '14:30',
+  headcount: {
+    scoutCount: 12,
+    adultCount: 4,
+    guestCount: 2,
+  },
   days: [{ date: '2026-07-01', meals: [] }],
   createdAt: 1,
   updatedAt: 1,
@@ -76,7 +83,7 @@ describe('EventDetail feedback tab date gate', () => {
     expect(screen.getByRole('tab', { name: 'Feedback' })).toBeEnabled()
   })
 
-  it('shows trip logistics badges including weather', () => {
+  it('shows departure/return times, headcount, and trip logistics badges including weather', () => {
     vi.setSystemTime(new Date('2026-07-02T12:00:00Z'))
 
     render(
@@ -99,9 +106,56 @@ describe('EventDetail feedback tab date gate', () => {
       />
     )
 
+    expect(screen.getByText('Departure: 08:00')).toBeInTheDocument()
+    expect(screen.getByText('Return: 14:30')).toBeInTheDocument()
+    expect(screen.getByText('Headcount: 12 scouts, 4 adults, 2 guests')).toBeInTheDocument()
     expect(screen.getByText('Power Available')).toBeInTheDocument()
     expect(screen.getByText('Running Water')).toBeInTheDocument()
     expect(screen.getByText('Trailer Access')).toBeInTheDocument()
     expect(screen.getByText('Weather: Cold nights')).toBeInTheDocument()
+  })
+
+  it('shows Not set for missing departure/return/headcount', () => {
+    vi.setSystemTime(new Date('2026-07-02T12:00:00Z'))
+
+    render(
+      <EventDetail
+        event={{ ...baseEvent, departureTime: undefined, returnTime: undefined, headcount: undefined }}
+        recipes={[]}
+        feedback={[]}
+        onUpdateEvent={vi.fn()}
+        onBack={vi.fn()}
+        onAddFeedback={vi.fn()}
+        onUpdateFeedback={vi.fn()}
+        onDeleteFeedback={vi.fn()}
+        onUpdateRecipe={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Departure: Not set')).toBeInTheDocument()
+    expect(screen.getByText('Return: Not set')).toBeInTheDocument()
+    expect(screen.getByText('Headcount: Not set')).toBeInTheDocument()
+  })
+
+  it('shows Not set for missing departure/return/headcount', () => {
+    vi.setSystemTime(new Date('2026-07-02T12:00:00Z'))
+
+    render(
+      <EventDetail
+        event={{ ...baseEvent, departureTime: undefined, returnTime: undefined, headcount: undefined }}
+        recipes={[]}
+        feedback={[]}
+        onUpdateEvent={vi.fn()}
+        onBack={vi.fn()}
+        onAddFeedback={vi.fn()}
+        onUpdateFeedback={vi.fn()}
+        onDeleteFeedback={vi.fn()}
+        onUpdateRecipe={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Departure: Not set')).toBeInTheDocument()
+    expect(screen.getByText('Return: Not set')).toBeInTheDocument()
+    expect(screen.getByText('Headcount: Not set')).toBeInTheDocument()
   })
 })

@@ -31,6 +31,11 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const [description, setDescription] = useState('')
   const [link, setLink] = useState('')
+  const [departureTime, setDepartureTime] = useState('')
+  const [returnTime, setReturnTime] = useState('')
+  const [scoutCount, setScoutCount] = useState(0)
+  const [adultCount, setAdultCount] = useState(0)
+  const [guestCount, setGuestCount] = useState(0)
   const [hike, setHike] = useState(false)
   const [highAltitude, setHighAltitude] = useState(false)
   const [tentCamping, setTentCamping] = useState(false)
@@ -61,6 +66,13 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
       name,
       startDate: format(dateRange.from, 'yyyy-MM-dd'),
       endDate: format(dateRange.to, 'yyyy-MM-dd'),
+      departureTime: departureTime || undefined,
+      returnTime: returnTime || undefined,
+      headcount: {
+        scoutCount,
+        adultCount,
+        guestCount,
+      },
       days,
       description: description || undefined,
       link: link || undefined,
@@ -81,6 +93,11 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
     setDateRange(undefined)
     setDescription('')
     setLink('')
+    setDepartureTime('')
+    setReturnTime('')
+    setScoutCount(0)
+    setAdultCount(0)
+    setGuestCount(0)
     setHike(false)
     setHighAltitude(false)
     setTentCamping(false)
@@ -145,6 +162,61 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
               numberOfMonths={2}
               disabled={{ before: new Date() }}
             />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="departure-time">Departure Time</Label>
+              <Input
+                id="departure-time"
+                type="time"
+                value={departureTime}
+                onChange={(e) => setDepartureTime(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="return-time">Return Time</Label>
+              <Input
+                id="return-time"
+                type="time"
+                value={returnTime}
+                onChange={(e) => setReturnTime(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label>Expected Headcount</Label>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-2">
+                <Label htmlFor="headcount-scouts">Scouts</Label>
+                <Input
+                  id="headcount-scouts"
+                  type="number"
+                  min={0}
+                  value={scoutCount}
+                  onChange={(e) => setScoutCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="headcount-adults">Adults</Label>
+                <Input
+                  id="headcount-adults"
+                  type="number"
+                  min={0}
+                  value={adultCount}
+                  onChange={(e) => setAdultCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="headcount-guests">Guests</Label>
+                <Input
+                  id="headcount-guests"
+                  type="number"
+                  min={0}
+                  value={guestCount}
+                  onChange={(e) => setGuestCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                />
+              </div>
+            </div>
           </div>
           <div className="grid gap-2">
             <Label>Event Characteristics</Label>

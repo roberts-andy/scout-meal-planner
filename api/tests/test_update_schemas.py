@@ -51,3 +51,37 @@ def test_update_event_rejects_invalid_logistics_field_types():
 def test_update_recipe_validates_constraints_when_field_is_set():
     with pytest.raises(ValidationError):
         UpdateRecipe(servings=0)
+
+
+def test_create_event_defaults_headcount_to_zeroes():
+    body = CreateEvent(name="Campout", startDate="2026-07-01", endDate="2026-07-02", days=[])
+    assert body.headcount.model_dump() == {"scoutCount": 0, "adultCount": 0, "guestCount": 0}
+    assert body.departureTime is None
+    assert body.returnTime is None
+
+
+def test_event_headcount_rejects_negative_values():
+    with pytest.raises(ValidationError):
+        CreateEvent(
+            name="Campout",
+            startDate="2026-07-01",
+            endDate="2026-07-02",
+            days=[],
+            headcount={"scoutCount": -1, "adultCount": 0, "guestCount": 0},
+        )
+
+
+
+
+def test_event_times_validate_hh_mm_format():
+    with pytest.raises(ValidationError):
+        CreateEvent(
+            name="Campout",
+            startDate="2026-07-01",
+            endDate="2026-07-02",
+            days=[],
+            departureTime="8am",
+        )
+
+    with pytest.raises(ValidationError):
+        UpdateEvent(returnTime="25:00")
