@@ -128,7 +128,7 @@ async def review_flagged_content(item_id: str, body: ReviewFlaggedContent, auth:
     }
 
     if body.action == "reject":
-        moderation["status"] = "flagged"
+        moderation["status"] = "rejected"
     else:
         moderation["status"] = "approved"
         moderation["flaggedFields"] = []
