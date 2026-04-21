@@ -7,6 +7,7 @@ import pytest_asyncio
 from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 
+from app import feature_flags
 from app.main import app
 from app.middleware import moderation
 from app.middleware.auth import TroopContext
@@ -70,6 +71,41 @@ async def test_get_feature_flags_returns_defaults_without_overrides(client, monk
         "enable-feedback": False,
         "enable-print-recipes": True,
     }
+
+
+def test_feature_flag_uses_app_config_list_when_no_env_override(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("FEATURE_FLAGS_ENV", "dev")
+    monkeypatch.delenv("FEATURE_FLAG_ENABLE_SHARED_LINKS", raising=False)
+    monkeypatch.setattr(
+        feature_flags,
+        "_app_config_provider",
+        {
+            "feature_management": {
+                "feature_flags": [
+                    {"id": "enable-shared-links", "enabled": True},
+                ]
+            }
+        },
+    )
+
+    assert feature_flags.is_feature_enabled("enable-shared-links") is True
+
+
+def test_feature_flag_env_override_takes_precedence_over_app_config(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("FEATURE_FLAG_ENABLE_SHARED_LINKS", "false")
+    monkeypatch.setattr(
+        feature_flags,
+        "_app_config_provider",
+        {
+            "feature_management": {
+                "feature_flags": [
+                    {"id": "enable-shared-links", "enabled": True},
+                ]
+            }
+        },
+    )
+
+    assert feature_flags.is_feature_enabled("enable-shared-links") is False
 
 
 @pytest.mark.asyncio

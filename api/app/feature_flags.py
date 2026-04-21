@@ -52,6 +52,7 @@ _ENV_FLAG_NAME_BY_FLAG = {
 }
 
 _logged_evaluations: set[tuple[str, bool, str]] = set()
+_app_config_provider = None
 
 
 def _normalize_environment(value: str | None) -> str:
@@ -78,6 +79,22 @@ def _coerce_bool(value: str | None) -> bool | None:
     return None
 
 
+def _resolve_from_app_config(flag_name: str) -> bool | None:
+    if _app_config_provider is None:
+        return None
+    try:
+        feature_flags = _app_config_provider["feature_management"]["feature_flags"]
+        for feature_flag in feature_flags:
+            if feature_flag["id"] == flag_name:
+                return bool(feature_flag.get("enabled", False))
+        return None
+    except (KeyError, TypeError):
+        return None
+    except Exception:
+        logger.warning("App Configuration lookup failed for %s", flag_name, exc_info=True)
+        return None
+
+
 def is_feature_enabled(flag_name: str) -> bool:
     if flag_name not in ALL_FEATURE_FLAGS:
         raise ValueError(f"Unknown feature flag: {flag_name}")
@@ -86,13 +103,18 @@ def is_feature_enabled(flag_name: str) -> bool:
     override_value = _coerce_bool(os.environ.get(override_name))
     source = f"env:{override_name}"
     if override_value is None:
-        env = _normalize_environment(
-            os.environ.get("FEATURE_FLAGS_ENV")
-            or os.environ.get("APP_ENV")
-            or os.environ.get("ENVIRONMENT")
-        )
-        override_value = _PRD_DEFAULTS_BY_ENV[env][flag_name]
-        source = f"default:{env}"
+        app_config_value = _resolve_from_app_config(flag_name)
+        if app_config_value is not None:
+            override_value = app_config_value
+            source = "app-config"
+        else:
+            env = _normalize_environment(
+                os.environ.get("FEATURE_FLAGS_ENV")
+                or os.environ.get("APP_ENV")
+                or os.environ.get("ENVIRONMENT")
+            )
+            override_value = _PRD_DEFAULTS_BY_ENV[env][flag_name]
+            source = f"default:{env}"
 
     evaluation = (flag_name, override_value, source)
     if evaluation not in _logged_evaluations:
