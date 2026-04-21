@@ -180,3 +180,60 @@ async def test_create_event_emits_recipe_assigned_custom_event_when_meals_preass
             "assignmentCount": "2",
         }),
     ]
+@pytest.mark.asyncio
+async def test_logistics_fields_round_trip(client, monkeypatch):
+    stored_events: dict[str, dict] = {}
+
+    async def fake_create_item(*_args, **_kwargs):
+        payload = _args[1]
+        stored_events[payload["id"]] = payload
+        return payload
+
+    async def fake_get_by_id(*_args, **_kwargs):
+        event_id = _args[1]
+        troop_id = _args[2]
+        event = stored_events.get(event_id)
+        if event and event["troopId"] == troop_id:
+            return event
+        return None
+
+    monkeypatch.setattr(events_router, "create_item", fake_create_item)
+    monkeypatch.setattr(events_router, "get_by_id", fake_get_by_id)
+
+    app.dependency_overrides[require_troop_context] = lambda: SimpleNamespace(
+        userId="user-1",
+        email="leader@example.com",
+        displayName="Leader",
+        troopId="troop-1",
+        role="troopAdmin",
+    )
+
+    payload = {
+        "name": "Summer Camp",
+        "startDate": "2026-07-10",
+        "endDate": "2026-07-12",
+        "departureTime": "08:05",
+        "returnTime": "17:30",
+        "headcount": {
+            "scoutCount": 15,
+            "adultCount": 4,
+            "guestCount": 1,
+        },
+        "days": [],
+    }
+
+    create_response = await client.post("/api/events", json=payload)
+    assert create_response.status_code == 201
+
+    created = create_response.json()
+    get_response = await client.get(f"/api/events/{created['id']}")
+    assert get_response.status_code == 200
+
+    fetched = get_response.json()
+    assert fetched["departureTime"] == "08:05"
+    assert fetched["returnTime"] == "17:30"
+    assert fetched["headcount"] == {
+        "scoutCount": 15,
+        "adultCount": 4,
+        "guestCount": 1,
+    }
