@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.cosmosdb import get_all_by_troop, get_by_id, update_item
 from app.middleware.auth import RequireTroopContext, forbidden
+from app.middleware.moderation import moderate_text_fields, ModerationField
 from app.middleware.roles import check_permission
 from app.schemas import ReviewFlaggedContent, ReviewFlaggedContentEdit
 
@@ -182,6 +183,26 @@ async def _resolve_item(id_param: str, troop_id: str) -> dict | None:
     return None
 
 
+def _edited_fields_for_moderation(content_type: ContentType, body: ReviewFlaggedContentEdit) -> list[ModerationField]:
+    edits = body.edits
+    fields: list[ModerationField] = []
+
+    if content_type == "recipe":
+        if edits.name is not None:
+            fields.append(ModerationField(field="name", text=edits.name))
+        if edits.description is not None:
+            fields.append(ModerationField(field="description", text=edits.description))
+        return fields
+
+    if edits.comments is not None:
+        fields.append(ModerationField(field="comments", text=edits.comments))
+    if edits.whatWorked is not None:
+        fields.append(ModerationField(field="whatWorked", text=edits.whatWorked))
+    if edits.whatToChange is not None:
+        fields.append(ModerationField(field="whatToChange", text=edits.whatToChange))
+    return fields
+
+
 @router.get("/admin/flagged-content")
 async def list_flagged_content(auth: RequireTroopContext):
     if not check_permission(auth.role, "manageTroop"):
@@ -215,10 +236,14 @@ async def review_flagged_content(item_id: str, body: ReviewFlaggedContent, auth:
     now = int(time.time() * 1000)
     audit = {"userId": auth.userId, "displayName": auth.displayName}
     container = RECIPES_CONTAINER if content_type == "recipe" else FEEDBACK_CONTAINER
+    moderation_result = None
+
+    if body.action == "edit" and isinstance(body, ReviewFlaggedContentEdit):
+        moderation_result = await moderate_text_fields(_edited_fields_for_moderation(content_type, body))
 
     moderation = {
         **(item.get("moderation") or {}),
-        "checkedAt": now,
+        "checkedAt": moderation_result.checkedAt if moderation_result else now,
         "reviewedAt": now,
         "reviewedBy": audit,
         "reviewAction": body.action,
@@ -226,6 +251,11 @@ async def review_flagged_content(item_id: str, body: ReviewFlaggedContent, auth:
 
     if body.action == "reject":
         moderation["status"] = "rejected"
+    elif moderation_result:
+        moderation["status"] = moderation_result.status
+        moderation["flaggedFields"] = moderation_result.flaggedFields
+        moderation["checkedAt"] = moderation_result.checkedAt
+        moderation["provider"] = moderation_result.provider
     else:
         moderation["status"] = "approved"
         moderation["flaggedFields"] = []

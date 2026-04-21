@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from app.middleware.auth import TroopContext
+from app.middleware.moderation import ModerationResult
 from app.routers import admin_flagged_content
 from app.schemas import ReviewFlaggedContentReject
 
@@ -121,3 +122,61 @@ async def test_list_flagged_content_includes_categories_and_flagged_text(monkeyp
         "text": "I hate this meal",
         "categories": [{"category": "Hate", "severity": 4}],
     }]
+
+
+@pytest.mark.asyncio
+async def test_review_edit_re_moderates_updated_fields(monkeypatch: pytest.MonkeyPatch):
+    captured = {}
+
+    async def fake_resolve_item(_item_id: str, _troop_id: str):
+        return {
+            "status": "ok",
+            "contentType": "recipe",
+            "item": {
+                "id": "recipe-1",
+                "troopId": "troop-1",
+                "name": "Original",
+                "description": "Original description",
+                "moderation": {"status": "flagged", "flaggedFields": ["description"]},
+            },
+        }
+
+    async def fake_moderate_text_fields(fields):
+        captured["fields"] = [(field.field, field.text) for field in fields]
+        return ModerationResult(
+            status="flagged",
+            flaggedFields=["description"],
+            checkedAt=999,
+        )
+
+    async def fake_update_item(_container: str, _item_id: str, updated: dict, _troop_id: str):
+        captured["updated"] = updated
+        return updated
+
+    monkeypatch.setattr(admin_flagged_content, "check_permission", lambda _role, _permission: True)
+    monkeypatch.setattr(admin_flagged_content, "_resolve_item", fake_resolve_item)
+    monkeypatch.setattr(admin_flagged_content, "moderate_text_fields", fake_moderate_text_fields)
+    monkeypatch.setattr(admin_flagged_content, "update_item", fake_update_item)
+
+    auth = TroopContext(
+        userId="user-1",
+        email="admin@example.com",
+        displayName="Admin User",
+        troopId="troop-1",
+        role="troopAdmin",
+    )
+
+    result = await admin_flagged_content.review_flagged_content(
+        "recipe:recipe-1",
+        admin_flagged_content.ReviewFlaggedContentEdit(action="edit", edits={"description": "Updated description"}),
+        auth,
+    )
+
+    assert captured["fields"] == [("description", "Updated description")]
+    assert captured["updated"]["description"] == "Updated description"
+    assert captured["updated"]["moderation"]["status"] == "flagged"
+    assert captured["updated"]["moderation"]["flaggedFields"] == ["description"]
+    assert captured["updated"]["moderation"]["checkedAt"] == 999
+    assert "reviewedAt" in captured["updated"]["moderation"]
+    assert captured["updated"]["moderation"]["reviewedBy"] == {"userId": "user-1", "displayName": "Admin User"}
+    assert result["moderation"]["status"] == "flagged"

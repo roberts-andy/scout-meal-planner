@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from dataclasses import asdict
 
 from fastapi import APIRouter, HTTPException
 from fastapi import Query
@@ -18,6 +19,7 @@ from app.cosmosdb import (
 )
 from app.event_tags import with_migrated_tags
 from app.middleware.auth import RequireTroopContext, forbidden
+from app.middleware.moderation import moderate_text_fields, ModerationField
 from app.middleware.roles import check_permission
 from app.schemas import CreateEvent, UpdateEvent
 from app.telemetry import track_custom_event
@@ -40,6 +42,22 @@ def _extract_meal_recipe_assignments(event: dict) -> dict[str, str]:
                 continue
             assignments[str(meal_id)] = str(recipe_id)
     return assignments
+
+
+def _event_moderation_fields(data: CreateEvent | UpdateEvent) -> list[ModerationField]:
+    fields: list[ModerationField] = []
+    if data.name is not None:
+        fields.append(ModerationField(field="name", text=data.name))
+    if data.description is not None:
+        fields.append(ModerationField(field="description", text=data.description))
+    if data.notes is not None:
+        fields.append(ModerationField(field="notes", text=data.notes))
+
+    for day_index, day in enumerate(data.days or []):
+        for meal_index, meal in enumerate(day.meals):
+            if meal.notes is not None:
+                fields.append(ModerationField(field=f"days[{day_index}].meals[{meal_index}].notes", text=meal.notes))
+    return fields
 
 
 @router.get("/events")
@@ -70,10 +88,12 @@ async def get_event(event_id: str, auth: RequireTroopContext):
 async def create_event(body: CreateEvent, auth: RequireTroopContext):
     if not check_permission(auth.role, "manageEvents"):
         forbidden()
+    moderation = await moderate_text_fields(_event_moderation_fields(body))
     event = await create_item(CONTAINER, {
         "id": str(uuid.uuid4()),
         "troopId": auth.troopId,
         **body.model_dump(),
+        "moderation": asdict(moderation),
         **audit_create(auth),
     })
     track_custom_event("event_created", properties={
@@ -98,11 +118,13 @@ async def update_event(event_id: str, body: UpdateEvent, auth: RequireTroopConte
     existing = await get_by_id(CONTAINER, event_id, auth.troopId)
     if not existing:
         raise HTTPException(status_code=404, detail="Event not found")
+    moderation = await moderate_text_fields(_event_moderation_fields(body))
     event = await update_item(CONTAINER, event_id, {
         **existing,
         **body.model_dump(exclude_unset=True),
         "id": event_id,
         "troopId": auth.troopId,
+        "moderation": asdict(moderation),
         **audit_update(auth),
     }, auth.troopId)
 

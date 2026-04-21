@@ -3,12 +3,14 @@ from __future__ import annotations
 import logging
 import time
 import uuid
+from dataclasses import asdict
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi import Query
 
 from app.cosmosdb import query_items_paginated, query_items, create_item, update_item, delete_item
 from app.middleware.auth import RequireTroopContext, forbidden, get_troop_context
+from app.middleware.moderation import moderate_text_fields, ModerationField
 from app.middleware.roles import check_permission
 from app.schemas import CreateMember, UpdateMember, UpdateTroopMemberStatus
 
@@ -90,21 +92,25 @@ async def create_member(body: CreateMember, auth: RequireTroopContext):
         "troopId": auth.troopId,
         "status": "active",
     }
+    moderation = await moderate_text_fields([ModerationField(field="displayName", text=body.displayName)])
+    display_name = _to_first_name(body.displayName) if body.role.value == "scout" else body.displayName
 
     if body.role.value == "scout":
         member = await create_item(CONTAINER, {
             **base,
-            "displayName": _to_first_name(body.displayName),
+            "displayName": display_name,
             "role": body.role.value,
+            "moderation": asdict(moderation),
         })
     else:
         member = await create_item(CONTAINER, {
             **base,
             "userId": "",
             "joinedAt": int(time.time() * 1000),
-            "displayName": body.displayName,
+            "displayName": display_name,
             "email": body.email,
             "role": body.role.value,
+            "moderation": asdict(moderation),
         })
 
     return member

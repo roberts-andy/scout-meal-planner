@@ -6,6 +6,7 @@ from unittest.mock import Mock, call
 
 from app.main import app
 from app.middleware.auth import require_troop_context
+from app.middleware.moderation import ModerationResult
 from app.routers import events as events_router
 
 
@@ -270,3 +271,113 @@ async def test_get_event_migrates_legacy_characteristics_to_tags(client, monkeyp
 
     assert response.status_code == 200
     assert response.json()["tags"] == ["Backpacking", "Hike", "High Altitude"]
+
+
+@pytest.mark.asyncio
+async def test_create_event_moderates_text_fields(client, monkeypatch):
+    captured = {}
+
+    async def fake_moderate_text_fields(fields):
+        captured["fields"] = [(field.field, field.text) for field in fields]
+        return ModerationResult(status="flagged", flaggedFields=["notes"], checkedAt=123)
+
+    async def fake_create_item(*_args, **_kwargs):
+        captured["item"] = _args[1]
+        return _args[1]
+
+    monkeypatch.setattr(events_router, "moderate_text_fields", fake_moderate_text_fields)
+    monkeypatch.setattr(events_router, "create_item", fake_create_item)
+
+    app.dependency_overrides[require_troop_context] = lambda: SimpleNamespace(
+        userId="user-1",
+        email="leader@example.com",
+        displayName="Leader",
+        troopId="troop-1",
+        role="troopAdmin",
+    )
+
+    response = await client.post(
+        "/api/events",
+        json={
+            "name": "Summer Campout",
+            "description": "Weekend trip",
+            "notes": "Bring warm layers",
+            "startDate": "2026-06-01",
+            "endDate": "2026-06-02",
+            "days": [
+                {
+                    "date": "2026-06-01",
+                    "meals": [
+                        {"id": "meal-1", "type": "breakfast", "scoutCount": 4, "notes": "No peanuts"},
+                    ],
+                },
+            ],
+        },
+    )
+
+    assert response.status_code == 201
+    assert captured["fields"] == [
+        ("name", "Summer Campout"),
+        ("description", "Weekend trip"),
+        ("notes", "Bring warm layers"),
+        ("days[0].meals[0].notes", "No peanuts"),
+    ]
+    assert captured["item"]["moderation"] == {
+        "status": "flagged",
+        "flaggedFields": ["notes"],
+        "checkedAt": 123,
+        "provider": "azure-content-safety",
+        "categories": [],
+        "fieldCategories": [],
+    }
+
+
+@pytest.mark.asyncio
+async def test_update_event_moderates_updated_text_fields(client, monkeypatch):
+    captured = {}
+
+    async def fake_get_by_id(*_args, **_kwargs):
+        return {
+            "id": "event-1",
+            "troopId": "troop-1",
+            "name": "Old Name",
+            "startDate": "2026-05-01",
+            "endDate": "2026-05-03",
+            "days": [],
+        }
+
+    async def fake_moderate_text_fields(fields):
+        captured["fields"] = [(field.field, field.text) for field in fields]
+        return ModerationResult(status="approved", checkedAt=321)
+
+    async def fake_update_item(*_args, **_kwargs):
+        captured["item"] = _args[2]
+        return _args[2]
+
+    monkeypatch.setattr(events_router, "get_by_id", fake_get_by_id)
+    monkeypatch.setattr(events_router, "moderate_text_fields", fake_moderate_text_fields)
+    monkeypatch.setattr(events_router, "update_item", fake_update_item)
+
+    app.dependency_overrides[require_troop_context] = lambda: SimpleNamespace(
+        userId="user-1",
+        email="leader@example.com",
+        displayName="Leader",
+        troopId="troop-1",
+        role="troopAdmin",
+    )
+
+    response = await client.put(
+        "/api/events/event-1",
+        json={"description": "Updated description"},
+    )
+
+    assert response.status_code == 200
+    assert captured["fields"] == [("description", "Updated description")]
+    assert captured["item"]["moderation"] == {
+        "status": "approved",
+        "flaggedFields": [],
+        "checkedAt": 321,
+        "provider": "azure-content-safety",
+        "categories": [],
+        "fieldCategories": [],
+    }
