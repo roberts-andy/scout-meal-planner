@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
+from fastapi import HTTPException
 
 from app.middleware.moderation import ModerationResult
 from app.routers import troops as troops_router
@@ -8,34 +9,13 @@ from app.schemas import CreateTroop, UpdateTroop
 
 
 @pytest.mark.asyncio
-async def test_create_troop_moderates_name(monkeypatch):
-    captured = {}
-
-    async def fake_moderate_text_fields(fields):
-        captured["fields"] = [(field.field, field.text) for field in fields]
-        return ModerationResult(status="approved", checkedAt=10)
-
-    async def fake_create_item(container, item):
-        captured.setdefault("created", []).append((container, item))
-        return item
-
-    monkeypatch.setattr(troops_router, "moderate_text_fields", fake_moderate_text_fields)
-    monkeypatch.setattr(troops_router, "create_item", fake_create_item)
-
-    await troops_router.create_troop(
-        CreateTroop(name="Troop 123"),
-        SimpleNamespace(userId="user-1", email="user@example.com", displayName="Leader"),
-    )
-
-    assert captured["fields"] == [("name", "Troop 123")]
-    assert captured["created"][0][1]["moderation"] == {
-        "status": "approved",
-        "flaggedFields": [],
-        "checkedAt": 10,
-        "provider": "azure-content-safety",
-        "categories": [],
-        "fieldCategories": [],
-    }
+async def test_create_troop_is_disabled():
+    with pytest.raises(HTTPException) as exc_info:
+        await troops_router.create_troop(
+            CreateTroop(name="Troop 123"),
+            SimpleNamespace(userId="user-1", email="user@example.com", displayName="Leader"),
+        )
+    assert exc_info.value.status_code == 403
 
 
 @pytest.mark.asyncio
