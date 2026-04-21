@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 
@@ -11,6 +12,9 @@ configure_logging()  # must run before any getLogger() calls in routers
 
 from app.cosmosdb import DatabaseUnavailableError, close_database_clients, init_database
 from app.telemetry import track_exception, track_request
+
+_DB_INIT_MAX_RETRIES = 5
+_DB_INIT_BASE_DELAY = 2  # seconds, doubles each retry
 from app.routers import (
     events,
     event_packed,
@@ -31,12 +35,28 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
-    try:
-        await init_database()
-        logger.info("Cosmos DB initialized successfully")
-    except Exception as exc:
-        logger.error("Cosmos DB unavailable at startup — running without database: %s", exc, exc_info=True)
-        track_exception(exc, properties={"phase": "startup", "component": "cosmosdb"})
+    last_exc: Exception | None = None
+    for attempt in range(1, _DB_INIT_MAX_RETRIES + 1):
+        try:
+            await init_database()
+            logger.info("Cosmos DB initialized successfully (attempt %d)", attempt)
+            last_exc = None
+            break
+        except Exception as exc:
+            last_exc = exc
+            delay = _DB_INIT_BASE_DELAY * (2 ** (attempt - 1))
+            logger.warning(
+                "Cosmos DB init attempt %d/%d failed: %s — retrying in %ds",
+                attempt, _DB_INIT_MAX_RETRIES, exc, delay,
+            )
+            if attempt < _DB_INIT_MAX_RETRIES:
+                await asyncio.sleep(delay)
+    if last_exc:
+        logger.error(
+            "Cosmos DB unavailable after %d attempts — running without database: %s",
+            _DB_INIT_MAX_RETRIES, last_exc, exc_info=True,
+        )
+        track_exception(last_exc, properties={"phase": "startup", "component": "cosmosdb"})
     try:
         yield
     finally:
