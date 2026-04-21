@@ -88,6 +88,14 @@ When assigned an issue:
 - Debug/verbose logging must be gated to development mode (`import.meta.env.DEV`).
 - Sanitize user-controlled strings before interpolating into email subjects, headers, or URLs (strip newlines, enforce length limits).
 
+## Test Coverage
+
+- Every code change (new or modified) must be accompanied by corresponding unit tests.
+- For API changes, add or update tests in `api/tests/` using pytest.
+- For frontend changes, add or update tests alongside the source file (e.g., `Component.test.tsx`) using Vitest.
+- If modifying existing code, verify that existing tests still pass and add new test cases for any changed behaviour.
+- Do not consider a task complete until all new and modified code paths are covered by tests.
+
 ## Do Not
 
 - Do not modify `infra/` (Bicep) files unless the issue explicitly requests infrastructure changes.
