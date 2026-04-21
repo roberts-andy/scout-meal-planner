@@ -33,6 +33,12 @@ param contentSafetyAccountName string = 'cs-scout-meal-planner'
 @description('Name of the Azure Communication Services resource')
 param communicationServiceName string = 'acs-scout-meal-planner'
 
+@description('Name of the Log Analytics workspace')
+param logAnalyticsName string = 'log-scout-meal-planner'
+
+@description('Name of the Application Insights resource')
+param appInsightsName string = 'ai-scout-meal-planner'
+
 @description('Client ID of the pre-created Entra app registration for MSAL sign-in')
 param entraClientId string = '42871bb7-a693-4d97-9cb9-69bbf9a50ff4'
 
@@ -56,6 +62,8 @@ module resources 'resources.bicep' = {
     entraClientId: entraClientId
     contentSafetyAccountName: contentSafetyAccountName
     communicationServiceName: communicationServiceName
+    logAnalyticsName: logAnalyticsName
+    appInsightsName: appInsightsName
   }
 }
 
@@ -67,3 +75,4 @@ output entraClientId string = resources.outputs.entraClientId
 output contentSafetyEndpoint string = resources.outputs.contentSafetyEndpoint
 output acsEndpoint string = resources.outputs.acsEndpoint
 output acsFromEmail string = resources.outputs.acsFromEmail
+output appInsightsConnectionString string = resources.outputs.appInsightsConnectionString

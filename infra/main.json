@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "5538852263672173888"
+      "templateHash": "558941852244093203"
     }
   },
   "parameters": {
@@ -58,25 +58,53 @@
         "description": "GitHub branch for SWA deployment"
       }
     },
-    "functionAppName": {
+    "appServicePlanName": {
       "type": "string",
-      "defaultValue": "func-scout-meal-planner",
+      "defaultValue": "plan-scout-meal-planner",
       "metadata": {
-        "description": "Name of the Function App"
+        "description": "Name of the App Service Plan"
       }
     },
-    "storageAccountName": {
+    "apiAppName": {
       "type": "string",
-      "defaultValue": "stscoutmealplanner",
+      "defaultValue": "app-scout-meal-planner-api",
       "metadata": {
-        "description": "Name of the Storage Account for Function App"
+        "description": "Name of the API Web App"
       }
     },
-    "deployerPrincipalId": {
+    "contentSafetyAccountName": {
       "type": "string",
-      "defaultValue": "",
+      "defaultValue": "cs-scout-meal-planner",
       "metadata": {
-        "description": "Object ID of the GitHub Actions service principal for deployment"
+        "description": "Name of the Azure AI Content Safety account"
+      }
+    },
+    "communicationServiceName": {
+      "type": "string",
+      "defaultValue": "acs-scout-meal-planner",
+      "metadata": {
+        "description": "Name of the Azure Communication Services resource"
+      }
+    },
+    "logAnalyticsName": {
+      "type": "string",
+      "defaultValue": "log-scout-meal-planner",
+      "metadata": {
+        "description": "Name of the Log Analytics workspace"
+      }
+    },
+    "appInsightsName": {
+      "type": "string",
+      "defaultValue": "ai-scout-meal-planner",
+      "metadata": {
+        "description": "Name of the Application Insights resource"
+      }
+    },
+    "entraClientId": {
+      "type": "string",
+      "defaultValue": "42871bb7-a693-4d97-9cb9-69bbf9a50ff4",
+      "metadata": {
+        "description": "Client ID of the pre-created Entra app registration for MSAL sign-in"
       }
     }
   },
@@ -116,25 +144,36 @@
           "repositoryBranch": {
             "value": "[parameters('repositoryBranch')]"
           },
-          "functionAppName": {
-            "value": "[parameters('functionAppName')]"
+          "appServicePlanName": {
+            "value": "[parameters('appServicePlanName')]"
           },
-          "storageAccountName": {
-            "value": "[parameters('storageAccountName')]"
+          "apiAppName": {
+            "value": "[parameters('apiAppName')]"
           },
-          "deployerPrincipalId": {
-            "value": "[parameters('deployerPrincipalId')]"
+          "entraClientId": {
+            "value": "[parameters('entraClientId')]"
+          },
+          "contentSafetyAccountName": {
+            "value": "[parameters('contentSafetyAccountName')]"
+          },
+          "communicationServiceName": {
+            "value": "[parameters('communicationServiceName')]"
+          },
+          "logAnalyticsName": {
+            "value": "[parameters('logAnalyticsName')]"
+          },
+          "appInsightsName": {
+            "value": "[parameters('appInsightsName')]"
           }
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "languageVersion": "2.0",
           "contentVersion": "1.0.0.0",
           "metadata": {
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "6498273170204784468"
+              "templateHash": "9074230066807719996"
             }
           },
           "parameters": {
@@ -174,64 +213,82 @@
                 "description": "GitHub branch"
               }
             },
-            "functionAppName": {
+            "appServicePlanName": {
               "type": "string",
               "metadata": {
-                "description": "Name of the Function App"
+                "description": "Name of the App Service Plan"
               }
             },
-            "storageAccountName": {
+            "apiAppName": {
               "type": "string",
               "metadata": {
-                "description": "Name of the Storage Account for Function App"
+                "description": "Name of the API Web App"
               }
             },
-            "deployerPrincipalId": {
+            "entraClientId": {
               "type": "string",
-              "defaultValue": "",
               "metadata": {
-                "description": "Object ID of the GitHub Actions service principal for deployment"
+                "description": "Client ID of the pre-created Entra app registration for MSAL sign-in"
               }
             },
-            "msaAppDisplayName": {
+            "contentSafetyAccountName": {
               "type": "string",
-              "defaultValue": "ScoutMealPlanner",
               "metadata": {
-                "description": "Display name for the MSA sign-in app registration"
+                "description": "Name of the Azure AI Content Safety account"
               }
             },
-            "maximumInstanceCount": {
-              "type": "int",
-              "defaultValue": 100,
+            "communicationServiceName": {
+              "type": "string",
               "metadata": {
-                "description": "Maximum instance count for Flex Consumption scaling"
+                "description": "Name of the Azure Communication Services resource"
               }
             },
-            "instanceMemoryMB": {
-              "type": "int",
-              "defaultValue": 2048,
-              "allowedValues": [
-                512,
-                2048,
-                4096
-              ],
+            "logAnalyticsName": {
+              "type": "string",
               "metadata": {
-                "description": "Instance memory in MB for Flex Consumption"
+                "description": "Name of the Log Analytics workspace"
+              }
+            },
+            "appInsightsName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Application Insights resource"
               }
             }
           },
           "variables": {
-            "deploymentStorageContainerName": "[format('app-package-{0}', take(parameters('functionAppName'), 32))]",
             "cosmosDataContributorRoleId": "00000000-0000-0000-0000-000000000002"
           },
-          "imports": {
-            "MicrosoftGraph": {
-              "provider": "MicrosoftGraph",
-              "version": "0.1.8-preview"
-            }
-          },
-          "resources": {
-            "cosmosAccount": {
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2023-09-01",
+              "name": "[parameters('logAnalyticsName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": {
+                  "name": "PerGB2018"
+                },
+                "retentionInDays": 30
+              }
+            },
+            {
+              "type": "Microsoft.Insights/components",
+              "apiVersion": "2020-02-02",
+              "name": "[parameters('appInsightsName')]",
+              "location": "[parameters('location')]",
+              "kind": "web",
+              "properties": {
+                "Application_Type": "web",
+                "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName'))]",
+                "publicNetworkAccessForIngestion": "Enabled",
+                "publicNetworkAccessForQuery": "Enabled"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName'))]"
+              ]
+            },
+            {
               "type": "Microsoft.DocumentDB/databaseAccounts",
               "apiVersion": "2024-05-15",
               "name": "[parameters('cosmosAccountName')]",
@@ -255,7 +312,7 @@
                 }
               }
             },
-            "cosmosDatabase": {
+            {
               "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
               "apiVersion": "2024-05-15",
               "name": "[format('{0}/{1}', parameters('cosmosAccountName'), parameters('cosmosDatabaseName'))]",
@@ -265,10 +322,10 @@
                 }
               },
               "dependsOn": [
-                "cosmosAccount"
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName'))]"
               ]
             },
-            "eventsContainer": {
+            {
               "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
               "apiVersion": "2024-05-15",
               "name": "[format('{0}/{1}/{2}', parameters('cosmosAccountName'), parameters('cosmosDatabaseName'), 'events')]",
@@ -277,17 +334,17 @@
                   "id": "events",
                   "partitionKey": {
                     "paths": [
-                      "/troopId"
+                      "/id"
                     ],
                     "kind": "Hash"
                   }
                 }
               },
               "dependsOn": [
-                "cosmosDatabase"
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('cosmosAccountName'), parameters('cosmosDatabaseName'))]"
               ]
             },
-            "recipesContainer": {
+            {
               "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
               "apiVersion": "2024-05-15",
               "name": "[format('{0}/{1}/{2}', parameters('cosmosAccountName'), parameters('cosmosDatabaseName'), 'recipes')]",
@@ -296,17 +353,17 @@
                   "id": "recipes",
                   "partitionKey": {
                     "paths": [
-                      "/troopId"
+                      "/id"
                     ],
                     "kind": "Hash"
                   }
                 }
               },
               "dependsOn": [
-                "cosmosDatabase"
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('cosmosAccountName'), parameters('cosmosDatabaseName'))]"
               ]
             },
-            "feedbackContainer": {
+            {
               "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
               "apiVersion": "2024-05-15",
               "name": "[format('{0}/{1}/{2}', parameters('cosmosAccountName'), parameters('cosmosDatabaseName'), 'feedback')]",
@@ -315,17 +372,17 @@
                   "id": "feedback",
                   "partitionKey": {
                     "paths": [
-                      "/troopId"
+                      "/eventId"
                     ],
                     "kind": "Hash"
                   }
                 }
               },
               "dependsOn": [
-                "cosmosDatabase"
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('cosmosAccountName'), parameters('cosmosDatabaseName'))]"
               ]
             },
-            "troopsContainer": {
+            {
               "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
               "apiVersion": "2024-05-15",
               "name": "[format('{0}/{1}/{2}', parameters('cosmosAccountName'), parameters('cosmosDatabaseName'), 'troops')]",
@@ -341,10 +398,10 @@
                 }
               },
               "dependsOn": [
-                "cosmosDatabase"
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('cosmosAccountName'), parameters('cosmosDatabaseName'))]"
               ]
             },
-            "membersContainer": {
+            {
               "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
               "apiVersion": "2024-05-15",
               "name": "[format('{0}/{1}/{2}', parameters('cosmosAccountName'), parameters('cosmosDatabaseName'), 'members')]",
@@ -360,104 +417,41 @@
                 }
               },
               "dependsOn": [
-                "cosmosDatabase"
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('cosmosAccountName'), parameters('cosmosDatabaseName'))]"
               ]
             },
-            "storageAccount": {
-              "type": "Microsoft.Storage/storageAccounts",
-              "apiVersion": "2023-05-01",
-              "name": "[parameters('storageAccountName')]",
-              "location": "[parameters('location')]",
-              "sku": {
-                "name": "Standard_LRS"
-              },
-              "kind": "StorageV2",
-              "properties": {
-                "allowSharedKeyAccess": false,
-                "minimumTlsVersion": "TLS1_2",
-                "publicNetworkAccess": "Enabled"
-              }
-            },
-            "blobServices": {
-              "type": "Microsoft.Storage/storageAccounts/blobServices",
-              "apiVersion": "2023-05-01",
-              "name": "[format('{0}/{1}', parameters('storageAccountName'), 'default')]",
-              "dependsOn": [
-                "storageAccount"
-              ]
-            },
-            "deployContainer": {
-              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
-              "apiVersion": "2023-05-01",
-              "name": "[format('{0}/{1}/{2}', parameters('storageAccountName'), 'default', variables('deploymentStorageContainerName'))]",
-              "dependsOn": [
-                "blobServices"
-              ]
-            },
-            "appServicePlan": {
+            {
               "type": "Microsoft.Web/serverfarms",
               "apiVersion": "2023-12-01",
-              "name": "[format('{0}-plan', parameters('functionAppName'))]",
+              "name": "[parameters('appServicePlanName')]",
               "location": "[parameters('location')]",
+              "kind": "linux",
               "sku": {
-                "name": "FC1",
-                "tier": "FlexConsumption"
+                "name": "B1",
+                "tier": "Basic"
               },
               "properties": {
                 "reserved": true
               }
             },
-            "functionApp": {
+            {
               "type": "Microsoft.Web/sites",
-              "apiVersion": "2024-04-01",
-              "name": "[parameters('functionAppName')]",
+              "apiVersion": "2023-12-01",
+              "name": "[parameters('apiAppName')]",
               "location": "[parameters('location')]",
-              "kind": "functionapp,linux",
               "identity": {
                 "type": "SystemAssigned"
               },
               "properties": {
-                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', format('{0}-plan', parameters('functionAppName')))]",
-                "functionAppConfig": {
-                  "deployment": {
-                    "storage": {
-                      "type": "blobContainer",
-                      "value": "[format('{0}{1}', reference('storageAccount').primaryEndpoints.blob, variables('deploymentStorageContainerName'))]",
-                      "authentication": {
-                        "type": "SystemAssignedIdentity"
-                      }
-                    }
-                  },
-                  "scaleAndConcurrency": {
-                    "maximumInstanceCount": "[parameters('maximumInstanceCount')]",
-                    "instanceMemoryMB": "[parameters('instanceMemoryMB')]"
-                  },
-                  "runtime": {
-                    "name": "node",
-                    "version": "22"
-                  }
-                },
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
+                "httpsOnly": true,
                 "siteConfig": {
+                  "linuxFxVersion": "PYTHON|3.12",
+                  "appCommandLine": "uvicorn app.main:app --host 0.0.0.0 --port 8000",
                   "appSettings": [
                     {
-                      "name": "AzureWebJobsStorage__credential",
-                      "value": "managedidentity"
-                    },
-                    {
-                      "name": "AzureWebJobsStorage__blobServiceUri",
-                      "value": "[format('https://{0}.blob.{1}', parameters('storageAccountName'), environment().suffixes.storage)]"
-                    },
-                    {
-                      "name": "AzureWebJobsStorage__queueServiceUri",
-                      "value": "[format('https://{0}.queue.{1}', parameters('storageAccountName'), environment().suffixes.storage)]"
-                    },
-                    {
-                      "name": "AzureWebJobsStorage__tableServiceUri",
-                      "value": "[format('https://{0}.table.{1}', parameters('storageAccountName'), environment().suffixes.storage)]"
-                    },
-                    {
                       "name": "COSMOS_ENDPOINT",
-                      "value": "[reference('cosmosAccount').documentEndpoint]"
+                      "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), '2024-05-15').documentEndpoint]"
                     },
                     {
                       "name": "COSMOS_DATABASE",
@@ -465,94 +459,96 @@
                     },
                     {
                       "name": "ENTRA_CLIENT_ID",
-                      "value": "[reference('msaApp').appId]"
+                      "value": "[parameters('entraClientId')]"
+                    },
+                    {
+                      "name": "CONTENT_SAFETY_ENDPOINT",
+                      "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('contentSafetyAccountName')), '2024-10-01').endpoint]"
+                    },
+                    {
+                      "name": "ACS_ENDPOINT",
+                      "value": "[reference(resourceId('Microsoft.Communication/communicationServices', parameters('communicationServiceName')), '2023-06-01-preview').hostName]"
+                    },
+                    {
+                      "name": "ACS_FROM_EMAIL",
+                      "value": "[format('DoNotReply@{0}', reference(resourceId('Microsoft.Communication/emailServices/domains', format('{0}-email', parameters('communicationServiceName')), 'AzureManagedDomain'), '2023-06-01-preview').fromSenderDomain)]"
+                    },
+                    {
+                      "name": "APPINSIGHTS_CONNECTION_STRING",
+                      "value": "[reference(resourceId('Microsoft.Insights/components', parameters('appInsightsName')), '2020-02-02').ConnectionString]"
+                    },
+                    {
+                      "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
+                      "value": "true"
+                    },
+                    {
+                      "name": "WEBSITES_PORT",
+                      "value": "8000"
                     }
                   ]
-                },
-                "httpsOnly": true
+                }
               },
               "dependsOn": [
-                "appServicePlan",
-                "cosmosAccount",
-                "msaApp",
-                "storageAccount"
+                "[resourceId('Microsoft.Insights/components', parameters('appInsightsName'))]",
+                "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
+                "[resourceId('Microsoft.Communication/communicationServices', parameters('communicationServiceName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts', parameters('contentSafetyAccountName'))]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName'))]",
+                "[resourceId('Microsoft.Communication/emailServices/domains', format('{0}-email', parameters('communicationServiceName')), 'AzureManagedDomain')]"
               ]
             },
-            "storageBlobRoleAssignment": {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
-              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), resourceId('Microsoft.Web/sites', parameters('functionAppName')), 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b')]",
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[resourceId('Microsoft.Web/sites', parameters('apiAppName'))]",
+              "name": "send-to-log-analytics",
               "properties": {
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b')]",
-                "principalId": "[reference('functionApp', '2024-04-01', 'full').identity.principalId]",
-                "principalType": "ServicePrincipal"
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName'))]",
+                "logs": [
+                  {
+                    "category": "AppServiceHTTPLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServiceConsoleLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServiceAppLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServicePlatformLogs",
+                    "enabled": true
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ]
               },
               "dependsOn": [
-                "functionApp",
-                "storageAccount"
+                "[resourceId('Microsoft.Web/sites', parameters('apiAppName'))]",
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName'))]"
               ]
             },
-            "storageQueueRoleAssignment": {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
-              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), resourceId('Microsoft.Web/sites', parameters('functionAppName')), '974c5e8b-45b9-4653-ba55-5f855dd0fb88')]",
-              "properties": {
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')]",
-                "principalId": "[reference('functionApp', '2024-04-01', 'full').identity.principalId]",
-                "principalType": "ServicePrincipal"
-              },
-              "dependsOn": [
-                "functionApp",
-                "storageAccount"
-              ]
-            },
-            "storageTableRoleAssignment": {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
-              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), resourceId('Microsoft.Web/sites', parameters('functionAppName')), '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3')]",
-              "properties": {
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3')]",
-                "principalId": "[reference('functionApp', '2024-04-01', 'full').identity.principalId]",
-                "principalType": "ServicePrincipal"
-              },
-              "dependsOn": [
-                "functionApp",
-                "storageAccount"
-              ]
-            },
-            "deployerBlobRoleAssignment": {
-              "condition": "[not(equals(parameters('deployerPrincipalId'), ''))]",
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
-              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('deployerPrincipalId'), 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
-              "properties": {
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
-                "principalId": "[parameters('deployerPrincipalId')]",
-                "principalType": "ServicePrincipal"
-              },
-              "dependsOn": [
-                "storageAccount"
-              ]
-            },
-            "cosmosRoleAssignment": {
+            {
               "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
               "apiVersion": "2024-05-15",
-              "name": "[format('{0}/{1}', parameters('cosmosAccountName'), guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), resourceId('Microsoft.Web/sites', parameters('functionAppName')), variables('cosmosDataContributorRoleId')))]",
+              "name": "[format('{0}/{1}', parameters('cosmosAccountName'), guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), resourceId('Microsoft.Web/sites', parameters('apiAppName')), variables('cosmosDataContributorRoleId')))]",
               "properties": {
                 "roleDefinitionId": "[format('{0}/sqlRoleDefinitions/{1}', resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), variables('cosmosDataContributorRoleId'))]",
-                "principalId": "[reference('functionApp', '2024-04-01', 'full').identity.principalId]",
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('apiAppName')), '2023-12-01', 'full').identity.principalId]",
                 "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName'))]"
               },
               "dependsOn": [
-                "cosmosAccount",
-                "functionApp"
+                "[resourceId('Microsoft.Web/sites', parameters('apiAppName'))]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName'))]"
               ]
             },
-            "staticWebApp": {
+            {
               "type": "Microsoft.Web/staticSites",
               "apiVersion": "2023-12-01",
               "name": "[parameters('staticWebAppName')]",
@@ -570,54 +566,140 @@
                 }
               }
             },
-            "swaBackend": {
+            {
               "type": "Microsoft.Web/staticSites/linkedBackends",
               "apiVersion": "2023-12-01",
               "name": "[format('{0}/{1}', parameters('staticWebAppName'), 'backend')]",
               "properties": {
-                "backendResourceId": "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]",
+                "backendResourceId": "[resourceId('Microsoft.Web/sites', parameters('apiAppName'))]",
                 "region": "[parameters('location')]"
               },
               "dependsOn": [
-                "functionApp",
-                "staticWebApp"
+                "[resourceId('Microsoft.Web/sites', parameters('apiAppName'))]",
+                "[resourceId('Microsoft.Web/staticSites', parameters('staticWebAppName'))]"
               ]
             },
-            "msaApp": {
-              "import": "MicrosoftGraph",
-              "type": "Microsoft.Graph/applications@v1.0",
+            {
+              "type": "Microsoft.CognitiveServices/accounts",
+              "apiVersion": "2024-10-01",
+              "name": "[parameters('contentSafetyAccountName')]",
+              "location": "[parameters('location')]",
+              "kind": "ContentSafety",
+              "sku": {
+                "name": "F0"
+              },
               "properties": {
-                "uniqueName": "[parameters('msaAppDisplayName')]",
-                "displayName": "[parameters('msaAppDisplayName')]",
-                "signInAudience": "PersonalMicrosoftAccount",
-                "spa": {
-                  "redirectUris": [
-                    "http://localhost:5000",
-                    "[format('https://{0}', reference('staticWebApp').defaultHostname)]"
-                  ]
-                }
+                "customSubDomainName": "[parameters('contentSafetyAccountName')]",
+                "publicNetworkAccess": "Enabled"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('contentSafetyAccountName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('contentSafetyAccountName')), resourceId('Microsoft.Web/sites', parameters('apiAppName')), 'a97b65f3-24c7-4388-baec-2e87135dc908')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'a97b65f3-24c7-4388-baec-2e87135dc908')]",
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('apiAppName')), '2023-12-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
               },
               "dependsOn": [
-                "staticWebApp"
+                "[resourceId('Microsoft.Web/sites', parameters('apiAppName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts', parameters('contentSafetyAccountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Communication/emailServices",
+              "apiVersion": "2023-06-01-preview",
+              "name": "[format('{0}-email', parameters('communicationServiceName'))]",
+              "location": "global",
+              "properties": {
+                "dataLocation": "United States"
+              }
+            },
+            {
+              "type": "Microsoft.Communication/emailServices/domains",
+              "apiVersion": "2023-06-01-preview",
+              "name": "[format('{0}/{1}', format('{0}-email', parameters('communicationServiceName')), 'AzureManagedDomain')]",
+              "location": "global",
+              "properties": {
+                "domainManagement": "AzureManaged"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Communication/emailServices', format('{0}-email', parameters('communicationServiceName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Communication/communicationServices",
+              "apiVersion": "2023-06-01-preview",
+              "name": "[parameters('communicationServiceName')]",
+              "location": "global",
+              "properties": {
+                "dataLocation": "United States",
+                "linkedDomains": [
+                  "[resourceId('Microsoft.Communication/emailServices/domains', format('{0}-email', parameters('communicationServiceName')), 'AzureManagedDomain')]"
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Communication/emailServices/domains', format('{0}-email', parameters('communicationServiceName')), 'AzureManagedDomain')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Communication/communicationServices', parameters('communicationServiceName'))]",
+              "name": "[guid(resourceId('Microsoft.Communication/communicationServices', parameters('communicationServiceName')), resourceId('Microsoft.Web/sites', parameters('apiAppName')), 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('apiAppName')), '2023-12-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('apiAppName'))]",
+                "[resourceId('Microsoft.Communication/communicationServices', parameters('communicationServiceName'))]"
               ]
             }
-          },
+          ],
           "outputs": {
             "staticWebAppUrl": {
               "type": "string",
-              "value": "[reference('staticWebApp').defaultHostname]"
+              "value": "[reference(resourceId('Microsoft.Web/staticSites', parameters('staticWebAppName')), '2023-12-01').defaultHostname]"
             },
             "cosmosAccountEndpoint": {
               "type": "string",
-              "value": "[reference('cosmosAccount').documentEndpoint]"
+              "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), '2024-05-15').documentEndpoint]"
             },
-            "functionAppName": {
+            "apiAppName": {
               "type": "string",
-              "value": "[parameters('functionAppName')]"
+              "value": "[parameters('apiAppName')]"
             },
-            "msaAppClientId": {
+            "apiAppDefaultHostname": {
               "type": "string",
-              "value": "[reference('msaApp').appId]"
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('apiAppName')), '2023-12-01').defaultHostName]"
+            },
+            "entraClientId": {
+              "type": "string",
+              "value": "[parameters('entraClientId')]"
+            },
+            "contentSafetyEndpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('contentSafetyAccountName')), '2024-10-01').endpoint]"
+            },
+            "acsEndpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Communication/communicationServices', parameters('communicationServiceName')), '2023-06-01-preview').hostName]"
+            },
+            "acsFromEmail": {
+              "type": "string",
+              "value": "[format('DoNotReply@{0}', reference(resourceId('Microsoft.Communication/emailServices/domains', format('{0}-email', parameters('communicationServiceName')), 'AzureManagedDomain'), '2023-06-01-preview').fromSenderDomain)]"
+            },
+            "appInsightsConnectionString": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Insights/components', parameters('appInsightsName')), '2020-02-02').ConnectionString]"
+            },
+            "appInsightsInstrumentationKey": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Insights/components', parameters('appInsightsName')), '2020-02-02').InstrumentationKey]"
             }
           }
         }
@@ -636,13 +718,33 @@
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'resources'), '2025-04-01').outputs.cosmosAccountEndpoint.value]"
     },
-    "functionAppName": {
+    "apiAppName": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'resources'), '2025-04-01').outputs.functionAppName.value]"
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'resources'), '2025-04-01').outputs.apiAppName.value]"
     },
-    "msaAppClientId": {
+    "apiAppDefaultHostname": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'resources'), '2025-04-01').outputs.msaAppClientId.value]"
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'resources'), '2025-04-01').outputs.apiAppDefaultHostname.value]"
+    },
+    "entraClientId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'resources'), '2025-04-01').outputs.entraClientId.value]"
+    },
+    "contentSafetyEndpoint": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'resources'), '2025-04-01').outputs.contentSafetyEndpoint.value]"
+    },
+    "acsEndpoint": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'resources'), '2025-04-01').outputs.acsEndpoint.value]"
+    },
+    "acsFromEmail": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'resources'), '2025-04-01').outputs.acsFromEmail.value]"
+    },
+    "appInsightsConnectionString": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'resources'), '2025-04-01').outputs.appInsightsConnectionString.value]"
     }
   }
 }
