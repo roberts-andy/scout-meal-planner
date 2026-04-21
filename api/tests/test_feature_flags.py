@@ -259,3 +259,14 @@ def test_defaults_used_when_app_config_missing_flag(monkeypatch: pytest.MonkeyPa
 def test_resolve_returns_none_when_no_provider():
     init_app_config(None)
     assert _resolve_from_app_config("enable-feedback") is None
+
+
+def test_resolve_logs_warning_once_for_invalid_app_config_shape(caplog: pytest.LogCaptureFixture):
+    init_app_config(_FakeAppConfigProvider({}))
+
+    with caplog.at_level("WARNING"):
+        assert _resolve_from_app_config("enable-feedback") is None
+        assert _resolve_from_app_config("enable-feedback") is None
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert len([m for m in messages if "App Configuration data missing/invalid" in m]) == 1

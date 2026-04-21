@@ -389,7 +389,7 @@ resource ffContentModeration 'Microsoft.AppConfiguration/configurationStores/key
   parent: appConfig
   name: '.appconfig.featureflag~2Fenable-content-moderation'
   properties: {
-    value: '{"id":"enable-content-moderation","description":"Enable Azure AI Content Safety moderation","enabled":false}'
+    value: '{"id":"enable-content-moderation","description":"Enable Azure AI Content Safety moderation","enabled":true}'
     contentType: 'application/vnd.microsoft.appconfig.ff+json;charset=utf-8'
   }
 }
@@ -398,7 +398,7 @@ resource ffEmailShoppingList 'Microsoft.AppConfiguration/configurationStores/key
   parent: appConfig
   name: '.appconfig.featureflag~2Fenable-email-shopping-list'
   properties: {
-    value: '{"id":"enable-email-shopping-list","description":"Enable email shopping list feature","enabled":false}'
+    value: '{"id":"enable-email-shopping-list","description":"Enable email shopping list feature","enabled":true}'
     contentType: 'application/vnd.microsoft.appconfig.ff+json;charset=utf-8'
   }
 }
@@ -407,7 +407,7 @@ resource ffSharedLinks 'Microsoft.AppConfiguration/configurationStores/keyValues
   parent: appConfig
   name: '.appconfig.featureflag~2Fenable-shared-links'
   properties: {
-    value: '{"id":"enable-shared-links","description":"Enable shared event links","enabled":false}'
+    value: '{"id":"enable-shared-links","description":"Enable shared event links","enabled":true}'
     contentType: 'application/vnd.microsoft.appconfig.ff+json;charset=utf-8'
   }
 }
