@@ -82,6 +82,13 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
     consistencyPolicy: {
       defaultConsistencyLevel: 'Session'
     }
+    publicNetworkAccess: 'Enabled'
+    isVirtualNetworkFilterEnabled: false
+    ipRules: [
+      {
+        ipAddressOrRange: '0.0.0.0'
+      }
+    ]
   }
 }
 
