@@ -1,0 +1,23 @@
+{
+  "schema_version": "1",
+  "branch": "feature/azure-app-config-feature-flags",
+  "head_commit": "0ec56d3fd16bdee7082a61f283e6d124d66bc96c",
+  "reviewed_at": "2026-04-21T16:22:58Z",
+  "verdict": "request_changes",
+  "files_changed": [
+    "api/app/feature_flags.py",
+    "api/app/main.py",
+    "api/requirements.txt",
+    "api/tests/test_feature_flags.py",
+    "infra/main.bicep",
+    "infra/parameters.json",
+    "infra/resources.bicep"
+  ],
+  "findings_count": {
+    "critical": 1,
+    "high": 2,
+    "medium": 4,
+    "low": 2
+  },
+  "reviewer": "code-review-full"
+}
