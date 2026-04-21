@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useAuthContext } from '@/components/AuthProvider'
 import { format, eachDayOfInterval } from 'date-fns'
 import { toast } from 'sonner'
@@ -29,6 +30,7 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
   const { troopId } = useAuthContext()
   const [name, setName] = useState('')
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
   const [description, setDescription] = useState('')
   const [link, setLink] = useState('')
   const [departureTime, setDepartureTime] = useState('')
@@ -44,6 +46,13 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
   const [runningWater, setRunningWater] = useState(false)
   const [trailerAccess, setTrailerAccess] = useState(false)
   const [expectedWeather, setExpectedWeather] = useState('')
+
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setIsDatePickerOpen(false)
+    }
+    onOpenChange(nextOpen)
+  }
 
   const handleSubmit = () => {
     if (!name || !dateRange?.from || !dateRange?.to) return
@@ -106,11 +115,18 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
     setRunningWater(false)
     setTrailerAccess(false)
     setExpectedWeather('')
-    onOpenChange(false)
+    handleDialogOpenChange(false)
+  }
+
+  const handleDateRangeChange = (range: DateRange | undefined) => {
+    setDateRange(range)
+    if (range?.from && range?.to) {
+      setIsDatePickerOpen(false)
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="sm:max-w-[640px]">
         <DialogHeader>
           <DialogTitle>Create New Event</DialogTitle>
@@ -138,30 +154,43 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
               rows={3}
             />
           </div>
-          <div className="grid gap-2">
+          <div className="grid gap-3">
             <Label>Trip Dates</Label>
-            <div className="text-sm text-muted-foreground">
-              {dateRange?.from ? (
-                dateRange.to ? (
-                  <>
-                    {format(dateRange.from, 'MMM d, yyyy')} — {format(dateRange.to, 'MMM d, yyyy')}
-                  </>
-                ) : (
-                  <>
-                    {format(dateRange.from, 'MMM d, yyyy')} — <span className="italic">select end date</span>
-                  </>
-                )
-              ) : (
-                'Select start and end dates'
-              )}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="start-date">Start Date</Label>
+                <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Input
+                      id="start-date"
+                      readOnly
+                      value={dateRange?.from ? format(dateRange.from, 'MMM d, yyyy') : ''}
+                      placeholder="Select start date"
+                    />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="range"
+                      selected={dateRange}
+                      onSelect={handleDateRangeChange}
+                      numberOfMonths={2}
+                      disabled={{ before: new Date() }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="end-date">End Date</Label>
+                <Input
+                  id="end-date"
+                  readOnly
+                  value={dateRange?.to ? format(dateRange.to, 'MMM d, yyyy') : ''}
+                  placeholder="Select end date"
+                  onClick={() => setIsDatePickerOpen(true)}
+                  onFocus={() => setIsDatePickerOpen(true)}
+                />
+              </div>
             </div>
-            <CalendarComponent
-              mode="range"
-              selected={dateRange}
-              onSelect={setDateRange}
-              numberOfMonths={2}
-              disabled={{ before: new Date() }}
-            />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="grid gap-2">
@@ -300,7 +329,7 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleDialogOpenChange(false)}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={!name || !dateRange?.from || !dateRange?.to || !troopId}>
