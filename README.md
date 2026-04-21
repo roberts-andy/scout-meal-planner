@@ -108,7 +108,7 @@ scout-meal-planner/
 | **fnm** (Fast Node Manager) | latest | `winget install Schniz.fnm` (Windows) or [fnm docs](https://github.com/Schniz/fnm#installation) |
 | **Node.js** | 20 LTS (pinned via `.nvmrc`) | Installed automatically by fnm: `fnm install 20` |
 | **Azure Cosmos DB Emulator** | latest | [Download](https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-develop-emulator) — must be running on `https://localhost:8081/` before starting the dev server |
-| **Azure Functions Core Tools** | v4 | Installed as a project dependency (`azure-functions-core-tools` in `api/package.json`) — no global install needed |
+| **Python** | 3.13 | Required for the FastAPI backend (`api/`). Install via [python.org](https://www.python.org/downloads/) or your package manager |
 | **Azure Static Web Apps CLI** | v2 | Installed as a project dependency (`@azure/static-web-apps-cli` in root `package.json`) — no global install needed |
 
 #### fnm setup

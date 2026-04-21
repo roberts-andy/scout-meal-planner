@@ -455,7 +455,7 @@ Feature flags enable progressive rollout, safe experimentation, and quick kill-s
 | 1.0 | 2026-04-18 | andyrob | Approved — added troop admin FRs (FR-028–030), feature flags, user journeys, communication plan. 2 open questions remain (external dependencies, not blockers). | Approval |
 | 1.1 | 2026-04-18 | andyrob | Added COPPA consent model (Section 11), FR-031 (member data deletion), resolved OQ-004, added parent role to out-of-scope, linked privacy policy. | Update |
 | 1.2 | 2026-04-18 | andyrob | Resolved OQ-001 with Scouting America policy research. Expanded compliance table from 1 row to 5 policy areas. Added REF-003–REF-006 (Scouting America policy sources). All open questions now resolved. | Update |
-| 1.3 | 2026-04-20 | andyrob | Updated technology stack: API is Python FastAPI (was "Azure Functions v4 Node.js"). Updated deployment description. Added gap analysis reference (REF-007). Node.js scaffold in `api/src/` is legacy — Python FastAPI in `api/app/` is the authoritative backend. | Correction |
+| 1.3 | 2026-04-20 | andyrob | Updated technology stack: API is Python FastAPI (was "Azure Functions v4 Node.js"). Updated deployment description. Added gap analysis reference (REF-007). | Correction |
 
 ## 16. References & Provenance
 | Ref ID | Type | Source | Summary | Conflict Resolution |

@@ -16,7 +16,7 @@ When reviewing pull requests, check for:
 
 ### Conventions
 - No changes to `infra/` unless the issue explicitly requires it
-- No changes to `api/src/middleware/auth.ts` unless the issue explicitly requires it
+- No changes to `api/app/middleware/auth.py` unless the issue explicitly requires it
 - No new dependencies without clear justification
 - Branch targets `main` (trunk-based, no `develop` branch)
 
