@@ -62,6 +62,7 @@ describe('EventDetail feedback tab date gate', () => {
     render(
       <EventDetail
         event={baseEvent}
+        allEvents={[baseEvent]}
         recipes={[]}
         feedback={[]}
         onUpdateEvent={vi.fn()}
@@ -82,6 +83,7 @@ describe('EventDetail feedback tab date gate', () => {
     render(
       <EventDetail
         event={baseEvent}
+        allEvents={[baseEvent]}
         recipes={[]}
         feedback={[]}
         onUpdateEvent={vi.fn()}
@@ -103,6 +105,7 @@ describe('EventDetail feedback tab date gate', () => {
     render(
       <EventDetail
         event={baseEvent}
+        allEvents={[baseEvent]}
         recipes={[]}
         feedback={[]}
         onUpdateEvent={vi.fn()}
@@ -124,11 +127,13 @@ describe('EventDetail feedback tab date gate', () => {
       <EventDetail
         event={{
           ...baseEvent,
+          tags: ['Hike', 'High Altitude'],
           powerAvailable: true,
           runningWater: true,
           trailerAccess: true,
           expectedWeather: 'Cold nights',
         }}
+        allEvents={[baseEvent]}
         recipes={[]}
         feedback={[]}
         onUpdateEvent={vi.fn()}
@@ -143,6 +148,8 @@ describe('EventDetail feedback tab date gate', () => {
     expect(screen.getByText('Departure: 08:00')).toBeInTheDocument()
     expect(screen.getByText('Return: 14:30')).toBeInTheDocument()
     expect(screen.getByText('Headcount: 12 scouts, 4 adults, 2 guests')).toBeInTheDocument()
+    expect(screen.getByText('Hike')).toBeInTheDocument()
+    expect(screen.getByText('High Altitude')).toBeInTheDocument()
     expect(screen.getByText('Power Available')).toBeInTheDocument()
     expect(screen.getByText('Running Water')).toBeInTheDocument()
     expect(screen.getByText('Trailer Access')).toBeInTheDocument()
@@ -155,6 +162,7 @@ describe('EventDetail feedback tab date gate', () => {
     render(
       <EventDetail
         event={{ ...baseEvent, departureTime: undefined, returnTime: undefined, headcount: undefined }}
+        allEvents={[baseEvent]}
         recipes={[]}
         feedback={[]}
         onUpdateEvent={vi.fn()}

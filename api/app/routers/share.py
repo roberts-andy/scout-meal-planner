@@ -18,6 +18,12 @@ router = APIRouter()
 EVENTS_CONTAINER = "events"
 RECIPES_CONTAINER = "recipes"
 SHARE_TOKENS_CONTAINER = "share-tokens"
+LEGACY_CHARACTERISTICS = {
+    "hike": "Hike",
+    "highAltitude": "High Altitude",
+    "tentCamping": "Tent Camping",
+    "cabinCamping": "Cabin Camping",
+}
 
 
 def _require_shared_links_enabled() -> None:
@@ -44,6 +50,29 @@ async def _delete_share_token_index(token: str) -> None:
         if getattr(exc, "status_code", None) == 404:
             return
         raise
+
+
+def _get_event_tags(event: dict) -> list[str]:
+    tags: list[str] = []
+    seen: set[str] = set()
+
+    for raw_tag in event.get("tags") or []:
+        tag = str(raw_tag).strip()
+        if not tag:
+            continue
+        key = tag.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        tags.append(tag)
+
+    for field_name, label in LEGACY_CHARACTERISTICS.items():
+        if event.get(field_name):
+            key = label.lower()
+            if key not in seen:
+                seen.add(key)
+                tags.append(label)
+    return tags
 
 
 @router.get("/events/{event_id}/share")
@@ -213,10 +242,7 @@ async def get_shared_event(token: str):
             "name": event.get("name"),
             "startDate": event.get("startDate"),
             "endDate": event.get("endDate"),
-            "hike": event.get("hike"),
-            "highAltitude": event.get("highAltitude"),
-            "tentCamping": event.get("tentCamping"),
-            "cabinCamping": event.get("cabinCamping"),
+            "tags": _get_event_tags(event),
             "powerAvailable": event.get("powerAvailable"),
             "runningWater": event.get("runningWater"),
             "trailerAccess": event.get("trailerAccess"),

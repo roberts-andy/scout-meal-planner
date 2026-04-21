@@ -165,10 +165,7 @@ class CreateEvent(BaseModel):
     packedItems: Optional[list[str]] = None
     purchasedItems: Optional[list[str]] = None
     notes: Optional[str] = None
-    hike: Optional[bool] = None
-    highAltitude: Optional[bool] = None
-    tentCamping: Optional[bool] = None
-    cabinCamping: Optional[bool] = None
+    tags: Optional[list[str]] = None
     powerAvailable: Optional[bool] = None
     runningWater: Optional[bool] = None
     trailerAccess: Optional[bool] = None
@@ -188,10 +185,7 @@ class UpdateEvent(BaseModel):
     packedItems: Optional[list[str]] = None
     purchasedItems: Optional[list[str]] = None
     notes: Optional[str] = None
-    hike: Optional[bool] = None
-    highAltitude: Optional[bool] = None
-    tentCamping: Optional[bool] = None
-    cabinCamping: Optional[bool] = None
+    tags: Optional[list[str]] = None
     powerAvailable: Optional[bool] = None
     runningWater: Optional[bool] = None
     trailerAccess: Optional[bool] = None

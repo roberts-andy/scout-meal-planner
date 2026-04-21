@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { TagInput } from './TagInput'
 import { useAuthContext } from '@/components/AuthProvider'
 import { format, eachDayOfInterval } from 'date-fns'
 import { toast } from 'sonner'
@@ -24,9 +25,10 @@ interface CreateEventDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreateEvent: (event: Event) => void
+  existingTags?: string[]
 }
 
-export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateEventDialogProps) {
+export function CreateEventDialog({ open, onOpenChange, onCreateEvent, existingTags = [] }: CreateEventDialogProps) {
   const { troopId } = useAuthContext()
   const [name, setName] = useState('')
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
@@ -38,10 +40,7 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
   const [scoutCount, setScoutCount] = useState(0)
   const [adultCount, setAdultCount] = useState(0)
   const [guestCount, setGuestCount] = useState(0)
-  const [hike, setHike] = useState(false)
-  const [highAltitude, setHighAltitude] = useState(false)
-  const [tentCamping, setTentCamping] = useState(false)
-  const [cabinCamping, setCabinCamping] = useState(false)
+  const [tags, setTags] = useState<string[]>([])
   const [powerAvailable, setPowerAvailable] = useState(false)
   const [runningWater, setRunningWater] = useState(false)
   const [trailerAccess, setTrailerAccess] = useState(false)
@@ -85,10 +84,7 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
       days,
       description: description || undefined,
       link: link || undefined,
-      hike: hike || undefined,
-      highAltitude: highAltitude || undefined,
-      tentCamping: tentCamping || undefined,
-      cabinCamping: cabinCamping || undefined,
+      tags: tags.length > 0 ? tags : undefined,
       powerAvailable: powerAvailable || undefined,
       runningWater: runningWater || undefined,
       trailerAccess: trailerAccess || undefined,
@@ -107,10 +103,7 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
     setScoutCount(0)
     setAdultCount(0)
     setGuestCount(0)
-    setHike(false)
-    setHighAltitude(false)
-    setTentCamping(false)
-    setCabinCamping(false)
+    setTags([])
     setPowerAvailable(false)
     setRunningWater(false)
     setTrailerAccess(false)
@@ -250,38 +243,12 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
           <div className="grid gap-2">
             <Label>Event Characteristics</Label>
             <div className="grid gap-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="hike"
-                  checked={hike}
-                  onCheckedChange={(checked) => setHike(checked as boolean)}
-                />
-                <Label htmlFor="hike" className="cursor-pointer font-normal">Hike</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="high-altitude"
-                  checked={highAltitude}
-                  onCheckedChange={(checked) => setHighAltitude(checked as boolean)}
-                />
-                <Label htmlFor="high-altitude" className="cursor-pointer font-normal">High Altitude</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="tent-camping"
-                  checked={tentCamping}
-                  onCheckedChange={(checked) => setTentCamping(checked as boolean)}
-                />
-                <Label htmlFor="tent-camping" className="cursor-pointer font-normal">Tent Camping</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="cabin-camping"
-                  checked={cabinCamping}
-                  onCheckedChange={(checked) => setCabinCamping(checked as boolean)}
-                />
-                <Label htmlFor="cabin-camping" className="cursor-pointer font-normal">Cabin Camping</Label>
-              </div>
+              <TagInput
+                tags={tags}
+                suggestions={existingTags}
+                onChange={setTags}
+                placeholder="e.g., Hike, Canoeing, High Altitude"
+              />
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="power-available"

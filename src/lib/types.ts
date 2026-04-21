@@ -143,10 +143,7 @@ export interface Event {
   packedItems?: string[]
   purchasedItems?: string[]
   notes?: string
-  hike?: boolean
-  highAltitude?: boolean
-  tentCamping?: boolean
-  cabinCamping?: boolean
+  tags?: string[]
   powerAvailable?: boolean
   runningWater?: boolean
   trailerAccess?: boolean
@@ -178,10 +175,7 @@ export interface SharedEvent {
   returnTime?: string
   headcount?: EventHeadcount
   days: EventDay[]
-  hike?: boolean
-  highAltitude?: boolean
-  tentCamping?: boolean
-  cabinCamping?: boolean
+  tags?: string[]
   powerAvailable?: boolean
   runningWater?: boolean
   trailerAccess?: boolean

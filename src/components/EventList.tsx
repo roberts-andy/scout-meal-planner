@@ -15,8 +15,17 @@ interface EventListProps {
   onDeleteEvent: (eventId: string) => void
 }
 
+function collectEventTags(events: Event[]) {
+  return Array.from(
+    new Set(
+      events.flatMap((event) => event.tags ?? []).map((tag) => tag.trim()).filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b))
+}
+
 export function EventList({ events, onSelectEvent, onCreateEvent, onDeleteEvent }: EventListProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const existingTags = collectEventTags(events)
 
   if (events.length === 0) {
     return (
@@ -34,6 +43,7 @@ export function EventList({ events, onSelectEvent, onCreateEvent, onDeleteEvent 
           open={isCreateDialogOpen}
           onOpenChange={setIsCreateDialogOpen}
           onCreateEvent={onCreateEvent}
+          existingTags={existingTags}
         />
       </div>
     )
@@ -93,12 +103,11 @@ export function EventList({ events, onSelectEvent, onCreateEvent, onDeleteEvent 
                     <span>•</span>
                     <span>{event.days.reduce((acc, day) => acc + day.meals.length, 0)} meals</span>
                   </div>
-                  {(event.hike || event.highAltitude || event.tentCamping || event.cabinCamping || event.powerAvailable || event.runningWater || event.trailerAccess || event.expectedWeather) && (
+                  {((event.tags?.length ?? 0) > 0 || event.powerAvailable || event.runningWater || event.trailerAccess || event.expectedWeather) && (
                     <div className="flex flex-wrap gap-1.5">
-                      {event.hike && <Badge variant="secondary" className="text-xs">Hike</Badge>}
-                      {event.highAltitude && <Badge variant="secondary" className="text-xs">High Altitude</Badge>}
-                      {event.tentCamping && <Badge variant="secondary" className="text-xs">Tent Camping</Badge>}
-                      {event.cabinCamping && <Badge variant="secondary" className="text-xs">Cabin Camping</Badge>}
+                      {(event.tags ?? []).map((tag) => (
+                        <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                      ))}
                       {event.powerAvailable && <Badge variant="secondary" className="text-xs">Power Available</Badge>}
                       {event.runningWater && <Badge variant="secondary" className="text-xs">Running Water</Badge>}
                       {event.trailerAccess && <Badge variant="secondary" className="text-xs">Trailer Access</Badge>}
@@ -116,6 +125,7 @@ export function EventList({ events, onSelectEvent, onCreateEvent, onDeleteEvent 
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         onCreateEvent={onCreateEvent}
+        existingTags={existingTags}
       />
     </div>
   )

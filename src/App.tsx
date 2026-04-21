@@ -135,6 +135,7 @@ function AppContent() {
     return (
       <EventDetail
         event={selectedEvent}
+        allEvents={events}
         recipes={recipes}
         feedback={feedback}
         onUpdateEvent={handleUpdateEvent}
