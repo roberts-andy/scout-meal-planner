@@ -7,6 +7,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, Request
 
 from app.cosmosdb import create_item, delete_item, get_by_id, get_all_by_troop, update_item
+from app.event_tags import get_event_tags
 from app.feature_flags import FLAG_ENABLE_SHARED_LINKS, is_feature_enabled
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
@@ -213,10 +214,7 @@ async def get_shared_event(token: str):
             "name": event.get("name"),
             "startDate": event.get("startDate"),
             "endDate": event.get("endDate"),
-            "hike": event.get("hike"),
-            "highAltitude": event.get("highAltitude"),
-            "tentCamping": event.get("tentCamping"),
-            "cabinCamping": event.get("cabinCamping"),
+            "tags": get_event_tags(event),
             "powerAvailable": event.get("powerAvailable"),
             "runningWater": event.get("runningWater"),
             "trailerAccess": event.get("trailerAccess"),

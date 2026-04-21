@@ -27,7 +27,7 @@ async def test_list_events_returns_paginated_shape(monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(events, "query_items_paginated", fake_query_items_paginated)
 
     result = await events.list_events(auth=_auth(), limit=25, continuationToken="start-token")
-    assert result == {"items": [{"id": "event-1"}], "continuationToken": "next-token"}
+    assert result == {"items": [{"id": "event-1", "tags": []}], "continuationToken": "next-token"}
     assert called["args"][0] == "events"
     assert called["args"][3] == 25
     assert called["args"][4] == "start-token"

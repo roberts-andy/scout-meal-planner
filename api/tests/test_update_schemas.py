@@ -34,11 +34,13 @@ def test_create_event_accepts_new_logistics_fields():
         runningWater=False,
         trailerAccess=True,
         expectedWeather="Rain likely",
+        tags=["Hike", "Canoeing"],
     )
     assert body.model_dump()["powerAvailable"] is True
     assert body.model_dump()["runningWater"] is False
     assert body.model_dump()["trailerAccess"] is True
     assert body.model_dump()["expectedWeather"] == "Rain likely"
+    assert body.model_dump()["tags"] == ["Hike", "Canoeing"]
 
 
 def test_update_event_rejects_invalid_logistics_field_types():
@@ -46,6 +48,8 @@ def test_update_event_rejects_invalid_logistics_field_types():
         UpdateEvent(powerAvailable=[])
     with pytest.raises(ValidationError):
         UpdateEvent(expectedWeather={})
+    with pytest.raises(ValidationError):
+        UpdateEvent(tags="Hike")
 
 
 def test_update_recipe_validates_constraints_when_field_is_set():

@@ -13,12 +13,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
+import { TagInput } from './TagInput'
 
 interface EditEventDialogProps {
   event: Event
   open: boolean
   onOpenChange: (open: boolean) => void
   onUpdateEvent: (event: Event) => void
+  existingTags?: string[]
 }
 
 export function EditEventDialog({
@@ -26,6 +28,7 @@ export function EditEventDialog({
   open,
   onOpenChange,
   onUpdateEvent,
+  existingTags = [],
 }: EditEventDialogProps) {
   const [name, setName] = useState(event.name)
   const [description, setDescription] = useState(event.description || '')
@@ -35,10 +38,7 @@ export function EditEventDialog({
   const [scoutCount, setScoutCount] = useState(event.headcount?.scoutCount ?? 0)
   const [adultCount, setAdultCount] = useState(event.headcount?.adultCount ?? 0)
   const [guestCount, setGuestCount] = useState(event.headcount?.guestCount ?? 0)
-  const [hike, setHike] = useState(event.hike || false)
-  const [highAltitude, setHighAltitude] = useState(event.highAltitude || false)
-  const [tentCamping, setTentCamping] = useState(event.tentCamping || false)
-  const [cabinCamping, setCabinCamping] = useState(event.cabinCamping || false)
+  const [tags, setTags] = useState(event.tags || [])
   const [powerAvailable, setPowerAvailable] = useState(event.powerAvailable || false)
   const [runningWater, setRunningWater] = useState(event.runningWater || false)
   const [trailerAccess, setTrailerAccess] = useState(event.trailerAccess || false)
@@ -53,10 +53,7 @@ export function EditEventDialog({
     setScoutCount(event.headcount?.scoutCount ?? 0)
     setAdultCount(event.headcount?.adultCount ?? 0)
     setGuestCount(event.headcount?.guestCount ?? 0)
-    setHike(event.hike || false)
-    setHighAltitude(event.highAltitude || false)
-    setTentCamping(event.tentCamping || false)
-    setCabinCamping(event.cabinCamping || false)
+    setTags(event.tags || [])
     setPowerAvailable(event.powerAvailable || false)
     setRunningWater(event.runningWater || false)
     setTrailerAccess(event.trailerAccess || false)
@@ -75,12 +72,9 @@ export function EditEventDialog({
         adultCount,
         guestCount,
       },
-      hike: hike || undefined,
+      tags: tags.length > 0 ? tags : undefined,
       link: link || undefined,
-      tentCamping: tentCamping || undefined,
-      highAltitude: highAltitude || undefined,
       updatedAt: Date.now(),
-      cabinCamping: cabinCamping || undefined,
       powerAvailable: powerAvailable || undefined,
       runningWater: runningWater || undefined,
       trailerAccess: trailerAccess || undefined,
@@ -186,46 +180,12 @@ export function EditEventDialog({
           <div className="grid gap-3">
             <Label>Trip Type</Label>
             <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="edit-hike"
-                  checked={hike}
-                  onCheckedChange={(checked) => setHike(checked as boolean)}
-                />
-                <Label htmlFor="edit-hike" className="font-normal cursor-pointer">
-                  Hike
-                </Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="edit-high-altitude"
-                  checked={highAltitude}
-                  onCheckedChange={(checked) => setHighAltitude(checked as boolean)}
-                />
-                <Label htmlFor="edit-high-altitude" className="font-normal cursor-pointer">
-                  High Altitude
-                </Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="edit-tent-camping"
-                  checked={tentCamping}
-                  onCheckedChange={(checked) => setTentCamping(checked as boolean)}
-                />
-                <Label htmlFor="edit-tent-camping" className="font-normal cursor-pointer">
-                  Tent Camping
-                </Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="edit-cabin-camping"
-                  checked={cabinCamping}
-                  onCheckedChange={(checked) => setCabinCamping(checked as boolean)}
-                />
-                <Label htmlFor="edit-cabin-camping" className="font-normal cursor-pointer">
-                  Cabin Camping
-                </Label>
-              </div>
+              <TagInput
+                tags={tags}
+                suggestions={existingTags}
+                onChange={setTags}
+                placeholder="e.g., Hike, Canoeing, High Altitude"
+              />
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="edit-power-available"

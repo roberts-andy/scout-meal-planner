@@ -13,9 +13,11 @@ import { EditEventDialog } from './EditEventDialog'
 import { toast } from 'sonner'
 import { canSubmitEventFeedback } from '@/lib/helpers'
 import { isFeatureEnabled } from '@/lib/featureFlags'
+import { collectExistingEventTags } from '@/lib/eventTags'
 
 interface EventDetailProps {
   event: Event
+  allEvents: Event[]
   recipes: Recipe[]
   feedback: MealFeedback[]
   onUpdateEvent: (event: Event) => void
@@ -28,6 +30,7 @@ interface EventDetailProps {
 
 export function EventDetail({
   event,
+  allEvents,
   recipes,
   feedback,
   onUpdateEvent,
@@ -45,6 +48,7 @@ export function EventDetail({
   const headcount = event.headcount
     ? `${event.headcount.scoutCount} scouts, ${event.headcount.adultCount} adults, ${event.headcount.guestCount} guests`
     : 'Not set'
+  const existingTags = collectExistingEventTags(allEvents)
 
   const buildShareUrl = (token?: string) => token ? `${window.location.origin}/share/${token}` : null
 
@@ -172,14 +176,13 @@ export function EventDetail({
             <p className="text-muted-foreground">
               {event.days.length} days • {event.days.reduce((acc, day) => acc + day.meals.length, 0)} meals planned
             </p>
-            {(event.hike || event.highAltitude || event.tentCamping || event.cabinCamping || event.powerAvailable || event.runningWater || event.trailerAccess || event.expectedWeather) && (
+            {((event.tags?.length ?? 0) > 0 || event.powerAvailable || event.runningWater || event.trailerAccess || event.expectedWeather) && (
               <>
                 <span className="text-muted-foreground">•</span>
                 <div className="flex flex-wrap gap-1.5">
-                  {event.hike && <Badge variant="secondary" className="text-xs">Hike</Badge>}
-                  {event.highAltitude && <Badge variant="secondary" className="text-xs">High Altitude</Badge>}
-                  {event.tentCamping && <Badge variant="secondary" className="text-xs">Tent Camping</Badge>}
-                  {event.cabinCamping && <Badge variant="secondary" className="text-xs">Cabin Camping</Badge>}
+                  {(event.tags ?? []).map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                  ))}
                   {event.powerAvailable && <Badge variant="secondary" className="text-xs">Power Available</Badge>}
                   {event.runningWater && <Badge variant="secondary" className="text-xs">Running Water</Badge>}
                   {event.trailerAccess && <Badge variant="secondary" className="text-xs">Trailer Access</Badge>}
@@ -293,6 +296,7 @@ export function EventDetail({
         onOpenChange={setEditDialogOpen}
         event={event}
         onUpdateEvent={onUpdateEvent}
+        existingTags={existingTags}
       />
     </div>
   )

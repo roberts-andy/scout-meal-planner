@@ -70,7 +70,7 @@ async def test_list_endpoints_return_only_callers_troop_data(client, troop_a_con
 
     events_response = await client.get("/api/events")
     assert events_response.status_code == 200
-    assert events_response.json() == {"items": [{"id": "event-a", "troopId": "troop-a"}], "continuationToken": None}
+    assert events_response.json() == {"items": [{"id": "event-a", "troopId": "troop-a", "tags": []}], "continuationToken": None}
 
     members_response = await client.get("/api/members")
     assert members_response.status_code == 200

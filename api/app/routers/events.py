@@ -16,6 +16,7 @@ from app.cosmosdb import (
     query_items_paginated,
     update_item,
 )
+from app.event_tags import with_migrated_tags
 from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
 from app.schemas import CreateEvent, UpdateEvent
@@ -54,7 +55,7 @@ async def list_events(
         limit=limit,
         continuation_token=continuationToken,
     )
-    return {"items": items, "continuationToken": next_token}
+    return {"items": [with_migrated_tags(event) for event in items], "continuationToken": next_token}
 
 
 @router.get("/events/{event_id}")
@@ -62,7 +63,7 @@ async def get_event(event_id: str, auth: RequireTroopContext):
     event = await get_by_id(CONTAINER, event_id, auth.troopId)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    return event
+    return with_migrated_tags(event)
 
 
 @router.post("/events", status_code=201)
@@ -87,7 +88,7 @@ async def create_event(body: CreateEvent, auth: RequireTroopContext):
             "troopId": auth.troopId,
             "assignmentCount": str(assigned_count),
         })
-    return event
+    return with_migrated_tags(event)
 
 
 @router.put("/events/{event_id}")
@@ -117,7 +118,7 @@ async def update_event(event_id: str, body: UpdateEvent, auth: RequireTroopConte
             "troopId": auth.troopId,
             "assignmentCount": str(assigned_count),
         })
-    return event
+    return with_migrated_tags(event)
 
 
 @router.delete("/events/{event_id}", status_code=204)

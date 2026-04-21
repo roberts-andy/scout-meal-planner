@@ -38,6 +38,8 @@ async def test_get_shared_event_uses_share_token_index(monkeypatch):
                 "id": "event-1",
                 "troopId": "troop-1",
                 "name": "Backpacking",
+                "tags": ["Canoeing"],
+                "hike": True,
                 "powerAvailable": True,
                 "runningWater": False,
                 "trailerAccess": True,
@@ -75,6 +77,7 @@ async def test_get_shared_event_uses_share_token_index(monkeypatch):
     result = await share.get_shared_event("token-1")
 
     assert result["event"]["id"] == "event-1"
+    assert result["event"]["tags"] == ["Canoeing", "Hike"]
     assert result["event"]["powerAvailable"] is True
     assert result["event"]["runningWater"] is False
     assert result["event"]["trailerAccess"] is True

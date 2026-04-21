@@ -239,3 +239,34 @@ async def test_logistics_fields_round_trip(client, monkeypatch):
         "adultCount": 4,
         "guestCount": 1,
     }
+
+
+@pytest.mark.asyncio
+async def test_get_event_migrates_legacy_characteristics_to_tags(client, monkeypatch):
+    async def fake_get_by_id(*_args, **_kwargs):
+        return {
+            "id": "event-1",
+            "troopId": "troop-1",
+            "name": "Legacy Campout",
+            "startDate": "2026-07-01",
+            "endDate": "2026-07-02",
+            "days": [],
+            "hike": True,
+            "highAltitude": True,
+            "tags": ["Backpacking"],
+        }
+
+    monkeypatch.setattr(events_router, "get_by_id", fake_get_by_id)
+
+    app.dependency_overrides[require_troop_context] = lambda: SimpleNamespace(
+        userId="user-1",
+        email="leader@example.com",
+        displayName="Leader",
+        troopId="troop-1",
+        role="troopAdmin",
+    )
+
+    response = await client.get("/api/events/event-1")
+
+    assert response.status_code == 200
+    assert response.json()["tags"] == ["Backpacking", "Hike", "High Altitude"]

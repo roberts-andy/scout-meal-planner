@@ -44,10 +44,7 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
 
   const eventIsActive = isEventActive(event)
   const eventLogistics = [
-    event.hike && 'Hike',
-    event.highAltitude && 'High Altitude',
-    event.tentCamping && 'Tent Camping',
-    event.cabinCamping && 'Cabin Camping',
+    ...(event.tags ?? []),
     event.powerAvailable && 'Power Available',
     event.runningWater && 'Running Water',
     event.trailerAccess && 'Trailer Access',
