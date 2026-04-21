@@ -37,8 +37,27 @@ function oklchToLinearSrgb(value: string): [number, number, number] {
   return [clamp(red), clamp(green), clamp(blue)];
 }
 
+function toSrgb(linear: number): number {
+  return linear <= 0.0031308
+    ? linear * 12.92
+    : 1.055 * Math.pow(linear, 1 / 2.4) - 0.055;
+}
+
+function toLinearLuminanceComponent(component: number): number {
+  return component <= 0.04045
+    ? component / 12.92
+    : Math.pow((component + 0.055) / 1.055, 2.4);
+}
+
 function relativeLuminance(value: string): number {
-  const [red, green, blue] = oklchToLinearSrgb(value);
+  const [redSrgb, greenSrgb, blueSrgb] = oklchToLinearSrgb(value).map(toSrgb) as [
+    number,
+    number,
+    number,
+  ];
+  const red = toLinearLuminanceComponent(redSrgb);
+  const green = toLinearLuminanceComponent(greenSrgb);
+  const blue = toLinearLuminanceComponent(blueSrgb);
   return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 }
 
