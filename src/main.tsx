@@ -10,12 +10,14 @@ import { AuthProvider } from './components/AuthProvider.tsx'
 import App from './App.tsx'
 import { SharedEventPage } from './components/SharedEventPage.tsx'
 import { ErrorFallback } from './ErrorFallback.tsx'
+import { initTelemetry, trackClientError } from './lib/telemetry.ts'
 
 import "./main.css"
 import "./styles/theme.css"
 import "./index.css"
 
 const msalInstance = new PublicClientApplication(msalConfig)
+initTelemetry()
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,7 +33,10 @@ const sharedMatch = window.location.pathname.match(/^\/share\/([^/]+)$/)
 if (sharedMatch) {
   const token = decodeURIComponent(sharedMatch[1])
   createRoot(document.getElementById('root')!).render(
-    <ErrorBoundary FallbackComponent={ErrorFallback}>
+    <ErrorBoundary
+      FallbackComponent={ErrorFallback}
+      onError={(error) => trackClientError(error, { source: 'react-error-boundary' })}
+    >
       <QueryClientProvider client={queryClient}>
         <SharedEventPage token={token} />
       </QueryClientProvider>
@@ -40,7 +45,10 @@ if (sharedMatch) {
 } else {
   msalInstance.initialize().then(() => {
     createRoot(document.getElementById('root')!).render(
-      <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <ErrorBoundary
+        FallbackComponent={ErrorFallback}
+        onError={(error) => trackClientError(error, { source: 'react-error-boundary' })}
+      >
         <MsalProvider instance={msalInstance}>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>

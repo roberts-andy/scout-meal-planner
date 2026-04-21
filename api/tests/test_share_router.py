@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from fastapi import HTTPException
 from starlette.requests import Request
+from unittest.mock import Mock
 
 from app.middleware.auth import TroopContext
 from app.routers import share
@@ -86,6 +87,7 @@ async def test_create_event_share_creates_index_and_removes_old_token(monkeypatc
     created_items: list[dict] = []
     deleted_items: list[tuple[str, str, str | None]] = []
     updated_items: list[dict] = []
+    track_custom_event = Mock()
 
     async def fake_get_by_id(container_name: str, item_id: str, partition_key_value: str | None = None):
         if container_name == "events":
@@ -116,6 +118,7 @@ async def test_create_event_share_creates_index_and_removes_old_token(monkeypatc
     monkeypatch.setattr(share, "delete_item", fake_delete_item)
     monkeypatch.setattr(share, "create_item", fake_create_item)
     monkeypatch.setattr(share, "_generate_share_token", lambda: "new-token")
+    monkeypatch.setattr(share, "track_custom_event", track_custom_event)
 
     response = await share.create_event_share("event-1", _make_request("/api/events/event-1/share"), auth)
 
@@ -125,6 +128,10 @@ async def test_create_event_share_creates_index_and_removes_old_token(monkeypatc
     assert created_items[0]["eventId"] == "event-1"
     assert created_items[0]["troopId"] == "troop-1"
     assert deleted_items == [("share-tokens", "old-token", "old-token")]
+    track_custom_event.assert_called_once_with("shared_link_generated", properties={
+        "eventId": "event-1",
+        "troopId": "troop-1",
+    })
 
 
 @pytest.mark.asyncio

@@ -18,6 +18,7 @@
     },
     "dependencies": {
         "@azure/cosmos": "^4.9.2",
+        "@microsoft/applicationinsights-web": "^3.4.1",
         "@azure/msal-browser": "^5.6.3",
         "@azure/msal-react": "^5.2.1",
         "@github/spark": ">=0.43.1 <1",
