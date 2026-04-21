@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 
 from fastapi import FastAPI
@@ -10,6 +11,7 @@ from app.logging_config import configure_logging
 configure_logging()  # must run before any getLogger() calls in routers
 
 from app.cosmosdb import DatabaseUnavailableError, close_database_clients, init_database
+from app.feature_flags import init_app_config
 from app.telemetry import track_exception, track_request
 from app.routers import (
     events,
@@ -31,6 +33,29 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
+    # ── Azure App Configuration (feature flags) ──
+    try:
+        endpoint = os.environ.get("APPCONFIG_ENDPOINT")
+        if endpoint:
+            from azure.appconfiguration.provider import load
+            from azure.appconfiguration.provider import SettingSelector
+            from azure.identity import DefaultAzureCredential
+
+            provider = load(
+                endpoint=endpoint,
+                credential=DefaultAzureCredential(),
+                feature_flag_enabled=True,
+                feature_flag_selectors=[SettingSelector(key_filter="*")],
+                feature_flag_refresh_enabled=True,
+            )
+            init_app_config(provider)
+        else:
+            logger.info("APPCONFIG_ENDPOINT not set — using env var / default feature flags")
+    except Exception as exc:
+        logger.warning("App Configuration unavailable — falling back to env var / defaults: %s", exc)
+        track_exception(exc, properties={"phase": "startup", "component": "appconfig"})
+
+    # ── Cosmos DB ──
     try:
         await init_database()
         logger.info("Cosmos DB initialized successfully")
