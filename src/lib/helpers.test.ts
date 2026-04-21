@@ -32,6 +32,7 @@ function makeIngredient(overrides: Partial<Ingredient> = {}): Ingredient {
 function makeRecipe(overrides: Partial<Recipe> = {}): Recipe {
   return {
     id: 'recipe-1',
+    troopId: 'troop-1',
     name: 'Pancakes',
     servings: 4,
     ingredients: [
@@ -57,6 +58,7 @@ function makeRecipe(overrides: Partial<Recipe> = {}): Recipe {
 function makeEvent(overrides: Partial<Event> = {}): Event {
   return {
     id: 'event-1',
+    troopId: 'troop-1',
     name: 'Summer Camp',
     startDate: '2025-07-01',
     endDate: '2025-07-03',
@@ -83,6 +85,7 @@ function makeEvent(overrides: Partial<Event> = {}): Event {
 function makeFeedback(overrides: Partial<MealFeedback> = {}): MealFeedback {
   return {
     id: 'fb-1',
+    troopId: 'troop-1',
     eventId: 'event-1',
     mealId: 'meal-1',
     recipeId: 'recipe-1',

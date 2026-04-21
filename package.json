@@ -7,7 +7,7 @@
         "dev": "vite",
         "dev:swa": "swa start http://localhost:5000 --run \"npm run dev\" --api-devserver-url http://localhost:8000",
         "kill": "fuser -k 5000/tcp",
-        "build": "tsc -b --noCheck && vite build",
+        "build": "tsc -b && vite build",
         "lint": "eslint .",
         "optimize": "vite optimize",
         "preview": "vite preview",
