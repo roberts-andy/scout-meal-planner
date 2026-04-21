@@ -20,8 +20,12 @@ describe("field-guide theme configuration", () => {
   });
 
   it("merges theme.json into Tailwind config without losing default tokens", () => {
-    expect(tailwindConfig.theme.extend.colors.neutral).toBeDefined();
-    expect(tailwindConfig.theme.extend.colors["field-guide"].forest).toBe(
+    const colors = (
+      tailwindConfig.theme as { extend?: { colors?: Record<string, unknown> } }
+    ).extend?.colors;
+
+    expect(colors?.neutral).toBeDefined();
+    expect((colors?.["field-guide"] as { forest?: string } | undefined)?.forest).toBe(
       "oklch(0.45 0.09 155)",
     );
   });
