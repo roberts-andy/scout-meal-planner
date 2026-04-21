@@ -7,10 +7,10 @@ import pytest_asyncio
 from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 
-from app import feature_flags
 from app.main import app
 from app.middleware import moderation
 from app.middleware.auth import TroopContext
+from app.feature_flags import init_app_config, _resolve_from_app_config, is_feature_enabled
 from app.routers import email_shopping_list, feedback, share
 from app.schemas import CreateFeedback, EmailShoppingList
 
@@ -71,40 +71,6 @@ async def test_get_feature_flags_returns_defaults_without_overrides(client, monk
         "enable-feedback": False,
         "enable-print-recipes": True,
     }
-
-
-def test_feature_flag_uses_app_config_list_when_no_env_override(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.delenv("FEATURE_FLAG_ENABLE_SHARED_LINKS", raising=False)
-    monkeypatch.setattr(
-        feature_flags,
-        "_app_config_provider",
-        {
-            "feature_management": {
-                "feature_flags": [
-                    {"id": "enable-shared-links", "enabled": True},
-                ]
-            }
-        },
-    )
-
-    assert feature_flags.is_feature_enabled("enable-shared-links") is True
-
-
-def test_feature_flag_env_override_takes_precedence_over_app_config(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("FEATURE_FLAG_ENABLE_SHARED_LINKS", "false")
-    monkeypatch.setattr(
-        feature_flags,
-        "_app_config_provider",
-        {
-            "feature_management": {
-                "feature_flags": [
-                    {"id": "enable-shared-links", "enabled": True},
-                ]
-            }
-        },
-    )
-
-    assert feature_flags.is_feature_enabled("enable-shared-links") is False
 
 
 @pytest.mark.asyncio
@@ -214,3 +180,82 @@ class RequestFactory:
                 "root_path": "",
             }
         )
+
+
+# ── Azure App Configuration integration tests ──
+
+
+class _FakeAppConfigProvider(dict):
+    """Minimal dict-like provider that returns feature flag settings."""
+    pass
+
+
+@pytest.fixture(autouse=True)
+def _reset_app_config_provider():
+    """Ensure each test starts with no App Configuration provider."""
+    init_app_config(None)
+    yield
+    init_app_config(None)
+
+
+def test_app_config_flag_is_used_when_provider_set(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("FEATURE_FLAG_ENABLE_FEEDBACK", raising=False)
+    monkeypatch.setenv("FEATURE_FLAGS_ENV", "dev")
+
+    provider = _FakeAppConfigProvider({
+        "feature_management": {
+            "feature_flags": [
+                {"id": "enable-feedback", "enabled": True},
+            ]
+        }
+    })
+    init_app_config(provider)
+
+    assert is_feature_enabled("enable-feedback") is True
+
+
+def test_env_var_overrides_app_config(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("FEATURE_FLAG_ENABLE_FEEDBACK", "false")
+
+    provider = _FakeAppConfigProvider({
+        "feature_management": {
+            "feature_flags": [
+                {"id": "enable-feedback", "enabled": True},
+            ]
+        }
+    })
+    init_app_config(provider)
+
+    assert is_feature_enabled("enable-feedback") is False
+
+
+def test_ff_prefixed_env_var_overrides_app_config(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("FEATURE_FLAG_ENABLE_FEEDBACK", raising=False)
+    monkeypatch.setenv("FF_ENABLE_FEEDBACK", "false")
+
+    provider = _FakeAppConfigProvider({
+        "feature_management": {
+            "feature_flags": [
+                {"id": "enable-feedback", "enabled": True},
+            ]
+        }
+    })
+    init_app_config(provider)
+
+    assert is_feature_enabled("enable-feedback") is False
+
+
+def test_defaults_used_when_app_config_missing_flag(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("FEATURE_FLAG_ENABLE_PRINT_RECIPES", raising=False)
+    monkeypatch.setenv("FEATURE_FLAGS_ENV", "dev")
+
+    provider = _FakeAppConfigProvider({})  # no flags loaded
+    init_app_config(provider)
+
+    # dev default for enable-print-recipes is True
+    assert is_feature_enabled("enable-print-recipes") is True
+
+
+def test_resolve_returns_none_when_no_provider():
+    init_app_config(None)
+    assert _resolve_from_app_config("enable-feedback") is None
