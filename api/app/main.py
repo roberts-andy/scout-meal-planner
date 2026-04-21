@@ -5,6 +5,10 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from starlette.requests import Request
 
+from app.logging_config import configure_logging
+
+configure_logging()  # must run before any getLogger() calls in routers
+
 from app.cosmosdb import close_database_clients, init_database
 from app.telemetry import track_exception, track_request
 from app.routers import (
@@ -29,8 +33,10 @@ logger = logging.getLogger(__name__)
 async def lifespan(application: FastAPI):
     try:
         await init_database()
+        logger.info("Cosmos DB initialized successfully")
     except Exception as exc:
-        logger.warning("Cosmos DB unavailable at startup — running without database: %s", exc)
+        logger.error("Cosmos DB unavailable at startup — running without database: %s", exc, exc_info=True)
+        track_exception(exc, properties={"phase": "startup", "component": "cosmosdb"})
     try:
         yield
     finally:
