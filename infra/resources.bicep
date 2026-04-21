@@ -37,6 +37,9 @@ param logAnalyticsName string
 @description('Name of the Application Insights resource')
 param appInsightsName string
 
+@description('Name of the Azure App Configuration store')
+param appConfigName string
+
 // ── Log Analytics + Application Insights ──
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: logAnalyticsName
@@ -213,6 +216,7 @@ resource apiApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'ACS_ENDPOINT', value: communicationService.properties.hostName }
         { name: 'ACS_FROM_EMAIL', value: 'DoNotReply@${emailDomain.properties.fromSenderDomain}' }
         { name: 'APPINSIGHTS_CONNECTION_STRING', value: appInsights.properties.ConnectionString }
+        { name: 'APPCONFIG_ENDPOINT', value: appConfig.properties.endpoint }
         { name: 'SCM_DO_BUILD_DURING_DEPLOYMENT', value: 'true' }
         { name: 'WEBSITES_PORT', value: '8000' }
       ]
@@ -347,6 +351,75 @@ resource acsRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' 
   }
 }
 
+// ── Azure App Configuration ──
+resource appConfig 'Microsoft.AppConfiguration/configurationStores@2023-03-01' = {
+  name: appConfigName
+  location: location
+  sku: {
+    name: 'free'
+  }
+  properties: {
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+// Seed feature flags into App Configuration
+resource ffContentModeration 'Microsoft.AppConfiguration/configurationStores/keyValues@2023-03-01' = {
+  parent: appConfig
+  name: '.appconfig.featureflag~2Fenable-content-moderation'
+  properties: {
+    value: '{"id":"enable-content-moderation","description":"Enable Azure AI Content Safety moderation","enabled":false}'
+    contentType: 'application/vnd.microsoft.appconfig.ff+json;charset=utf-8'
+  }
+}
+
+resource ffEmailShoppingList 'Microsoft.AppConfiguration/configurationStores/keyValues@2023-03-01' = {
+  parent: appConfig
+  name: '.appconfig.featureflag~2Fenable-email-shopping-list'
+  properties: {
+    value: '{"id":"enable-email-shopping-list","description":"Enable email shopping list feature","enabled":false}'
+    contentType: 'application/vnd.microsoft.appconfig.ff+json;charset=utf-8'
+  }
+}
+
+resource ffSharedLinks 'Microsoft.AppConfiguration/configurationStores/keyValues@2023-03-01' = {
+  parent: appConfig
+  name: '.appconfig.featureflag~2Fenable-shared-links'
+  properties: {
+    value: '{"id":"enable-shared-links","description":"Enable shared event links","enabled":false}'
+    contentType: 'application/vnd.microsoft.appconfig.ff+json;charset=utf-8'
+  }
+}
+
+resource ffFeedback 'Microsoft.AppConfiguration/configurationStores/keyValues@2023-03-01' = {
+  parent: appConfig
+  name: '.appconfig.featureflag~2Fenable-feedback'
+  properties: {
+    value: '{"id":"enable-feedback","description":"Enable event feedback collection","enabled":false}'
+    contentType: 'application/vnd.microsoft.appconfig.ff+json;charset=utf-8'
+  }
+}
+
+resource ffPrintRecipes 'Microsoft.AppConfiguration/configurationStores/keyValues@2023-03-01' = {
+  parent: appConfig
+  name: '.appconfig.featureflag~2Fenable-print-recipes'
+  properties: {
+    value: '{"id":"enable-print-recipes","description":"Enable recipe printing","enabled":true}'
+    contentType: 'application/vnd.microsoft.appconfig.ff+json;charset=utf-8'
+  }
+}
+
+// App Configuration Data Reader role for Web App managed identity
+resource appConfigRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(appConfig.id, apiApp.id, '516239f1-63e1-4d78-a4de-a74fb236a071')
+  scope: appConfig
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '516239f1-63e1-4d78-a4de-a74fb236a071')
+    principalId: apiApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 output staticWebAppUrl string = staticWebApp.properties.defaultHostname
 output cosmosAccountEndpoint string = cosmosAccount.properties.documentEndpoint
 output apiAppName string = apiApp.name
@@ -357,3 +430,4 @@ output acsEndpoint string = communicationService.properties.hostName
 output acsFromEmail string = 'DoNotReply@${emailDomain.properties.fromSenderDomain}'
 output appInsightsConnectionString string = appInsights.properties.ConnectionString
 output appInsightsInstrumentationKey string = appInsights.properties.InstrumentationKey
+output appConfigEndpoint string = appConfig.properties.endpoint
