@@ -303,11 +303,6 @@ async def review_flagged_content(item_id: str, body: ReviewFlaggedContent, auth:
         moderation["flaggedFields"] = moderation_result.flaggedFields
         moderation["checkedAt"] = moderation_result.checkedAt
         moderation["provider"] = moderation_result.provider
-    elif body.action == "reject":
-        moderation["status"] = "flagged"
-    else:
-        moderation["status"] = "approved"
-        moderation["flaggedFields"] = []
 
     result = await update_item(container, item["id"], updated, auth.troopId)
     return {

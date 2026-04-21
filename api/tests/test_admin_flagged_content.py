@@ -143,6 +143,7 @@ async def test_review_edit_re_moderates_updated_fields(monkeypatch: pytest.Monke
         }
 
     async def fake_moderate_text_fields(fields):
+        captured.setdefault("all_calls", []).append([(field.field, field.text) for field in fields])
         captured["fields"] = [(field.field, field.text) for field in fields]
         return ModerationResult(
             status="flagged",
@@ -173,7 +174,10 @@ async def test_review_edit_re_moderates_updated_fields(monkeypatch: pytest.Monke
         auth,
     )
 
-    assert captured["fields"] == [("description", "Updated description")]
+    # First call moderates only edited fields, second call re-moderates all fields
+    assert captured["all_calls"][0] == [("description", "Updated description")]
+    assert ("name", "Original") in captured["fields"]
+    assert ("description", "Updated description") in captured["fields"]
     assert captured["updated"]["description"] == "Updated description"
     assert captured["updated"]["moderation"]["status"] == "flagged"
     assert captured["updated"]["moderation"]["flaggedFields"] == ["description"]
