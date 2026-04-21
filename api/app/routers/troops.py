@@ -33,6 +33,7 @@ def _to_first_name(display_name: str) -> str:
 
 @router.post("/troops", status_code=201)
 async def create_troop(body: CreateTroop, claims: RequireToken):
+    raise HTTPException(status_code=403, detail="Troop creation is currently disabled")
     now = int(time.time() * 1000)
     troop_id = str(uuid.uuid4())
     moderation = await moderate_text_fields([ModerationField(field="name", text=body.name)])

@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Copy, UserCircleMinus, CheckCircle, UserCircle } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { InviteQRCode } from './InviteQRCode'
 import type { FlaggedContentAction, FlaggedContentItem, MemberStatus, TroopMember, TroopRole } from '@/lib/types'
 
 const CONTENT_SAFETY_MAX_SEVERITY = 6
@@ -263,6 +264,7 @@ export function TroopAdmin() {
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
+            <InviteQRCode inviteLink={inviteLink} troopName={troop?.name} />
             <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
               <DialogTrigger asChild>
                 <Button type="button">Add Member</Button>
