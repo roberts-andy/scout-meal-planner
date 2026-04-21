@@ -115,6 +115,7 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
       instructions: v.instructions.filter(i => i.trim()),
       equipment: v.equipment.filter(e => e.trim())
     })).filter(v => v.instructions.length > 0)
+    const submittedVariations = isEditing ? variations : filteredVariations
 
     if (isEditingInTrip && initialRecipe && eventId) {
       const existingEventVersion = initialRecipe.versions.find(v => v.eventId === eventId)
@@ -128,7 +129,7 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
                 description: description || undefined,
                 servings,
                 ingredients: filteredIngredients,
-                variations: filteredVariations,
+                variations: submittedVariations,
                 createdAt: Date.now(),
                 changeNote: changeNote || v.changeNote,
               }
@@ -141,7 +142,7 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
           description: description || undefined,
           servings,
           ingredients: filteredIngredients,
-          variations: filteredVariations,
+          variations: submittedVariations,
           updatedAt: Date.now(),
           versions: updatedVersions,
         }
@@ -159,7 +160,7 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
           description: description || undefined,
           servings,
           ingredients: filteredIngredients,
-          variations: filteredVariations,
+          variations: submittedVariations,
           createdAt: Date.now(),
           changeNote: changeNote || `Modified for ${eventName}`,
         }
@@ -170,7 +171,7 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
           description: description || undefined,
           servings,
           ingredients: filteredIngredients,
-          variations: filteredVariations,
+          variations: submittedVariations,
           updatedAt: Date.now(),
           currentVersion: newVersion,
           versions: [...(initialRecipe.versions || []), eventVersion],
@@ -200,7 +201,7 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
         description: description || undefined,
         servings,
         ingredients: filteredIngredients,
-        variations: filteredVariations,
+        variations: submittedVariations,
         updatedAt: Date.now(),
         currentVersion: newVersion,
         versions: [...(initialRecipe.versions || []), previousVersion],
@@ -253,8 +254,8 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Recipe' : 'Create New Recipe'}</DialogTitle>
           <DialogDescription>
-            {isEditing 
-              ? 'Update your recipe details, ingredients, and cooking instructions' 
+            {isEditing
+              ? 'Update your recipe details and ingredients' 
               : 'Add a new recipe to your library with ingredients, cooking instructions, and equipment needs'}
           </DialogDescription>
         </DialogHeader>
@@ -360,82 +361,86 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
               ))}
             </div>
 
-            <Separator />
+            {!isEditing && (
+              <>
+                <Separator />
 
-            <div className="grid gap-4">
-              <Label>Cooking Variation</Label>
-              {variations.map((variation, varIndex) => (
-                <div key={variation.id} className="border rounded-lg p-4 space-y-3">
-                  <div className="grid gap-2">
-                    <Label>Cooking Method</Label>
-                    <Select 
-                      value={variation.cookingMethod} 
-                      onValueChange={(value) => updateVariationMethod(varIndex, value as CookingMethod)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="camp-stove">Camp Stove</SelectItem>
-                        <SelectItem value="open-fire">Open Fire</SelectItem>
-                        <SelectItem value="dutch-oven">Dutch Oven</SelectItem>
-                        <SelectItem value="skillet">Skillet</SelectItem>
-                        <SelectItem value="grill">Grill</SelectItem>
-                        <SelectItem value="no-cook">No Cook</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="grid gap-4">
+                  <Label>Cooking Variation</Label>
+                  {variations.map((variation, varIndex) => (
+                    <div key={variation.id} className="border rounded-lg p-4 space-y-3">
+                      <div className="grid gap-2">
+                        <Label>Cooking Method</Label>
+                        <Select
+                          value={variation.cookingMethod}
+                          onValueChange={(value) => updateVariationMethod(varIndex, value as CookingMethod)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="camp-stove">Camp Stove</SelectItem>
+                            <SelectItem value="open-fire">Open Fire</SelectItem>
+                            <SelectItem value="dutch-oven">Dutch Oven</SelectItem>
+                            <SelectItem value="skillet">Skillet</SelectItem>
+                            <SelectItem value="grill">Grill</SelectItem>
+                            <SelectItem value="no-cook">No Cook</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  <div className="grid gap-2">
-                    <div className="flex items-center justify-between">
-                      <Label>Instructions</Label>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => addVariationInstruction(varIndex)}
-                        className="gap-1 h-7 text-xs"
-                      >
-                        <Plus size={14} />
-                        Step
-                      </Button>
+                      <div className="grid gap-2">
+                        <div className="flex items-center justify-between">
+                          <Label>Instructions</Label>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => addVariationInstruction(varIndex)}
+                            className="gap-1 h-7 text-xs"
+                          >
+                            <Plus size={14} />
+                            Step
+                          </Button>
+                        </div>
+                        {variation.instructions.map((instruction, instIndex) => (
+                          <Input
+                            key={instIndex}
+                            placeholder={`Step ${instIndex + 1}`}
+                            value={instruction}
+                            onChange={(e) => updateVariationInstructions(varIndex, instIndex, e.target.value)}
+                          />
+                        ))}
+                      </div>
+
+                      <div className="grid gap-2">
+                        <div className="flex items-center justify-between">
+                          <Label>Equipment Needed</Label>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => addVariationEquipment(varIndex)}
+                            className="gap-1 h-7 text-xs"
+                          >
+                            <Plus size={14} />
+                            Item
+                          </Button>
+                        </div>
+                        {variation.equipment.map((eq, eqIndex) => (
+                          <Input
+                            key={eqIndex}
+                            placeholder="Equipment item"
+                            value={eq}
+                            onChange={(e) => updateVariationEquipment(varIndex, eqIndex, e.target.value)}
+                          />
+                        ))}
+                      </div>
                     </div>
-                    {variation.instructions.map((instruction, instIndex) => (
-                      <Input
-                        key={instIndex}
-                        placeholder={`Step ${instIndex + 1}`}
-                        value={instruction}
-                        onChange={(e) => updateVariationInstructions(varIndex, instIndex, e.target.value)}
-                      />
-                    ))}
-                  </div>
-
-                  <div className="grid gap-2">
-                    <div className="flex items-center justify-between">
-                      <Label>Equipment Needed</Label>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => addVariationEquipment(varIndex)}
-                        className="gap-1 h-7 text-xs"
-                      >
-                        <Plus size={14} />
-                        Item
-                      </Button>
-                    </div>
-                    {variation.equipment.map((eq, eqIndex) => (
-                      <Input
-                        key={eqIndex}
-                        placeholder="Equipment item"
-                        value={eq}
-                        onChange={(e) => updateVariationEquipment(varIndex, eqIndex, e.target.value)}
-                      />
-                    ))}
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </div>
         </ScrollArea>
         <DialogFooter>
