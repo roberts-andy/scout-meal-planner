@@ -5,10 +5,11 @@ import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent } from '@/hoo
 import { useRecipes, useCreateRecipe, useUpdateRecipe, useDeleteRecipe } from '@/hooks/useRecipes'
 import { useFeedback, useCreateFeedback, useUpdateFeedback, useDeleteFeedback } from '@/hooks/useFeedback'
 
-export function useAppData() {
+export function useAppData(options?: { feedbackEnabled?: boolean }) {
+  const feedbackEnabled = options?.feedbackEnabled ?? true
   const { data: events = [], isLoading: eventsLoading, error: eventsError } = useEvents()
   const { data: recipes = [], isLoading: recipesLoading, error: recipesError } = useRecipes()
-  const { data: feedback = [], isLoading: feedbackLoading, error: feedbackError } = useFeedback()
+  const { data: feedback = [], isLoading: feedbackLoading, error: feedbackError } = useFeedback(feedbackEnabled)
 
   const createEvent = useCreateEvent()
   const updateEvent = useUpdateEvent()

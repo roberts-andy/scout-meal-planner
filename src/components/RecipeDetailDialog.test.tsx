@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { RecipeDetailDialog } from './RecipeDetailDialog'
 import type { Recipe } from '@/lib/types'
 import { useRecipeFeedback } from '@/hooks/useFeedback'
+import { __setFeatureFlagsForTests } from '@/lib/featureFlags'
 
 vi.mock('@/hooks/useFeedback', () => ({
   useRecipeFeedback: vi.fn(),
@@ -38,6 +39,7 @@ describe('RecipeDetailDialog', () => {
   const printSpy = vi.fn()
 
   beforeEach(() => {
+    __setFeatureFlagsForTests({ 'enable-print-recipes': true })
     vi.stubGlobal('print', printSpy)
     vi.mocked(useRecipeFeedback).mockReturnValue({
       data: [],
@@ -121,5 +123,21 @@ describe('RecipeDetailDialog', () => {
     expect(screen.getByText('Spring Campout')).toBeInTheDocument()
     expect(screen.getByText('Big hit with the patrol')).toBeInTheDocument()
     expect(screen.getByText('1 review')).toBeInTheDocument()
+  })
+
+  it('hides print button when print recipes feature flag is off', () => {
+    __setFeatureFlagsForTests({ 'enable-print-recipes': false })
+
+    render(
+      <RecipeDetailDialog
+        recipe={recipe}
+        open
+        onOpenChange={onOpenChange}
+        onUpdateRecipe={onUpdateRecipe}
+      />
+    )
+
+    expect(screen.queryByRole('button', { name: 'Print' })).not.toBeInTheDocument()
+    expect(document.body.querySelector('.print-only')).toBeNull()
   })
 })

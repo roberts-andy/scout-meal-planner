@@ -16,6 +16,7 @@ from app.routers import (
     troops,
     members,
     share,
+    feature_flags,
     email_shopping_list,
     admin_flagged_content,
     health,
@@ -82,5 +83,6 @@ app.include_router(feedback.router, prefix="/api")
 app.include_router(troops.router, prefix="/api")
 app.include_router(members.router, prefix="/api")
 app.include_router(share.router, prefix="/api")
+app.include_router(feature_flags.router, prefix="/api")
 app.include_router(email_shopping_list.router, prefix="/api")
 app.include_router(admin_flagged_content.router, prefix="/api")

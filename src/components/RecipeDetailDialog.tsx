@@ -16,6 +16,7 @@ import { Users, Flame, GitBranch, ClockCounterClockwise, Star, Printer } from '@
 import { formatQuantity, calculateRecipeRatings, revertRecipeToVersion } from '@/lib/helpers'
 import { RecipeVersionHistory } from './RecipeVersionHistory'
 import { useRecipeFeedback } from '@/hooks/useFeedback'
+import { isFeatureEnabled } from '@/lib/featureFlags'
 
 interface RecipeDetailDialogProps {
   recipe: Recipe
@@ -35,6 +36,7 @@ function formatEventDate(date?: string): string {
 export function RecipeDetailDialog({ recipe, recipes, open, onOpenChange, onUpdateRecipe }: RecipeDetailDialogProps) {
   const [showVersionHistory, setShowVersionHistory] = useState(false)
   const { data: feedback = [], isLoading: isFeedbackLoading } = useRecipeFeedback(recipe.id, open)
+  const printRecipesEnabled = isFeatureEnabled('enable-print-recipes')
   const originalRecipe = recipe.clonedFrom && recipes?.find(r => r.id === recipe.clonedFrom)
   const hasVersionHistory = recipe.versions && recipe.versions.length > 0
   const ratingSummary = calculateRecipeRatings(recipe.id, recipe.name, feedback)
@@ -74,15 +76,17 @@ export function RecipeDetailDialog({ recipe, recipes, open, onOpenChange, onUpda
                 </div>
               </div>
               <div className="flex items-center gap-2 no-print">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 shrink-0"
-                  onClick={handlePrint}
-                >
-                  <Printer size={16} />
-                  Print
-                </Button>
+                {printRecipesEnabled && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 shrink-0"
+                    onClick={handlePrint}
+                  >
+                    <Printer size={16} />
+                    Print
+                  </Button>
+                )}
                 {hasVersionHistory && (
                   <Button
                     variant="outline"
@@ -276,33 +280,35 @@ export function RecipeDetailDialog({ recipe, recipes, open, onOpenChange, onUpda
                   </AccordionItem>
                 ))}
               </Accordion>
-              <div className="print-only space-y-4">
-                {recipe.variations.map((variation) => (
-                  <div key={variation.id} className="recipe-print-section space-y-3">
-                    <h4 className="text-sm font-semibold capitalize">{variation.cookingMethod.replace(/-/g, ' ')}</h4>
-                    {variation.instructions.length > 0 && (
-                      <div>
-                        <h5 className="text-sm font-medium mb-1">Instructions</h5>
-                        <ol className="recipe-print-list list-decimal space-y-1">
-                          {variation.instructions.map((instruction, i) => (
-                            <li key={i} className="text-sm text-muted-foreground">{instruction}</li>
-                          ))}
-                        </ol>
-                      </div>
-                    )}
-                    {variation.equipment.length > 0 && (
-                      <div>
-                        <h5 className="text-sm font-medium mb-1">Equipment Needed</h5>
-                        <ul className="recipe-print-equipment">
-                          {variation.equipment.map((item, i) => (
-                            <li key={i} className="text-sm text-muted-foreground">{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+              {printRecipesEnabled && (
+                <div className="print-only space-y-4">
+                  {recipe.variations.map((variation) => (
+                    <div key={variation.id} className="recipe-print-section space-y-3">
+                      <h4 className="text-sm font-semibold capitalize">{variation.cookingMethod.replace(/-/g, ' ')}</h4>
+                      {variation.instructions.length > 0 && (
+                        <div>
+                          <h5 className="text-sm font-medium mb-1">Instructions</h5>
+                          <ol className="recipe-print-list list-decimal space-y-1">
+                            {variation.instructions.map((instruction, i) => (
+                              <li key={i} className="text-sm text-muted-foreground">{instruction}</li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
+                      {variation.equipment.length > 0 && (
+                        <div>
+                          <h5 className="text-sm font-medium mb-1">Equipment Needed</h5>
+                          <ul className="recipe-print-equipment">
+                            {variation.equipment.map((item, i) => (
+                              <li key={i} className="text-sm text-muted-foreground">{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </ScrollArea>

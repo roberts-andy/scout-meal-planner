@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { EventDetail } from './EventDetail'
+import { __setFeatureFlagsForTests } from '@/lib/featureFlags'
 
 vi.mock('@/lib/api', () => ({
   eventsApi: {
@@ -37,6 +38,10 @@ const baseEvent = {
 describe('EventDetail feedback tab date gate', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    __setFeatureFlagsForTests({
+      'enable-feedback': true,
+      'enable-shared-links': true,
+    })
   })
 
   afterEach(() => {
@@ -83,6 +88,27 @@ describe('EventDetail feedback tab date gate', () => {
     expect(screen.getByRole('tab', { name: 'Feedback' })).toBeEnabled()
   })
 
+  it('disables feedback tab when feedback feature flag is off', () => {
+    __setFeatureFlagsForTests({ 'enable-feedback': false })
+    vi.setSystemTime(new Date('2026-07-02T12:00:00Z'))
+
+    render(
+      <EventDetail
+        event={baseEvent}
+        recipes={[]}
+        feedback={[]}
+        onUpdateEvent={vi.fn()}
+        onBack={vi.fn()}
+        onAddFeedback={vi.fn()}
+        onUpdateFeedback={vi.fn()}
+        onDeleteFeedback={vi.fn()}
+        onUpdateRecipe={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole('tab', { name: 'Feedback' })).toBeDisabled()
+  })
+
   it('shows departure/return times, headcount, and trip logistics badges including weather', () => {
     vi.setSystemTime(new Date('2026-07-02T12:00:00Z'))
 
@@ -113,28 +139,6 @@ describe('EventDetail feedback tab date gate', () => {
     expect(screen.getByText('Running Water')).toBeInTheDocument()
     expect(screen.getByText('Trailer Access')).toBeInTheDocument()
     expect(screen.getByText('Weather: Cold nights')).toBeInTheDocument()
-  })
-
-  it('shows Not set for missing departure/return/headcount', () => {
-    vi.setSystemTime(new Date('2026-07-02T12:00:00Z'))
-
-    render(
-      <EventDetail
-        event={{ ...baseEvent, departureTime: undefined, returnTime: undefined, headcount: undefined }}
-        recipes={[]}
-        feedback={[]}
-        onUpdateEvent={vi.fn()}
-        onBack={vi.fn()}
-        onAddFeedback={vi.fn()}
-        onUpdateFeedback={vi.fn()}
-        onDeleteFeedback={vi.fn()}
-        onUpdateRecipe={vi.fn()}
-      />
-    )
-
-    expect(screen.getByText('Departure: Not set')).toBeInTheDocument()
-    expect(screen.getByText('Return: Not set')).toBeInTheDocument()
-    expect(screen.getByText('Headcount: Not set')).toBeInTheDocument()
   })
 
   it('shows Not set for missing departure/return/headcount', () => {

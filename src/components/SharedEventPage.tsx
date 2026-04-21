@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { shareApi } from '@/lib/api'
+import { isFeatureEnabled } from '@/lib/featureFlags'
 import { Event, Recipe } from '@/lib/types'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,11 +17,19 @@ interface SharedEventPageProps {
 // Shared view reuses existing Event/Recipe display components that expect these fields.
 const SHARED_EVENT_PLACEHOLDER_TROOP_ID = 'shared'
 const SHARED_EVENT_PLACEHOLDER_RECIPE_VERSION = 1
+const SHARED_LINKS_DISABLED_MESSAGE = 'Shared links are currently disabled.'
+
+function getErrorStatus(error: unknown): number | undefined {
+  if (typeof error !== 'object' || !error || !('status' in error)) return undefined
+  return typeof error.status === 'number' ? error.status : undefined
+}
 
 export function SharedEventPage({ token }: SharedEventPageProps) {
+  const sharedLinksEnabled = isFeatureEnabled('enable-shared-links')
   const { data, isLoading, error } = useQuery({
     queryKey: ['shared-event', token],
     queryFn: () => shareApi.getByToken(token),
+    enabled: sharedLinksEnabled,
   })
 
   const event = useMemo<Event | null>(() => {
@@ -55,6 +64,30 @@ export function SharedEventPage({ token }: SharedEventPageProps) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Loading shared event...</p>
+      </div>
+    )
+  }
+
+  if (!sharedLinksEnabled) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="max-w-md text-center space-y-2">
+          <p className="text-destructive font-semibold">Shared event is unavailable</p>
+          <p className="text-muted-foreground text-sm">{SHARED_LINKS_DISABLED_MESSAGE}</p>
+        </div>
+      </div>
+    )
+  }
+
+  const statusCode = getErrorStatus(error)
+
+  if (statusCode === 503) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="max-w-md text-center space-y-2">
+          <p className="text-destructive font-semibold">Shared event is unavailable</p>
+          <p className="text-muted-foreground text-sm">{SHARED_LINKS_DISABLED_MESSAGE}</p>
+        </div>
       </div>
     )
   }
