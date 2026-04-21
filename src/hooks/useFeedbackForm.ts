@@ -103,6 +103,7 @@ export function useFeedbackForm(
     } else {
       const newFeedback: MealFeedback = {
         id: `feedback-${Date.now()}`,
+        troopId: event.troopId,
         eventId: event.id,
         mealId: selectedMealId,
         recipeId: meal.meal.recipeId,

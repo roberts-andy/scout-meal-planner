@@ -1,22 +1,21 @@
 # Setup steps for GitHub Copilot coding agent
-# Runs after the devcontainer starts, before the agent begins coding.
-# The agent uses these to validate its work (build + test) before opening a PR.
+# These steps run BEFORE the firewall activates, so package downloads succeed.
+# The agent can then build, test, and lint freely in the sandboxed environment.
 
 steps:
+  - uses: actions/setup-node@v4
+    with:
+      node-version: 22
+      cache: npm
+
   - name: Install frontend dependencies
     run: npm ci
 
+  - uses: actions/setup-python@v5
+    with:
+      python-version: '3.13'
+      cache: pip
+      cache-dependency-path: api/requirements*.txt
+
   - name: Install API dependencies
     run: cd api && pip install -r requirements.txt -r requirements-dev.txt
-
-  - name: Build frontend
-    run: npm run build
-
-  - name: Run frontend tests
-    run: npm test
-
-  - name: Run API tests
-    run: cd api && python -m pytest
-
-  - name: Lint
-    run: npm run lint
