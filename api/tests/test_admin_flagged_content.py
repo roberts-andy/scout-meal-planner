@@ -172,7 +172,7 @@ async def test_review_edit_re_moderates_updated_fields(monkeypatch: pytest.Monke
         auth,
     )
 
-    assert captured["fields"] == [("name", None), ("description", "Updated description")]
+    assert captured["fields"] == [("description", "Updated description")]
     assert captured["updated"]["description"] == "Updated description"
     assert captured["updated"]["moderation"]["status"] == "flagged"
     assert captured["updated"]["moderation"]["flaggedFields"] == ["description"]

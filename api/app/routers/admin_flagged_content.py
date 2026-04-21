@@ -186,17 +186,22 @@ async def _resolve_item(id_param: str, troop_id: str) -> dict | None:
 
 def _edited_fields_for_moderation(content_type: ContentType, body: ReviewFlaggedContentEdit) -> list[ModerationField]:
     edits = body.edits
-    if content_type == "recipe":
-        return [
-            ModerationField(field="name", text=edits.name),
-            ModerationField(field="description", text=edits.description),
-        ]
+    fields: list[ModerationField] = []
 
-    return [
-        ModerationField(field="comments", text=edits.comments),
-        ModerationField(field="whatWorked", text=edits.whatWorked),
-        ModerationField(field="whatToChange", text=edits.whatToChange),
-    ]
+    if content_type == "recipe":
+        if edits.name is not None:
+            fields.append(ModerationField(field="name", text=edits.name))
+        if edits.description is not None:
+            fields.append(ModerationField(field="description", text=edits.description))
+        return fields
+
+    if edits.comments is not None:
+        fields.append(ModerationField(field="comments", text=edits.comments))
+    if edits.whatWorked is not None:
+        fields.append(ModerationField(field="whatWorked", text=edits.whatWorked))
+    if edits.whatToChange is not None:
+        fields.append(ModerationField(field="whatToChange", text=edits.whatToChange))
+    return fields
 
 
 @router.get("/admin/flagged-content")
