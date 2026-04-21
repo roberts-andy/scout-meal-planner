@@ -136,4 +136,26 @@ describe('EventDetail feedback tab date gate', () => {
     expect(screen.getByText('Return: Not set')).toBeInTheDocument()
     expect(screen.getByText('Headcount: Not set')).toBeInTheDocument()
   })
+
+  it('shows Not set for missing departure/return/headcount', () => {
+    vi.setSystemTime(new Date('2026-07-02T12:00:00Z'))
+
+    render(
+      <EventDetail
+        event={{ ...baseEvent, departureTime: undefined, returnTime: undefined, headcount: undefined }}
+        recipes={[]}
+        feedback={[]}
+        onUpdateEvent={vi.fn()}
+        onBack={vi.fn()}
+        onAddFeedback={vi.fn()}
+        onUpdateFeedback={vi.fn()}
+        onDeleteFeedback={vi.fn()}
+        onUpdateRecipe={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Departure: Not set')).toBeInTheDocument()
+    expect(screen.getByText('Return: Not set')).toBeInTheDocument()
+    expect(screen.getByText('Headcount: Not set')).toBeInTheDocument()
+  })
 })
