@@ -105,8 +105,11 @@ def _resolve_from_app_config(flag_name: str) -> bool | None:
     if provider is None:
         return None
     try:
-        ff = provider["feature_management"]["feature_flags"][flag_name]
-        return bool(ff.get("enabled", False))
+        feature_flags = provider["feature_management"]["feature_flags"]
+        for feature_flag in feature_flags:
+            if feature_flag.get("id") == flag_name:
+                return bool(feature_flag.get("enabled", False))
+        return None
     except (KeyError, TypeError):
         return None
     except Exception:
