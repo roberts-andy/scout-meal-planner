@@ -54,7 +54,7 @@ def _get_max_severity(result: dict) -> int:
     categories = _extract_categories(result)
     max_sev = 0
     for cat in categories:
-        sev = cat["severity"]
+        sev = cat.get("severity", 0)
         max_sev = max(max_sev, sev)
     return max_sev
 
