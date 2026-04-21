@@ -37,3 +37,7 @@ api/dist/
 api/node_modules/
 
 .squad/
+
+# Playwright
+test-results/
+playwright-report/
