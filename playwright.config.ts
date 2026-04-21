@@ -45,6 +45,10 @@ export default defineConfig({
       url: 'http://localhost:5173',
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
+      env: {
+        ...process.env,
+        VITE_ENTRA_CLIENT_ID: process.env.VITE_ENTRA_CLIENT_ID || '42871bb7-a693-4d97-9cb9-69bbf9a50ff4',
+      },
     },
   ],
 })

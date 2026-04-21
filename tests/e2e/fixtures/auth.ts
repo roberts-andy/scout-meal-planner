@@ -15,6 +15,11 @@ export const E2E_USER = {
   displayName: 'E2E Test User',
 } as const
 
+/**
+ * Client ID must match what the Vite app uses at runtime.
+ * Both the app (authConfig.ts) and this fixture read from VITE_ENTRA_CLIENT_ID.
+ * Falls back to the known dev/test value if unset.
+ */
 const CLIENT_ID = process.env.VITE_ENTRA_CLIENT_ID || '42871bb7-a693-4d97-9cb9-69bbf9a50ff4'
 const AUTHORITY = 'https://login.microsoftonline.com/consumers'
 

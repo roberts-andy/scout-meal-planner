@@ -12,7 +12,7 @@ import path from 'path'
 export default async function globalSetup() {
   console.log('[E2E] Seeding test database...')
 
-  const apiDir = path.resolve(__dirname, '..', 'api')
+  const apiDir = path.resolve(__dirname, '..', '..', 'api')
   const seedScript = path.resolve(__dirname, 'seed_db.py')
 
   try {
@@ -27,6 +27,8 @@ export default async function globalSetup() {
     })
     console.log('[E2E] Database seeded ✓')
   } catch (error) {
-    console.warn('[E2E] Database seeding failed — tests may fail if data is missing:', error)
+    console.error('[E2E] Database seeding FAILED — E2E tests require seeded data.')
+    console.error('[E2E] Ensure COSMOS_CONNECTION_STRING is set (emulator or test account).')
+    throw error
   }
 }

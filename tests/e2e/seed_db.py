@@ -1,7 +1,7 @@
 """Seed the Cosmos DB emulator with test data for E2E tests.
 
 Idempotent — safe to run multiple times. Uses upsert so existing data is updated.
-Run via: python -m tests.e2e.seed_db  (from the api/ directory)
+Run via: python tests/e2e/seed_db.py  (from the repo root)
 Or called programmatically from Playwright globalSetup.
 """
 
@@ -123,6 +123,13 @@ async def seed() -> None:
     from app.cosmosdb import init_database, _containers
 
     await init_database()
+
+    if not _containers:
+        raise RuntimeError(
+            "Cosmos DB init succeeded but no containers available. "
+            "Check that COSMOS_CONNECTION_STRING or COSMOS_ENDPOINT is set "
+            "and the database is reachable."
+        )
 
     troops = _containers["troops"]
     members = _containers["members"]
