@@ -93,12 +93,16 @@ export function EventList({ events, onSelectEvent, onCreateEvent, onDeleteEvent 
                     <span>•</span>
                     <span>{event.days.reduce((acc, day) => acc + day.meals.length, 0)} meals</span>
                   </div>
-                  {(event.hike || event.highAltitude || event.tentCamping || event.cabinCamping) && (
+                  {(event.hike || event.highAltitude || event.tentCamping || event.cabinCamping || event.powerAvailable || event.runningWater || event.trailerAccess || event.expectedWeather) && (
                     <div className="flex flex-wrap gap-1.5">
                       {event.hike && <Badge variant="secondary" className="text-xs">Hike</Badge>}
                       {event.highAltitude && <Badge variant="secondary" className="text-xs">High Altitude</Badge>}
                       {event.tentCamping && <Badge variant="secondary" className="text-xs">Tent Camping</Badge>}
                       {event.cabinCamping && <Badge variant="secondary" className="text-xs">Cabin Camping</Badge>}
+                      {event.powerAvailable && <Badge variant="secondary" className="text-xs">Power Available</Badge>}
+                      {event.runningWater && <Badge variant="secondary" className="text-xs">Running Water</Badge>}
+                      {event.trailerAccess && <Badge variant="secondary" className="text-xs">Trailer Access</Badge>}
+                      {event.expectedWeather && <Badge variant="outline" className="text-xs">Weather: {event.expectedWeather}</Badge>}
                     </div>
                   )}
                 </div>

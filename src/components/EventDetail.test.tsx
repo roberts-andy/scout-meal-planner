@@ -75,4 +75,33 @@ describe('EventDetail feedback tab date gate', () => {
 
     expect(screen.getByRole('tab', { name: 'Feedback' })).toBeEnabled()
   })
+
+  it('shows trip logistics badges including weather', () => {
+    vi.setSystemTime(new Date('2026-07-02T12:00:00Z'))
+
+    render(
+      <EventDetail
+        event={{
+          ...baseEvent,
+          powerAvailable: true,
+          runningWater: true,
+          trailerAccess: true,
+          expectedWeather: 'Cold nights',
+        }}
+        recipes={[]}
+        feedback={[]}
+        onUpdateEvent={vi.fn()}
+        onBack={vi.fn()}
+        onAddFeedback={vi.fn()}
+        onUpdateFeedback={vi.fn()}
+        onDeleteFeedback={vi.fn()}
+        onUpdateRecipe={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Power Available')).toBeInTheDocument()
+    expect(screen.getByText('Running Water')).toBeInTheDocument()
+    expect(screen.getByText('Trailer Access')).toBeInTheDocument()
+    expect(screen.getByText('Weather: Cold nights')).toBeInTheDocument()
+  })
 })

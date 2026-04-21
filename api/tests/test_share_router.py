@@ -38,6 +38,10 @@ async def test_get_shared_event_uses_share_token_index(monkeypatch):
                 "id": "event-1",
                 "troopId": "troop-1",
                 "name": "Backpacking",
+                "powerAvailable": True,
+                "runningWater": False,
+                "trailerAccess": True,
+                "expectedWeather": "Rainy",
                 "days": [{"date": "2026-05-01", "meals": [{"id": "m1", "recipeId": "r1"}]}],
                 "shareToken": "token-1",
             }
@@ -71,6 +75,10 @@ async def test_get_shared_event_uses_share_token_index(monkeypatch):
     result = await share.get_shared_event("token-1")
 
     assert result["event"]["id"] == "event-1"
+    assert result["event"]["powerAvailable"] is True
+    assert result["event"]["runningWater"] is False
+    assert result["event"]["trailerAccess"] is True
+    assert result["event"]["expectedWeather"] == "Rainy"
     assert [recipe["id"] for recipe in result["recipes"]] == ["r1"]
     assert calls[0] == ("share-tokens", "token-1", "token-1")
 

@@ -35,6 +35,10 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
   const [highAltitude, setHighAltitude] = useState(false)
   const [tentCamping, setTentCamping] = useState(false)
   const [cabinCamping, setCabinCamping] = useState(false)
+  const [powerAvailable, setPowerAvailable] = useState(false)
+  const [runningWater, setRunningWater] = useState(false)
+  const [trailerAccess, setTrailerAccess] = useState(false)
+  const [expectedWeather, setExpectedWeather] = useState('')
 
   const handleSubmit = () => {
     if (!name || !dateRange?.from || !dateRange?.to) return
@@ -64,6 +68,10 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
       highAltitude: highAltitude || undefined,
       tentCamping: tentCamping || undefined,
       cabinCamping: cabinCamping || undefined,
+      powerAvailable: powerAvailable || undefined,
+      runningWater: runningWater || undefined,
+      trailerAccess: trailerAccess || undefined,
+      expectedWeather: expectedWeather.trim() || undefined,
       createdAt: Date.now(),
       updatedAt: Date.now()
     }
@@ -77,6 +85,10 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
     setHighAltitude(false)
     setTentCamping(false)
     setCabinCamping(false)
+    setPowerAvailable(false)
+    setRunningWater(false)
+    setTrailerAccess(false)
+    setExpectedWeather('')
     onOpenChange(false)
   }
 
@@ -169,7 +181,40 @@ export function CreateEventDialog({ open, onOpenChange, onCreateEvent }: CreateE
                 />
                 <Label htmlFor="cabin-camping" className="cursor-pointer font-normal">Cabin Camping</Label>
               </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="power-available"
+                  checked={powerAvailable}
+                  onCheckedChange={(checked) => setPowerAvailable(checked as boolean)}
+                />
+                <Label htmlFor="power-available" className="cursor-pointer font-normal">Power Available</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="running-water"
+                  checked={runningWater}
+                  onCheckedChange={(checked) => setRunningWater(checked as boolean)}
+                />
+                <Label htmlFor="running-water" className="cursor-pointer font-normal">Running Water</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="trailer-access"
+                  checked={trailerAccess}
+                  onCheckedChange={(checked) => setTrailerAccess(checked as boolean)}
+                />
+                <Label htmlFor="trailer-access" className="cursor-pointer font-normal">Trailer Access</Label>
+              </div>
             </div>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="expected-weather">Expected Weather</Label>
+            <Input
+              id="expected-weather"
+              placeholder="e.g., Cool nights, chance of rain"
+              value={expectedWeather}
+              onChange={(e) => setExpectedWeather(e.target.value)}
+            />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="event-link">Link</Label>

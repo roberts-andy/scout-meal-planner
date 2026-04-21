@@ -138,6 +138,10 @@ export interface Event {
   highAltitude?: boolean
   tentCamping?: boolean
   cabinCamping?: boolean
+  powerAvailable?: boolean
+  runningWater?: boolean
+  trailerAccess?: boolean
+  expectedWeather?: string
   description?: string
   link?: string
   shareToken?: string
@@ -166,6 +170,10 @@ export interface SharedEvent {
   highAltitude?: boolean
   tentCamping?: boolean
   cabinCamping?: boolean
+  powerAvailable?: boolean
+  runningWater?: boolean
+  trailerAccess?: boolean
+  expectedWeather?: string
 }
 
 export interface SharedEventPlan {

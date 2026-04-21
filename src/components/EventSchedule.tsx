@@ -42,6 +42,16 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
   const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null)
 
   const eventIsActive = isEventActive(event)
+  const eventLogistics = [
+    event.hike && 'Hike',
+    event.highAltitude && 'High Altitude',
+    event.tentCamping && 'Tent Camping',
+    event.cabinCamping && 'Cabin Camping',
+    event.powerAvailable && 'Power Available',
+    event.runningWater && 'Running Water',
+    event.trailerAccess && 'Trailer Access',
+    event.expectedWeather?.trim() ? `Weather: ${event.expectedWeather.trim()}` : null,
+  ].filter((value): value is string => Boolean(value))
 
   const handleAddMeal = () => {
     if (selectedDayIndex === null) return
@@ -111,6 +121,11 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
       <div>
         <h2 className="text-2xl font-semibold mb-2">Meal Schedule</h2>
         <p className="text-muted-foreground">Plan meals for each day of your event</p>
+        {eventLogistics.length > 0 && (
+          <p className="text-sm text-muted-foreground mt-2">
+            Trip logistics: {eventLogistics.join(' • ')}
+          </p>
+        )}
       </div>
 
       <div className="space-y-6">
@@ -292,6 +307,11 @@ export function EventSchedule({ event, recipes, onUpdateEvent, onUpdateRecipe }:
               {dietaryNotes.trim() && (
                 <p className="text-xs text-muted-foreground">
                   Dietary notes for recipe selection: {dietaryNotes.trim()}
+                </p>
+              )}
+              {eventLogistics.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Trip logistics for recipe selection: {eventLogistics.join(' • ')}
                 </p>
               )}
             </div>

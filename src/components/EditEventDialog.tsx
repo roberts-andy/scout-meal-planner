@@ -34,6 +34,10 @@ export function EditEventDialog({
   const [highAltitude, setHighAltitude] = useState(event.highAltitude || false)
   const [tentCamping, setTentCamping] = useState(event.tentCamping || false)
   const [cabinCamping, setCabinCamping] = useState(event.cabinCamping || false)
+  const [powerAvailable, setPowerAvailable] = useState(event.powerAvailable || false)
+  const [runningWater, setRunningWater] = useState(event.runningWater || false)
+  const [trailerAccess, setTrailerAccess] = useState(event.trailerAccess || false)
+  const [expectedWeather, setExpectedWeather] = useState(event.expectedWeather || '')
 
   useEffect(() => {
     setName(event.name)
@@ -43,6 +47,10 @@ export function EditEventDialog({
     setHighAltitude(event.highAltitude || false)
     setTentCamping(event.tentCamping || false)
     setCabinCamping(event.cabinCamping || false)
+    setPowerAvailable(event.powerAvailable || false)
+    setRunningWater(event.runningWater || false)
+    setTrailerAccess(event.trailerAccess || false)
+    setExpectedWeather(event.expectedWeather || '')
   }, [event])
 
   const handleSubmit = () => {
@@ -56,6 +64,10 @@ export function EditEventDialog({
       highAltitude: highAltitude || undefined,
       updatedAt: Date.now(),
       cabinCamping: cabinCamping || undefined,
+      powerAvailable: powerAvailable || undefined,
+      runningWater: runningWater || undefined,
+      trailerAccess: trailerAccess || undefined,
+      expectedWeather: expectedWeather.trim() || undefined,
     }
     onUpdateEvent(updatedEvent)
     onOpenChange(false)
@@ -142,7 +154,46 @@ export function EditEventDialog({
                   Cabin Camping
                 </Label>
               </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="edit-power-available"
+                  checked={powerAvailable}
+                  onCheckedChange={(checked) => setPowerAvailable(checked as boolean)}
+                />
+                <Label htmlFor="edit-power-available" className="font-normal cursor-pointer">
+                  Power Available
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="edit-running-water"
+                  checked={runningWater}
+                  onCheckedChange={(checked) => setRunningWater(checked as boolean)}
+                />
+                <Label htmlFor="edit-running-water" className="font-normal cursor-pointer">
+                  Running Water
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="edit-trailer-access"
+                  checked={trailerAccess}
+                  onCheckedChange={(checked) => setTrailerAccess(checked as boolean)}
+                />
+                <Label htmlFor="edit-trailer-access" className="font-normal cursor-pointer">
+                  Trailer Access
+                </Label>
+              </div>
             </div>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="edit-expected-weather">Expected Weather</Label>
+            <Input
+              id="edit-expected-weather"
+              value={expectedWeather}
+              onChange={(e) => setExpectedWeather(e.target.value)}
+              placeholder="e.g., Cool nights, chance of rain"
+            />
           </div>
         </div>
         <DialogFooter>
