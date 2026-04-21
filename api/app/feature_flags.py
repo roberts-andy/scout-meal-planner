@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -64,12 +65,11 @@ def init_app_config(provider) -> None:
         logger.info("Azure App Configuration provider initialized")
 
 # Azure App Configuration provider — set by init_app_config() at startup
-_app_config_provider = None
+_state: dict[str, Any] = {"app_config_provider": None}
 
 
-def init_app_config(provider) -> None:
-    global _app_config_provider
-    _app_config_provider = provider
+def init_app_config(provider: Any) -> None:
+    _state["app_config_provider"] = provider
     if provider is None:
         logger.info("Azure App Configuration provider disabled")
     else:
@@ -101,10 +101,11 @@ def _coerce_bool(value: str | None) -> bool | None:
 
 
 def _resolve_from_app_config(flag_name: str) -> bool | None:
-    if _app_config_provider is None:
+    provider = _state["app_config_provider"]
+    if provider is None:
         return None
     try:
-        ff = _app_config_provider["feature_management"]["feature_flags"][flag_name]
+        ff = provider["feature_management"]["feature_flags"][flag_name]
         return bool(ff.get("enabled", False))
     except (KeyError, TypeError):
         return None
