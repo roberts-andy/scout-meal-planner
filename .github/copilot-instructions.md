@@ -70,6 +70,7 @@ When assigned an issue:
 6. Run the full validation: `npm run build && npm test && npm run lint && cd api && python -m pytest`.
 7. All builds and tests must pass before opening a PR.
 8. Open a PR targeting `main` with a clear description of what changed and why.
+9. **Always include `Closes #<issue-number>` in the PR description** so the linked issue is automatically closed when the PR is merged. If the PR addresses multiple issues, include a closing keyword for each (e.g., `Closes #12, Closes #34`).
 
 ## Security & Data Integrity Patterns
 
