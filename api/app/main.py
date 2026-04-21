@@ -9,7 +9,7 @@ from app.logging_config import configure_logging
 
 configure_logging()  # must run before any getLogger() calls in routers
 
-from app.cosmosdb import close_database_clients, init_database
+from app.cosmosdb import DatabaseUnavailableError, close_database_clients, init_database
 from app.telemetry import track_exception, track_request
 from app.routers import (
     events,
@@ -47,6 +47,38 @@ async def lifespan(application: FastAPI):
 
 
 app = FastAPI(title="Scout Meal Planner API", lifespan=lifespan)
+
+
+# ---------------------------------------------------------------------------
+# Global exception handlers — return structured JSON instead of opaque 500s
+# ---------------------------------------------------------------------------
+
+from fastapi.responses import JSONResponse
+from azure.cosmos.exceptions import CosmosHttpResponseError
+
+
+@app.exception_handler(DatabaseUnavailableError)
+async def database_unavailable_handler(request: Request, exc: DatabaseUnavailableError):
+    logger.error("Database unavailable: %s (path=%s)", exc, request.url.path)
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Service temporarily unavailable — database not ready"},
+    )
+
+
+@app.exception_handler(CosmosHttpResponseError)
+async def cosmos_error_handler(request: Request, exc: CosmosHttpResponseError):
+    logger.error("Cosmos DB error %s: %s (path=%s)", exc.status_code, exc.message, request.url.path)
+    track_exception(exc, properties={"path": request.url.path, "method": request.method})
+    if exc.status_code == 429:
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Service temporarily unavailable — rate limited"},
+        )
+    return JSONResponse(
+        status_code=502,
+        content={"detail": "Database operation failed"},
+    )
 
 
 @app.middleware("http")
