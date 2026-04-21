@@ -1,1 +1,24 @@
-{}
+{
+  "extend": {
+    "colors": {
+      "field-guide": {
+        "forest": "oklch(0.45 0.09 155)",
+        "stone": "oklch(0.70 0.01 85)",
+        "earth": "oklch(0.35 0.04 60)",
+        "campfire": "oklch(0.68 0.18 50)"
+      }
+    },
+    "fontFamily": {
+      "heading": [
+        "Space Grotesk",
+        "system-ui",
+        "sans-serif"
+      ],
+      "body": [
+        "Source Sans 3",
+        "system-ui",
+        "sans-serif"
+      ]
+    }
+  }
+}

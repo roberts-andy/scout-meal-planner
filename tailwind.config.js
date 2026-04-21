@@ -137,7 +137,28 @@ const defaultTheme = {
   darkMode: ["selector", '[data-appearance="dark"]'],
 }
 
+const mergedTheme = {
+  ...defaultTheme,
+  ...theme,
+  extend: {
+    ...defaultTheme.extend,
+    ...(theme.extend ?? {}),
+    colors: {
+      ...(defaultTheme.extend?.colors ?? {}),
+      ...(theme.extend?.colors ?? {}),
+    },
+    borderRadius: {
+      ...(defaultTheme.extend?.borderRadius ?? {}),
+      ...(theme.extend?.borderRadius ?? {}),
+    },
+    fontFamily: {
+      ...(defaultTheme.extend?.fontFamily ?? {}),
+      ...(theme.extend?.fontFamily ?? {}),
+    },
+  },
+};
+
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
-  theme: { ...defaultTheme, ...theme },
+  theme: mergedTheme,
 };
