@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,12 @@ _ENV_FLAG_NAME_BY_FLAG = {
 }
 
 _logged_evaluations: set[tuple[str, bool, str]] = set()
+_app_config_provider: Any = None
+
+
+def init_app_config(provider: Any) -> None:
+    global _app_config_provider
+    _app_config_provider = provider
 
 
 def _normalize_environment(value: str | None) -> str:
