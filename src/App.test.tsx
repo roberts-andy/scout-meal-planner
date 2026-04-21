@@ -30,6 +30,45 @@ beforeEach(() => {
   useAppDataMock.mockReset()
 })
 
+function mockAuthenticatedAuthContext(role: 'troopAdmin' | 'troopMember' = 'troopMember') {
+  useAuthContextMock.mockReturnValue({
+    isAuthenticated: true,
+    isLoading: false,
+    user: { userId: 'u1', email: 'user@example.com', displayName: 'User' },
+    troopId: 'troop-1',
+    role,
+    needsOnboarding: false,
+    authError: null,
+    retryMembership: vi.fn(),
+    getAccessToken: vi.fn(),
+    login: vi.fn(),
+    logout: vi.fn(),
+  })
+}
+
+function mockDefaultAppData(overrides: Record<string, unknown> = {}) {
+  useAppDataMock.mockReturnValue({
+    events: [],
+    recipes: [],
+    feedback: [],
+    selectedEvent: null,
+    setSelectedEventId: vi.fn(),
+    isLoading: false,
+    queryError: null,
+    failedResources: '',
+    handleCreateEvent: vi.fn(),
+    handleUpdateEvent: vi.fn(),
+    handleDeleteEvent: vi.fn(),
+    handleCreateRecipe: vi.fn(),
+    handleUpdateRecipe: vi.fn(),
+    handleDeleteRecipe: vi.fn(),
+    handleAddFeedback: vi.fn(),
+    handleUpdateFeedback: vi.fn(),
+    handleDeleteFeedback: vi.fn(),
+    ...overrides,
+  })
+}
+
 describe('App auth/query error states', () => {
   it('renders sign-in page when user is not authenticated', () => {
     useAuthContextMock.mockReturnValue({
@@ -51,38 +90,10 @@ describe('App auth/query error states', () => {
   })
 
   it('renders network/query errors with actionable message', () => {
-    useAuthContextMock.mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      user: { userId: 'u1', email: 'user@example.com', displayName: 'User' },
-      troopId: 'troop-1',
-      role: 'troopAdmin',
-      needsOnboarding: false,
-      authError: null,
-      retryMembership: vi.fn(),
-      getAccessToken: vi.fn(),
-      login: vi.fn(),
-      logout: vi.fn(),
-    })
-
-    useAppDataMock.mockReturnValue({
-      events: [],
-      recipes: [],
-      feedback: [],
-      selectedEvent: null,
-      setSelectedEventId: vi.fn(),
-      isLoading: false,
+    mockAuthenticatedAuthContext('troopAdmin')
+    mockDefaultAppData({
       queryError: new Error('Network error contacting the API'),
       failedResources: 'events, recipes, feedback',
-      handleCreateEvent: vi.fn(),
-      handleUpdateEvent: vi.fn(),
-      handleDeleteEvent: vi.fn(),
-      handleCreateRecipe: vi.fn(),
-      handleUpdateRecipe: vi.fn(),
-      handleDeleteRecipe: vi.fn(),
-      handleAddFeedback: vi.fn(),
-      handleUpdateFeedback: vi.fn(),
-      handleDeleteFeedback: vi.fn(),
     })
 
     render(<App />)
@@ -94,39 +105,8 @@ describe('App auth/query error states', () => {
 
 describe('App navigation tabs', () => {
   it('does not render Test Versioning tab', () => {
-    useAuthContextMock.mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      user: { userId: 'u1', email: 'user@example.com', displayName: 'User' },
-      troopId: 'troop-1',
-      role: 'troopMember',
-      needsOnboarding: false,
-      authError: null,
-      retryMembership: vi.fn(),
-      getAccessToken: vi.fn(),
-      login: vi.fn(),
-      logout: vi.fn(),
-    })
-
-    useAppDataMock.mockReturnValue({
-      events: [],
-      recipes: [],
-      feedback: [],
-      selectedEvent: null,
-      setSelectedEventId: vi.fn(),
-      isLoading: false,
-      queryError: null,
-      failedResources: '',
-      handleCreateEvent: vi.fn(),
-      handleUpdateEvent: vi.fn(),
-      handleDeleteEvent: vi.fn(),
-      handleCreateRecipe: vi.fn(),
-      handleUpdateRecipe: vi.fn(),
-      handleDeleteRecipe: vi.fn(),
-      handleAddFeedback: vi.fn(),
-      handleUpdateFeedback: vi.fn(),
-      handleDeleteFeedback: vi.fn(),
-    })
+    mockAuthenticatedAuthContext('troopMember')
+    mockDefaultAppData()
 
     render(<App />)
 
