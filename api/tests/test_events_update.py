@@ -180,6 +180,8 @@ async def test_create_event_emits_recipe_assigned_custom_event_when_meals_preass
             "assignmentCount": "2",
         }),
     ]
+
+
 @pytest.mark.asyncio
 async def test_logistics_fields_round_trip(client, monkeypatch):
     stored_events: dict[str, dict] = {}
