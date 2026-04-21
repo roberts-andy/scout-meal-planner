@@ -172,8 +172,15 @@ describe('TroopAdmin member data deletion', () => {
         id: 'feedback:f1',
         contentId: 'f1',
         contentType: 'feedback',
-        flagReason: 'Flagged fields: comments',
+        flagReason: 'Flagged fields: comments (Hate severity 4/6)',
         flaggedAt: 1700000000000,
+        flaggedDetails: [
+          {
+            field: 'comments',
+            text: 'Original comment',
+            categories: [{ category: 'Hate', severity: 4 }],
+          },
+        ],
         context: { comments: 'Original comment' },
       },
     ])
@@ -181,7 +188,10 @@ describe('TroopAdmin member data deletion', () => {
     renderTroopAdmin()
 
     await waitFor(() => expect(screen.getByText('Flagged Content Review')).toBeInTheDocument())
-    await waitFor(() => expect(screen.getByText('Flagged fields: comments')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Flagged fields: comments (Hate severity 4/6)')).toBeInTheDocument())
+    expect(screen.getByText('comments:')).toBeInTheDocument()
+    expect(screen.getAllByText('Original comment').length).toBeGreaterThan(0)
+    expect(screen.getByText('Hate — severity 4/6')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Approve' }))
 

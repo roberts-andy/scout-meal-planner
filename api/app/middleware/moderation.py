@@ -22,6 +22,8 @@ DEFAULT_BLOCK_SEVERITY = 4
 class ModerationResult:
     status: ModerationStatus
     flaggedFields: list[str] = field(default_factory=list)
+    categories: list[dict] = field(default_factory=list)
+    fieldCategories: list[dict] = field(default_factory=list)
     checkedAt: int = 0
     provider: str = "azure-content-safety"
 
@@ -49,15 +51,44 @@ def _get_request_timeout_s() -> float:
 
 
 def _get_max_severity(result: dict) -> int:
-    categories = result.get("categoriesAnalysis", [])
-    if not isinstance(categories, list):
-        return 0
+    categories = _extract_categories(result)
     max_sev = 0
     for cat in categories:
-        sev = cat.get("severity", 0) or 0
-        if isinstance(sev, (int, float)):
-            max_sev = max(max_sev, int(sev))
+        sev = cat["severity"]
+        max_sev = max(max_sev, sev)
     return max_sev
+
+
+def _extract_categories(result: dict) -> list[dict]:
+    categories = result.get("categoriesAnalysis", [])
+    if not isinstance(categories, list):
+        return []
+    parsed: list[dict] = []
+    for cat in categories:
+        if not isinstance(cat, dict):
+            continue
+        category = cat.get("category")
+        severity = cat.get("severity", 0)
+        if isinstance(category, str) and isinstance(severity, (int, float)):
+            parsed.append({
+                "category": category,
+                "severity": int(severity),
+            })
+    return parsed
+
+
+def _aggregate_categories(field_results: list[dict]) -> list[dict]:
+    max_by_category: dict[str, int] = {}
+    for result in field_results:
+        for category in result["categories"]:
+            name = category["category"]
+            severity = category["severity"]
+            if name not in max_by_category or severity > max_by_category[name]:
+                max_by_category[name] = severity
+    return [
+        {"category": name, "severity": severity}
+        for name, severity in sorted(max_by_category.items(), key=lambda item: (-item[1], item[0]))
+    ]
 
 
 async def _analyze_text(text: str) -> dict:
@@ -105,13 +136,24 @@ async def moderate_text_fields(fields: list[ModerationField]) -> ModerationResul
         results = []
         for entry in entries:
             analysis = await _analyze_text(entry["text"])
-            results.append({"field": entry["field"], "maxSeverity": _get_max_severity(analysis)})
+            categories = _extract_categories(analysis)
+            results.append({
+                "field": entry["field"],
+                "categories": categories,
+                "maxSeverity": _get_max_severity(analysis),
+            })
 
-        flagged_fields = [r["field"] for r in results if r["maxSeverity"] >= threshold]
+        flagged_results = [r for r in results if r["maxSeverity"] >= threshold]
+        flagged_fields = [r["field"] for r in flagged_results]
 
         return ModerationResult(
             status="flagged" if flagged_fields else "approved",
             flaggedFields=flagged_fields,
+            categories=_aggregate_categories(flagged_results),
+            fieldCategories=[
+                {"field": result["field"], "categories": result["categories"]}
+                for result in flagged_results
+            ],
             checkedAt=int(time.time() * 1000),
         )
     except Exception as exc:

@@ -78,3 +78,46 @@ async def test_review_reject_sets_rejected_status(monkeypatch: pytest.MonkeyPatc
 
     assert captured["updated"]["moderation"]["status"] == "rejected"
     assert result["moderation"]["status"] == "rejected"
+
+
+@pytest.mark.asyncio
+async def test_list_flagged_content_includes_categories_and_flagged_text(monkeypatch: pytest.MonkeyPatch):
+    async def fake_get_all_by_troop(container: str, troop_id: str):
+        if container == admin_flagged_content.FEEDBACK_CONTAINER:
+            return [{
+                "id": "feedback-1",
+                "troopId": troop_id,
+                "comments": "I hate this meal",
+                "moderation": {
+                    "status": "flagged",
+                    "checkedAt": 20,
+                    "flaggedFields": ["comments"],
+                    "categories": [{"category": "Hate", "severity": 4}],
+                    "fieldCategories": [{
+                        "field": "comments",
+                        "categories": [{"category": "Hate", "severity": 4}],
+                    }],
+                },
+            }]
+        return []
+
+    monkeypatch.setattr(admin_flagged_content, "get_all_by_troop", fake_get_all_by_troop)
+    monkeypatch.setattr(admin_flagged_content, "check_permission", lambda _role, _permission: True)
+
+    auth = TroopContext(
+        userId="user-1",
+        email="admin@example.com",
+        displayName="Admin User",
+        troopId="troop-1",
+        role="troopAdmin",
+    )
+
+    result = await admin_flagged_content.list_flagged_content(auth)
+
+    assert len(result) == 1
+    assert result[0]["flagReason"] == "Flagged fields: comments (Hate severity 4/6)"
+    assert result[0]["flaggedDetails"] == [{
+        "field": "comments",
+        "text": "I hate this meal",
+        "categories": [{"category": "Hate", "severity": 4}],
+    }]

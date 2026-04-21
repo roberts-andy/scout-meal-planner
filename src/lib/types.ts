@@ -216,6 +216,11 @@ export interface MealFeedback {
 export type FlaggedContentType = 'recipe' | 'feedback'
 export type FlaggedContentAction = 'approve' | 'edit' | 'reject'
 
+export interface ContentSafetyCategory {
+  category: string
+  severity: number
+}
+
 export interface FlaggedContentItem {
   id: string
   contentId: string
@@ -225,8 +230,11 @@ export interface FlaggedContentItem {
   moderation?: {
     status?: string
     flaggedFields?: string[]
+    categories?: ContentSafetyCategory[]
+    fieldCategories?: Array<{ field: string; categories: ContentSafetyCategory[] }>
     checkedAt?: number
   }
+  flaggedDetails?: Array<{ field: string; text?: string | null; categories: ContentSafetyCategory[] }>
   context: {
     name?: string
     description?: string
