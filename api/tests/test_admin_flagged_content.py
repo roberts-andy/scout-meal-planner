@@ -70,7 +70,11 @@ async def test_review_reject_sets_rejected_status(monkeypatch: pytest.MonkeyPatc
         role="troopAdmin",
     )
 
-    result = await admin_flagged_content.review_flagged_content("feedback:feedback-1", ReviewFlaggedContentReject(), auth)
+    result = await admin_flagged_content.review_flagged_content(
+        "feedback:feedback-1",
+        ReviewFlaggedContentReject(),
+        auth,
+    )
 
     assert captured["updated"]["moderation"]["status"] == "rejected"
     assert result["moderation"]["status"] == "rejected"
