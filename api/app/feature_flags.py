@@ -53,6 +53,16 @@ _ENV_FLAG_NAME_BY_FLAG = {
 }
 
 _logged_evaluations: set[tuple[str, bool, str]] = set()
+_app_config_provider = None
+
+
+def init_app_config(provider) -> None:
+    global _app_config_provider
+    _app_config_provider = provider
+    if provider is None:
+        logger.info("Azure App Configuration provider disabled")
+    else:
+        logger.info("Azure App Configuration provider initialized")
 
 # Azure App Configuration provider — set by init_app_config() at startup
 _state: dict[str, Any] = {"app_config_provider": None}
