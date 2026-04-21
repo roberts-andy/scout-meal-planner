@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Copy, UserCircleMinus, CheckCircle, UserCircle } from '@phosphor-icons/react'
+import { toast } from 'sonner'
 import type { FlaggedContentAction, FlaggedContentItem, MemberStatus, TroopMember, TroopRole } from '@/lib/types'
 
 const roleLabels: Record<TroopRole, string> = {
@@ -104,8 +105,21 @@ export function TroopAdmin() {
   const reviewFlaggedContent = useMutation({
     mutationFn: ({ id, action, edits }: { id: string; action: FlaggedContentAction; edits?: FlaggedContentEdits }) =>
       adminApi.reviewFlaggedContent(id, { action, edits }),
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminFlaggedContent'] })
+      if (variables.action === 'approve') {
+        toast.success('Flagged content approved.')
+      } else if (variables.action === 'reject') {
+        toast.success('Flagged content rejected.')
+      } else {
+        toast.success('Flagged content updated and approved.')
+      }
+    },
+    onError: (err, variables) => {
+      const defaultMessage = variables.action === 'edit'
+        ? 'Unable to save content edits.'
+        : `Unable to ${variables.action} flagged content.`
+      toast.error(err instanceof Error ? err.message : defaultMessage)
     },
   })
 
@@ -188,6 +202,12 @@ export function TroopAdmin() {
       : { comments: draft }
     await reviewFlaggedContent.mutateAsync({ id: item.id, action: 'edit', edits })
     setEditingIds((prev) => ({ ...prev, [item.id]: false }))
+  }
+
+  function handleRejectReview(itemId: string) {
+    const confirmed = window.confirm('Reject this flagged content?')
+    if (!confirmed) return
+    reviewFlaggedContent.mutate({ id: itemId, action: 'reject' })
   }
 
   return (
@@ -497,7 +517,7 @@ export function TroopAdmin() {
                   <Button
                     size="sm"
                     variant="destructive"
-                    onClick={() => reviewFlaggedContent.mutate({ id: item.id, action: 'reject' })}
+                    onClick={() => handleRejectReview(item.id)}
                     disabled={reviewFlaggedContent.isPending}
                   >
                     Reject

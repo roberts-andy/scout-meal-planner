@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TroopAdmin } from './TroopAdmin'
 
-const { useAuthContextMock, membersApiMock, troopsApiMock, adminApiMock } = vi.hoisted(() => ({
+const { useAuthContextMock, membersApiMock, troopsApiMock, adminApiMock, toastSuccessMock, toastErrorMock } = vi.hoisted(() => ({
   useAuthContextMock: vi.fn(() => ({
     user: { userId: 'admin-user', email: 'admin@example.com', displayName: 'Admin' },
     role: 'troopAdmin',
@@ -29,6 +29,8 @@ const { useAuthContextMock, membersApiMock, troopsApiMock, adminApiMock } = vi.h
     getFlaggedContent: vi.fn(),
     reviewFlaggedContent: vi.fn(),
   },
+  toastSuccessMock: vi.fn(),
+  toastErrorMock: vi.fn(),
 }))
 
 vi.mock('./AuthProvider', () => ({
@@ -39,6 +41,13 @@ vi.mock('@/lib/api', () => ({
   membersApi: membersApiMock,
   troopsApi: troopsApiMock,
   adminApi: adminApiMock,
+}))
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: toastSuccessMock,
+    error: toastErrorMock,
+  },
 }))
 
 function renderTroopAdmin() {
@@ -179,6 +188,97 @@ describe('TroopAdmin member data deletion', () => {
     await waitFor(() =>
       expect(adminApiMock.reviewFlaggedContent).toHaveBeenCalledWith('feedback:f1', { action: 'approve', edits: undefined })
     )
+    await waitFor(() => expect(toastSuccessMock).toHaveBeenCalledWith('Flagged content approved.'))
+  })
+
+  it('refetches flagged content after approve so resolved items disappear', async () => {
+    const user = userEvent.setup()
+    adminApiMock.getFlaggedContent
+      .mockResolvedValueOnce([
+        {
+          id: 'feedback:f1',
+          contentId: 'f1',
+          contentType: 'feedback',
+          flagReason: 'Flagged fields: comments',
+          flaggedAt: 1700000000000,
+          context: { comments: 'Original comment' },
+        },
+      ])
+      .mockResolvedValueOnce([])
+
+    renderTroopAdmin()
+
+    await waitFor(() => expect(screen.getByText('Flagged fields: comments')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Approve' }))
+
+    await waitFor(() => expect(adminApiMock.getFlaggedContent).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.queryByText('Flagged fields: comments')).not.toBeInTheDocument())
+  })
+
+  it('asks for confirmation before rejecting flagged content', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const user = userEvent.setup()
+    adminApiMock.getFlaggedContent.mockResolvedValueOnce([
+      {
+        id: 'feedback:f1',
+        contentId: 'f1',
+        contentType: 'feedback',
+        flagReason: 'Flagged fields: comments',
+        flaggedAt: 1700000000000,
+        context: { comments: 'Original comment' },
+      },
+    ])
+
+    renderTroopAdmin()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Reject' })).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Reject' }))
+
+    expect(confirmSpy).toHaveBeenCalledWith('Reject this flagged content?')
+    expect(adminApiMock.reviewFlaggedContent).not.toHaveBeenCalled()
+    confirmSpy.mockRestore()
+  })
+
+  it('shows error toast when flagged content review fails', async () => {
+    const user = userEvent.setup()
+    adminApiMock.getFlaggedContent.mockResolvedValueOnce([
+      {
+        id: 'feedback:f1',
+        contentId: 'f1',
+        contentType: 'feedback',
+        flagReason: 'Flagged fields: comments',
+        flaggedAt: 1700000000000,
+        context: { comments: 'Original comment' },
+      },
+    ])
+    adminApiMock.reviewFlaggedContent.mockRejectedValueOnce(new Error('Review failed'))
+
+    renderTroopAdmin()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Approve' }))
+
+    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith('Review failed'))
+  })
+
+  it('shows error toast when reject review fails', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const user = userEvent.setup()
+    adminApiMock.getFlaggedContent.mockResolvedValueOnce([
+      {
+        id: 'feedback:f1',
+        contentId: 'f1',
+        contentType: 'feedback',
+        flagReason: 'Flagged fields: comments',
+        flaggedAt: 1700000000000,
+        context: { comments: 'Original comment' },
+      },
+    ])
+    adminApiMock.reviewFlaggedContent.mockRejectedValueOnce(new Error('Reject failed'))
+
+    renderTroopAdmin()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Reject' })).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Reject' }))
+
+    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith('Reject failed'))
   })
 
   it('allows editing flagged content and submitting edit action', async () => {
@@ -210,5 +310,6 @@ describe('TroopAdmin member data deletion', () => {
         edits: { name: 'Updated Recipe Name' },
       })
     )
+    await waitFor(() => expect(toastSuccessMock).toHaveBeenCalledWith('Flagged content updated and approved.'))
   })
 })
