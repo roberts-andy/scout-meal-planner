@@ -105,7 +105,7 @@ export function TroopAdmin() {
   const reviewFlaggedContent = useMutation({
     mutationFn: ({ id, action, edits }: { id: string; action: FlaggedContentAction; edits?: FlaggedContentEdits }) =>
       adminApi.reviewFlaggedContent(id, { action, edits }),
-    onSuccess: (_, variables) => {
+    onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminFlaggedContent'] })
       if (variables.action === 'approve') {
         toast.success('Flagged content approved.')
