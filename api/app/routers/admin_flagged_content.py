@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import re
 import time
-from dataclasses import asdict
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException
@@ -253,7 +252,10 @@ async def review_flagged_content(item_id: str, body: ReviewFlaggedContent, auth:
     if body.action == "reject":
         moderation["status"] = "rejected"
     elif moderation_result:
-        moderation.update(asdict(moderation_result))
+        moderation["status"] = moderation_result.status
+        moderation["flaggedFields"] = moderation_result.flaggedFields
+        moderation["checkedAt"] = moderation_result.checkedAt
+        moderation["provider"] = moderation_result.provider
     else:
         moderation["status"] = "approved"
         moderation["flaggedFields"] = []

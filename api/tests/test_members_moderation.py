@@ -32,7 +32,7 @@ async def test_create_member_moderates_display_name(monkeypatch):
         SimpleNamespace(troopId="troop-1", role="troopAdmin"),
     )
 
-    assert captured["fields"] == [("displayName", "Alex")]
+    assert captured["fields"] == [("displayName", "Alex Patrol")]
     assert captured["item"]["displayName"] == "Alex"
     assert captured["item"]["moderation"] == {
         "status": "flagged",

@@ -92,8 +92,8 @@ async def create_member(body: CreateMember, auth: RequireTroopContext):
         "troopId": auth.troopId,
         "status": "active",
     }
+    moderation = await moderate_text_fields([ModerationField(field="displayName", text=body.displayName)])
     display_name = _to_first_name(body.displayName) if body.role.value == "scout" else body.displayName
-    moderation = await moderate_text_fields([ModerationField(field="displayName", text=display_name)])
 
     if body.role.value == "scout":
         member = await create_item(CONTAINER, {
