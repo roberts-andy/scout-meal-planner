@@ -5,12 +5,14 @@ import os
 import secrets
 import time
 import uuid
+from dataclasses import asdict
 
 from azure.cosmos.exceptions import CosmosHttpResponseError
 from fastapi import APIRouter, HTTPException
 
 from app.cosmosdb import get_by_id, create_item, update_item, query_items, delete_item
 from app.middleware.auth import RequireToken, RequireTroopContext, forbidden, get_troop_context, validate_token
+from app.middleware.moderation import moderate_text_fields, ModerationField
 from app.middleware.roles import check_permission
 from app.schemas import CreateTroop, UpdateTroop, JoinTroop
 
@@ -33,11 +35,13 @@ def _to_first_name(display_name: str) -> str:
 async def create_troop(body: CreateTroop, claims: RequireToken):
     now = int(time.time() * 1000)
     troop_id = str(uuid.uuid4())
+    moderation = await moderate_text_fields([ModerationField(field="name", text=body.name)])
 
     troop = await create_item(CONTAINER, {
         "id": troop_id,
         "name": body.name,
         "inviteCode": _generate_invite_code(),
+        "moderation": asdict(moderation),
         "createdBy": claims.userId,
         "createdAt": now,
         "updatedAt": now,
@@ -72,8 +76,15 @@ async def update_troop(body: UpdateTroop, auth: RequireTroopContext):
     existing = await get_by_id(CONTAINER, auth.troopId)
     if not existing:
         raise HTTPException(status_code=404, detail="Troop not found")
+    moderation = await moderate_text_fields([ModerationField(field="name", text=body.name)])
 
-    updated = {**existing, **body.model_dump(), "id": auth.troopId, "updatedAt": int(time.time() * 1000)}
+    updated = {
+        **existing,
+        **body.model_dump(),
+        "id": auth.troopId,
+        "moderation": asdict(moderation),
+        "updatedAt": int(time.time() * 1000),
+    }
     result = await update_item(CONTAINER, auth.troopId, updated)
     return result
 
