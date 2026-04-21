@@ -33,6 +33,8 @@ async def test_create_troop_moderates_name(monkeypatch):
         "flaggedFields": [],
         "checkedAt": 10,
         "provider": "azure-content-safety",
+        "categories": [],
+        "fieldCategories": [],
     }
 
 
@@ -67,4 +69,6 @@ async def test_update_troop_moderates_name(monkeypatch):
         "flaggedFields": ["name"],
         "checkedAt": 20,
         "provider": "azure-content-safety",
+        "categories": [],
+        "fieldCategories": [],
     }

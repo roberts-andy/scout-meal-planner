@@ -327,6 +327,8 @@ async def test_create_event_moderates_text_fields(client, monkeypatch):
         "flaggedFields": ["notes"],
         "checkedAt": 123,
         "provider": "azure-content-safety",
+        "categories": [],
+        "fieldCategories": [],
     }
 
 
@@ -376,4 +378,6 @@ async def test_update_event_moderates_updated_text_fields(client, monkeypatch):
         "flaggedFields": [],
         "checkedAt": 321,
         "provider": "azure-content-safety",
+        "categories": [],
+        "fieldCategories": [],
     }

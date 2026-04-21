@@ -39,4 +39,6 @@ async def test_create_member_moderates_display_name(monkeypatch):
         "flaggedFields": ["displayName"],
         "checkedAt": 55,
         "provider": "azure-content-safety",
+        "categories": [],
+        "fieldCategories": [],
     }
