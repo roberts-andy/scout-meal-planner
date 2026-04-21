@@ -70,6 +70,23 @@ When assigned an issue:
 6. Run the full validation: `npm run build && npm test && npm run lint && cd api && python -m pytest`.
 7. All builds and tests must pass before opening a PR.
 8. Open a PR targeting `main` with a clear description of what changed and why.
+9. **Always include `Closes #<issue-number>` in the PR description** so the linked issue is automatically closed when the PR is merged. If the PR addresses multiple issues, include a closing keyword for each (e.g., `Closes #12, Closes #34`).
+
+## Security & Data Integrity Patterns
+
+- **Ownership checks**: Any endpoint that modifies a user-created resource (feedback, recipes) must verify the requesting user is the original author OR has an admin-level permission. Never rely solely on role-based permission for user-owned data.
+- **Optimistic concurrency**: Any read-modify-write operation on Cosmos DB must use ETag-based concurrency control (`if_match=existing["_etag"]`) with a retry loop. See `api/app/routers/event_packed.py` for the reference pattern.
+- **Identity propagation**: When creating member/user records, always include `userId`, `email`, and `displayName` from the authenticated token claims. Missing identity fields break downstream auth resolution.
+- **Cascade deletes**: When deleting a parent entity (event, recipe), query and delete all child records (feedback, etc.) in the same operation.
+- **Secrets and PII**: Never hardcode real email addresses, names, or credentials in source. Use `@example.com` domains and placeholder names for seed/test data.
+- **Error responses**: Use `raise HTTPException(status_code=..., detail="...")` for all error paths. Do not use `JSONResponse` for errors. Import `HTTPException` at module level.
+- **Pydantic update models**: Update schemas must be separate from create schemas with all fields optional. Use `model_dump(exclude_unset=True)` to avoid overwriting server-managed fields.
+
+## Frontend Security
+
+- MSAL cache must use `sessionStorage`, never `localStorage`.
+- Debug/verbose logging must be gated to development mode (`import.meta.env.DEV`).
+- Sanitize user-controlled strings before interpolating into email subjects, headers, or URLs (strip newlines, enforce length limits).
 
 ## Do Not
 

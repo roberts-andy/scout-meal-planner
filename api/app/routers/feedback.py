@@ -21,6 +21,7 @@ from app.middleware.auth import RequireTroopContext, forbidden
 from app.middleware.roles import check_permission
 from app.middleware.moderation import moderate_text_fields, can_view_moderated_content, ModerationField
 from app.schemas import CreateFeedback, UpdateFeedback
+from app.telemetry import track_custom_event
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -65,6 +66,18 @@ async def create_feedback(body: CreateFeedback, auth: RequireTroopContext):
         "moderation": asdict(moderation),
         **audit_create(auth),
     })
+    track_custom_event("feedback_submitted", properties={
+        "feedbackId": feedback["id"],
+        "eventId": body.eventId,
+        "recipeId": body.recipeId,
+        "troopId": auth.troopId,
+    })
+    if moderation.status == "flagged":
+        track_custom_event("content_flagged", properties={
+            "contentType": "feedback",
+            "contentId": feedback["id"],
+            "troopId": auth.troopId,
+        })
     return feedback
 
 
@@ -92,6 +105,12 @@ async def update_feedback(feedback_id: str, body: UpdateFeedback, auth: RequireT
         "moderation": asdict(moderation),
         **audit_update(auth),
     }, auth.troopId)
+    if moderation.status == "flagged":
+        track_custom_event("content_flagged", properties={
+            "contentType": "feedback",
+            "contentId": feedback_id,
+            "troopId": auth.troopId,
+        })
     return feedback
 
 

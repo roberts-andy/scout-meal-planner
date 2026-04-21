@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -32,6 +33,7 @@ def _make_auth():
 @pytest.mark.asyncio
 async def test_create_feedback_serializes_moderation_with_asdict(monkeypatch):
     captured = {}
+    track_custom_event = Mock()
 
     async def fake_moderate_text_fields(_fields):
         moderation = ModerationResult(status="approved", flaggedFields=[], checkedAt=123)
@@ -45,6 +47,7 @@ async def test_create_feedback_serializes_moderation_with_asdict(monkeypatch):
     monkeypatch.setattr(feedback_router, "check_permission", lambda _role, _perm: True)
     monkeypatch.setattr(feedback_router, "moderate_text_fields", fake_moderate_text_fields)
     monkeypatch.setattr(feedback_router, "create_item", fake_create_item)
+    monkeypatch.setattr(feedback_router, "track_custom_event", track_custom_event)
 
     await feedback_router.create_feedback(_make_feedback_body(), _make_auth())
 
@@ -55,12 +58,19 @@ async def test_create_feedback_serializes_moderation_with_asdict(monkeypatch):
         "provider": "azure-content-safety",
     }
     assert "internal" not in captured["item"]["moderation"]
+    track_custom_event.assert_called_once_with("feedback_submitted", properties={
+        "feedbackId": captured["item"]["id"],
+        "eventId": "event-1",
+        "recipeId": "recipe-1",
+        "troopId": "troop-1",
+    })
 
 
 @pytest.mark.asyncio
 async def test_update_feedback_serializes_moderation_with_asdict(monkeypatch):
     captured = {}
     existing = {"id": "feedback-1", "troopId": "troop-1", "eventId": "event-1", "recipeId": "recipe-1"}
+    track_custom_event = Mock()
 
     async def fake_moderate_text_fields(_fields):
         moderation = ModerationResult(status="flagged", flaggedFields=["comments"], checkedAt=456)
@@ -78,6 +88,7 @@ async def test_update_feedback_serializes_moderation_with_asdict(monkeypatch):
     monkeypatch.setattr(feedback_router, "moderate_text_fields", fake_moderate_text_fields)
     monkeypatch.setattr(feedback_router, "get_by_id", fake_get_by_id)
     monkeypatch.setattr(feedback_router, "update_item", fake_update_item)
+    monkeypatch.setattr(feedback_router, "track_custom_event", track_custom_event)
 
     await feedback_router.update_feedback("feedback-1", _make_feedback_body(), _make_auth())
 
@@ -88,3 +99,8 @@ async def test_update_feedback_serializes_moderation_with_asdict(monkeypatch):
         "provider": "azure-content-safety",
     }
     assert "internal" not in captured["item"]["moderation"]
+    track_custom_event.assert_called_once_with("content_flagged", properties={
+        "contentType": "feedback",
+        "contentId": "feedback-1",
+        "troopId": "troop-1",
+    })

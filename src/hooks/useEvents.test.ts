@@ -11,8 +11,12 @@ vi.mock('@/lib/api', () => ({
     delete: vi.fn(),
   },
 }))
+vi.mock('@/lib/telemetry', () => ({
+  trackCustomEvent: vi.fn(),
+}))
 
 import { eventsApi } from '@/lib/api'
+import { trackCustomEvent } from '@/lib/telemetry'
 import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent } from './useEvents'
 
 function wrapper() {
@@ -61,6 +65,7 @@ describe('useCreateEvent', () => {
     // createMutation doesn't share the same queryClient instance across wrappers,
     // so we just assert the mutation fires the API.
     expect(eventsApi.create).toHaveBeenCalledWith(created)
+    expect(trackCustomEvent).toHaveBeenCalledWith('event_created', { eventId: 'e2' })
   })
 })
 
