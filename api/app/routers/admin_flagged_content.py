@@ -203,6 +203,20 @@ def _edited_fields_for_moderation(content_type: ContentType, body: ReviewFlagged
     return fields
 
 
+def _moderation_fields_for_review(content_type: ContentType, item: dict) -> list[ModerationField]:
+    if content_type == "recipe":
+        return [
+            ModerationField(field="name", text=item.get("name")),
+            ModerationField(field="description", text=item.get("description")),
+        ]
+
+    return [
+        ModerationField(field="comments", text=item.get("comments")),
+        ModerationField(field="whatWorked", text=item.get("whatWorked")),
+        ModerationField(field="whatToChange", text=item.get("whatToChange")),
+    ]
+
+
 @router.get("/admin/flagged-content")
 async def list_flagged_content(auth: RequireTroopContext):
     if not check_permission(auth.role, "manageTroop"):
@@ -283,6 +297,17 @@ async def review_flagged_content(item_id: str, body: ReviewFlaggedContent, auth:
                 updated["whatWorked"] = edits.whatWorked
             if edits.whatToChange is not None:
                 updated["whatToChange"] = edits.whatToChange
+
+        moderation_result = await moderate_text_fields(_moderation_fields_for_review(content_type, updated))
+        moderation["status"] = moderation_result.status
+        moderation["flaggedFields"] = moderation_result.flaggedFields
+        moderation["checkedAt"] = moderation_result.checkedAt
+        moderation["provider"] = moderation_result.provider
+    elif body.action == "reject":
+        moderation["status"] = "flagged"
+    else:
+        moderation["status"] = "approved"
+        moderation["flaggedFields"] = []
 
     result = await update_item(container, item["id"], updated, auth.troopId)
     return {

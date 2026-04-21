@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import pytest
 
+from app.middleware.moderation import ModerationResult
 from app.middleware.auth import TroopContext
 from app.middleware.moderation import ModerationResult
 from app.routers import admin_flagged_content
-from app.schemas import ReviewFlaggedContentReject
+from app.schemas import ReviewFlaggedContentReject, FlaggedContentEdits, ReviewFlaggedContentEdit
 
 
 @pytest.mark.asyncio
@@ -179,4 +180,92 @@ async def test_review_edit_re_moderates_updated_fields(monkeypatch: pytest.Monke
     assert captured["updated"]["moderation"]["checkedAt"] == 999
     assert "reviewedAt" in captured["updated"]["moderation"]
     assert captured["updated"]["moderation"]["reviewedBy"] == {"userId": "user-1", "displayName": "Admin User"}
+    assert result["moderation"]["status"] == "flagged"
+
+
+@pytest.mark.asyncio
+async def test_review_flagged_content_edit_approves_when_re_moderation_passes(monkeypatch: pytest.MonkeyPatch):
+    auth = TroopContext(
+        userId="user-1",
+        email="admin@example.com",
+        displayName="Admin User",
+        troopId="troop-1",
+        role="troopAdmin",
+    )
+    item = {
+        "id": "feedback-1",
+        "troopId": auth.troopId,
+        "comments": "Original",
+        "whatWorked": "Fine",
+        "whatToChange": "N/A",
+        "moderation": {"status": "flagged", "flaggedFields": ["comments"]},
+    }
+    captured_fields: list[tuple[str, str | None]] = []
+    captured_update: dict = {}
+
+    async def fake_resolve_item(_item_id: str, _troop_id: str):
+        return {"status": "ok", "contentType": "feedback", "item": item}
+
+    async def fake_moderate_text_fields(fields):
+        captured_fields.extend((field.field, field.text) for field in fields)
+        return ModerationResult(status="approved", flaggedFields=[], checkedAt=1700)
+
+    async def fake_update_item(_container: str, _item_id: str, updated: dict, _troop_id: str):
+        captured_update.update(updated)
+        return updated
+
+    monkeypatch.setattr(admin_flagged_content, "check_permission", lambda _role, _permission: True)
+    monkeypatch.setattr(admin_flagged_content, "_resolve_item", fake_resolve_item)
+    monkeypatch.setattr(admin_flagged_content, "moderate_text_fields", fake_moderate_text_fields)
+    monkeypatch.setattr(admin_flagged_content, "update_item", fake_update_item)
+
+    body = ReviewFlaggedContentEdit(action="edit", edits=FlaggedContentEdits(comments="Cleaned text"))
+    result = await admin_flagged_content.review_flagged_content("feedback:feedback-1", body, auth)
+
+    assert ("comments", "Cleaned text") in captured_fields
+    assert captured_update["comments"] == "Cleaned text"
+    assert captured_update["moderation"]["status"] == "approved"
+    assert captured_update["moderation"]["flaggedFields"] == []
+    assert result["moderation"]["status"] == "approved"
+
+
+@pytest.mark.asyncio
+async def test_review_flagged_content_edit_stays_flagged_when_re_moderation_flags(monkeypatch: pytest.MonkeyPatch):
+    auth = TroopContext(
+        userId="user-1",
+        email="admin@example.com",
+        displayName="Admin User",
+        troopId="troop-1",
+        role="troopAdmin",
+    )
+    item = {
+        "id": "feedback-1",
+        "troopId": auth.troopId,
+        "comments": "Original",
+        "whatWorked": "Fine",
+        "whatToChange": "N/A",
+        "moderation": {"status": "flagged", "flaggedFields": ["comments"]},
+    }
+    captured_update: dict = {}
+
+    async def fake_resolve_item(_item_id: str, _troop_id: str):
+        return {"status": "ok", "contentType": "feedback", "item": item}
+
+    async def fake_moderate_text_fields(_fields):
+        return ModerationResult(status="flagged", flaggedFields=["comments"], checkedAt=1700)
+
+    async def fake_update_item(_container: str, _item_id: str, updated: dict, _troop_id: str):
+        captured_update.update(updated)
+        return updated
+
+    monkeypatch.setattr(admin_flagged_content, "check_permission", lambda _role, _permission: True)
+    monkeypatch.setattr(admin_flagged_content, "_resolve_item", fake_resolve_item)
+    monkeypatch.setattr(admin_flagged_content, "moderate_text_fields", fake_moderate_text_fields)
+    monkeypatch.setattr(admin_flagged_content, "update_item", fake_update_item)
+
+    body = ReviewFlaggedContentEdit(action="edit", edits=FlaggedContentEdits(comments="Still unsafe"))
+    result = await admin_flagged_content.review_flagged_content("feedback:feedback-1", body, auth)
+
+    assert captured_update["moderation"]["status"] == "flagged"
+    assert captured_update["moderation"]["flaggedFields"] == ["comments"]
     assert result["moderation"]["status"] == "flagged"
