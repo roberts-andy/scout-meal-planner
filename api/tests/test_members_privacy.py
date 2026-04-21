@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
@@ -7,10 +8,11 @@ from app.middleware.auth import TroopContext
 from app.routers import members as members_router
 
 
-@pytest.fixture
-def client():
+@pytest_asyncio.fixture
+async def client():
     transport = ASGITransport(app=app)
-    return AsyncClient(transport=transport, base_url="http://test")
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
 
 
 @pytest.fixture(autouse=True)

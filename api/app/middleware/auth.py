@@ -16,8 +16,12 @@ from app.cosmosdb import query_items, update_item
 logger = logging.getLogger(__name__)
 
 CLIENT_ID = os.environ.get("ENTRA_CLIENT_ID")
+_E2E_TEST_MODE = os.environ.get("E2E_TEST_MODE", "").lower() == "true"
+_E2E_TEST_TOKEN = "e2e-test-token"
 
-if not CLIENT_ID:
+if _E2E_TEST_MODE:
+    logger.warning("E2E_TEST_MODE is enabled — auth bypass active for test tokens")
+elif not CLIENT_ID:
     logger.warning("ENTRA_CLIENT_ID not set — auth will reject all requests")
 
 # Microsoft identity platform /consumers endpoint
@@ -70,6 +74,14 @@ async def validate_token(request: Request) -> TokenClaims | None:
         return None
 
     token = auth_header[7:]
+
+    # E2E test bypass — return synthetic claims for the well-known test token
+    if _E2E_TEST_MODE and token == _E2E_TEST_TOKEN:
+        return TokenClaims(
+            userId="e2e-test-user",
+            email="e2e@test.local",
+            displayName="E2E Test User",
+        )
 
     try:
         jwks = await _get_jwks()
