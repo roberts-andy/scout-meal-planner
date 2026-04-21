@@ -63,6 +63,18 @@ def init_app_config(provider) -> None:
     else:
         logger.info("Azure App Configuration provider initialized")
 
+# Azure App Configuration provider — set by init_app_config() at startup
+_app_config_provider = None
+
+
+def init_app_config(provider) -> None:
+    global _app_config_provider
+    _app_config_provider = provider
+    if provider is None:
+        logger.info("Azure App Configuration provider disabled")
+    else:
+        logger.info("Azure App Configuration provider initialized")
+
 
 def _normalize_environment(value: str | None) -> str:
     normalized = (value or "").strip().lower()
@@ -88,13 +100,45 @@ def _coerce_bool(value: str | None) -> bool | None:
     return None
 
 
+def _resolve_from_app_config(flag_name: str) -> bool | None:
+    if _app_config_provider is None:
+        return None
+    try:
+        ff = _app_config_provider["feature_management"]["feature_flags"][flag_name]
+        return bool(ff.get("enabled", False))
+    except (KeyError, TypeError):
+        return None
+    except Exception:
+        logger.warning("App Configuration lookup failed for %s", flag_name, exc_info=True)
+        return None
+
+
+def _resolve_from_env_override(flag_name: str) -> tuple[bool | None, str]:
+    override_names = (
+        _ENV_FLAG_NAME_BY_FLAG[flag_name],
+        f"FF_{flag_name.upper().replace('-', '_')}",
+    )
+    for override_name in override_names:
+        override_value = _coerce_bool(os.environ.get(override_name))
+        if override_value is not None:
+            return override_value, f"env:{override_name}"
+    return None, f"env:{override_names[0]}"
+
+
 def is_feature_enabled(flag_name: str) -> bool:
     if flag_name not in ALL_FEATURE_FLAGS:
         raise ValueError(f"Unknown feature flag: {flag_name}")
 
-    override_name = _ENV_FLAG_NAME_BY_FLAG[flag_name]
-    override_value = _coerce_bool(os.environ.get(override_name))
-    source = f"env:{override_name}"
+    # 1. Env var override — highest priority (allows local dev / emergency override)
+    override_value, source = _resolve_from_env_override(flag_name)
+
+    # 2. Azure App Configuration
+    if override_value is None:
+        override_value = _resolve_from_app_config(flag_name)
+        if override_value is not None:
+            source = "appconfig"
+
+    # 3. Environment-based defaults
     if override_value is None:
         env = _normalize_environment(
             os.environ.get("FEATURE_FLAGS_ENV")
