@@ -37,6 +37,9 @@
     },
     "appInsightsName": {
       "value": "ai-scout-meal-planner"
+    },
+    "appConfigName": {
+      "value": "appconfig-scout-meal-planner"
     }
   }
 }
