@@ -31,6 +31,36 @@ param contentSafetyAccountName string
 @description('Name of the Azure Communication Services resource')
 param communicationServiceName string
 
+@description('Name of the Log Analytics workspace')
+param logAnalyticsName string
+
+@description('Name of the Application Insights resource')
+param appInsightsName string
+
+// ── Log Analytics + Application Insights ──
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
+  name: logAnalyticsName
+  location: location
+  properties: {
+    sku: {
+      name: 'PerGB2018'
+    }
+    retentionInDays: 30
+  }
+}
+
+resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
+  name: appInsightsName
+  location: location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+    WorkspaceResourceId: logAnalytics.id
+    publicNetworkAccessForIngestion: 'Enabled'
+    publicNetworkAccessForQuery: 'Enabled'
+  }
+}
+
 // Cosmos DB Account — Serverless
 resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   name: cosmosAccountName
@@ -175,10 +205,29 @@ resource apiApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'CONTENT_SAFETY_ENDPOINT', value: contentSafety.properties.endpoint }
         { name: 'ACS_ENDPOINT', value: communicationService.properties.hostName }
         { name: 'ACS_FROM_EMAIL', value: 'DoNotReply@${emailDomain.properties.fromSenderDomain}' }
+        { name: 'APPINSIGHTS_CONNECTION_STRING', value: appInsights.properties.ConnectionString }
         { name: 'SCM_DO_BUILD_DURING_DEPLOYMENT', value: 'true' }
         { name: 'WEBSITES_PORT', value: '8000' }
       ]
     }
+  }
+}
+
+// ── App Service Diagnostic Settings ──
+resource apiAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'send-to-log-analytics'
+  scope: apiApp
+  properties: {
+    workspaceId: logAnalytics.id
+    logs: [
+      { category: 'AppServiceHTTPLogs', enabled: true }
+      { category: 'AppServiceConsoleLogs', enabled: true }
+      { category: 'AppServiceAppLogs', enabled: true }
+      { category: 'AppServicePlatformLogs', enabled: true }
+    ]
+    metrics: [
+      { category: 'AllMetrics', enabled: true }
+    ]
   }
 }
 
@@ -299,3 +348,5 @@ output entraClientId string = entraClientId
 output contentSafetyEndpoint string = contentSafety.properties.endpoint
 output acsEndpoint string = communicationService.properties.hostName
 output acsFromEmail string = 'DoNotReply@${emailDomain.properties.fromSenderDomain}'
+output appInsightsConnectionString string = appInsights.properties.ConnectionString
+output appInsightsInstrumentationKey string = appInsights.properties.InstrumentationKey

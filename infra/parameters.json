@@ -31,6 +31,12 @@
     },
     "communicationServiceName": {
       "value": "acs-scout-meal-planner"
+    },
+    "logAnalyticsName": {
+      "value": "log-scout-meal-planner"
+    },
+    "appInsightsName": {
+      "value": "ai-scout-meal-planner"
     }
   }
 }
