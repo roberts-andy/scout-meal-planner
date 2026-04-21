@@ -54,6 +54,8 @@ async def test_create_feedback_serializes_moderation_with_asdict(monkeypatch):
     assert captured["item"]["moderation"] == {
         "status": "approved",
         "flaggedFields": [],
+        "categories": [],
+        "fieldCategories": [],
         "checkedAt": 123,
         "provider": "azure-content-safety",
     }
@@ -95,6 +97,8 @@ async def test_update_feedback_serializes_moderation_with_asdict(monkeypatch):
     assert captured["item"]["moderation"] == {
         "status": "flagged",
         "flaggedFields": ["comments"],
+        "categories": [],
+        "fieldCategories": [],
         "checkedAt": 456,
         "provider": "azure-content-safety",
     }

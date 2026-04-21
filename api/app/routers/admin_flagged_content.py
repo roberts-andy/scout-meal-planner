@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from typing import Literal
 
@@ -20,11 +21,106 @@ FEEDBACK_CONTAINER = "feedback"
 ContentType = Literal["recipe", "feedback"]
 
 
+def _format_categories(categories: list[dict]) -> str:
+    parts: list[str] = []
+    for category in categories:
+        name = category.get("category")
+        severity = category.get("severity")
+        if isinstance(name, str) and isinstance(severity, (int, float)):
+            parts.append(f"{name} severity {int(severity)}/6")
+    return ", ".join(parts)
+
+
 def _format_flag_reason(item: dict) -> str:
-    fields = (item.get("moderation") or {}).get("flaggedFields", [])
-    if not fields:
-        return "Flagged by moderation system"
-    return f"Flagged fields: {', '.join(fields)}"
+    moderation = item.get("moderation") or {}
+    fields = moderation.get("flaggedFields", [])
+    field_categories = moderation.get("fieldCategories", [])
+
+    if isinstance(fields, list) and fields:
+        if isinstance(field_categories, list) and field_categories:
+            category_lookup: dict[str, list[dict]] = {}
+            for entry in field_categories:
+                if not isinstance(entry, dict):
+                    continue
+                field = entry.get("field")
+                categories = entry.get("categories")
+                if isinstance(field, str) and isinstance(categories, list):
+                    category_lookup[field] = categories
+
+            formatted_fields = []
+            for field in fields:
+                if not isinstance(field, str):
+                    continue
+                details = _format_categories(category_lookup.get(field, []))
+                formatted_fields.append(f"{field} ({details})" if details else field)
+            if formatted_fields:
+                return f"Flagged fields: {', '.join(formatted_fields)}"
+        return f"Flagged fields: {', '.join(fields)}"
+
+    categories = moderation.get("categories", [])
+    if isinstance(categories, list):
+        details = _format_categories(categories)
+        if details:
+            return f"Flagged by moderation system: {details}"
+    return "Flagged by moderation system"
+
+
+def _extract_field_value(item: dict, field_path: str):
+    """Resolve dotted/indexed field paths like 'variations[0].instructions[1]' from item."""
+    current: object = item
+    for key, index in re.findall(r"([^\.\[\]]+)|\[(\d+)\]", field_path):
+        if key:
+            if not isinstance(current, dict):
+                return None
+            current = current.get(key)
+            continue
+
+        if index:
+            if not isinstance(current, list):
+                return None
+            idx = int(index)
+            if idx < 0 or idx >= len(current):
+                return None
+            current = current[idx]
+
+    return current
+
+
+def _build_flagged_details(item: dict, moderation: dict, context: dict) -> list[dict]:
+    fields = moderation.get("flaggedFields", [])
+    if not isinstance(fields, list) or not fields:
+        return []
+
+    categories_lookup: dict[str, list[dict]] = {}
+    for entry in moderation.get("fieldCategories", []):
+        if not isinstance(entry, dict):
+            continue
+        field = entry.get("field")
+        categories = entry.get("categories")
+        if isinstance(field, str) and isinstance(categories, list):
+            categories_lookup[field] = categories
+
+    details: list[dict] = []
+    for field in fields:
+        if not isinstance(field, str):
+            continue
+        raw_value = _extract_field_value(item, field)
+        if raw_value is None:
+            raw_value = context.get(field)
+
+        if isinstance(raw_value, str):
+            text: str | None = raw_value
+        elif raw_value is not None:
+            text = str(raw_value)
+        else:
+            text = None
+
+        details.append({
+            "field": field,
+            "text": text,
+            "categories": categories_lookup.get(field, []),
+        })
+    return details
 
 
 def _to_flagged_list_item(content_type: ContentType, item: dict) -> dict:
@@ -53,6 +149,7 @@ def _to_flagged_list_item(content_type: ContentType, item: dict) -> dict:
         "flagReason": _format_flag_reason(item),
         "flaggedAt": moderation.get("checkedAt") or item.get("updatedAt") or item.get("createdAt") or int(time.time() * 1000),
         "moderation": moderation,
+        "flaggedDetails": _build_flagged_details(item, moderation, context),
         "context": context,
     }
 

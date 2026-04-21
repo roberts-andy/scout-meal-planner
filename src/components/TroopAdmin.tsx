@@ -15,6 +15,8 @@ import { Copy, UserCircleMinus, CheckCircle, UserCircle } from '@phosphor-icons/
 import { toast } from 'sonner'
 import type { FlaggedContentAction, FlaggedContentItem, MemberStatus, TroopMember, TroopRole } from '@/lib/types'
 
+const CONTENT_SAFETY_MAX_SEVERITY = 6
+
 const roleLabels: Record<TroopRole, string> = {
   troopAdmin: 'Troop Admin',
   adultLeader: 'Adult Leader',
@@ -208,6 +210,29 @@ export function TroopAdmin() {
     const confirmed = window.confirm('Reject this flagged content?')
     if (!confirmed) return
     reviewFlaggedContent.mutate({ id: itemId, action: 'reject' })
+  }
+
+  function formatContentSafetyDetails(categories: Array<{ category: string; severity: number }> = []) {
+    if (!categories.length) return 'Category details unavailable'
+    return categories
+      .map((category) => `${category.category} — severity ${category.severity}/${CONTENT_SAFETY_MAX_SEVERITY}`)
+      .join(', ')
+  }
+
+  function getFallbackFlaggedText(item: FlaggedContentItem, field: string) {
+    const value = (item.context as Record<string, unknown>)[field]
+    if (typeof value === 'string') return value
+    if (value === null || value === undefined) return ''
+    return typeof value === 'object' ? JSON.stringify(value) : String(value)
+  }
+
+  function getFlaggedDetails(item: FlaggedContentItem) {
+    if (item.flaggedDetails?.length) return item.flaggedDetails
+    return (item.moderation?.flaggedFields || []).map((field) => ({
+      field,
+      text: getFallbackFlaggedText(item, field),
+      categories: [],
+    }))
   }
 
   return (
@@ -505,6 +530,14 @@ export function TroopAdmin() {
                   <p className="text-xs text-muted-foreground">
                     Flagged {new Date(item.flaggedAt).toLocaleString()}
                   </p>
+                  {getFlaggedDetails(item).map((detail, index) => (
+                    <div key={`${item.id}-${detail.field}-${index}`} className="mt-2 text-sm">
+                      <p>
+                        <span className="font-medium">{detail.field}:</span> {detail.text?.trim() ? detail.text : '—'}
+                      </p>
+                      <p className="text-muted-foreground">{formatContentSafetyDetails(detail.categories)}</p>
+                    </div>
+                  ))}
                 </div>
                 <div className="flex gap-2">
                   <Button
