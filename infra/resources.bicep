@@ -363,6 +363,27 @@ resource appConfig 'Microsoft.AppConfiguration/configurationStores@2023-03-01' =
   }
 }
 
+// ── App Configuration Diagnostic Settings ──
+resource appConfigDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'appconfig-diagnostics'
+  scope: appConfig
+  properties: {
+    workspaceId: logAnalytics.id
+    logs: [
+      {
+        categoryGroup: 'allLogs'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+      }
+    ]
+  }
+}
+
 // Seed feature flags into App Configuration
 resource ffContentModeration 'Microsoft.AppConfiguration/configurationStores/keyValues@2023-03-01' = {
   parent: appConfig
