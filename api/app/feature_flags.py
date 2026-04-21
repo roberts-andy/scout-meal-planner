@@ -60,7 +60,10 @@ _app_config_provider = None
 def init_app_config(provider) -> None:
     global _app_config_provider
     _app_config_provider = provider
-    logger.info("Azure App Configuration provider initialized")
+    if provider is None:
+        logger.info("Azure App Configuration provider disabled")
+    else:
+        logger.info("Azure App Configuration provider initialized")
 
 
 def _normalize_environment(value: str | None) -> str:
@@ -98,7 +101,18 @@ def _resolve_from_app_config(flag_name: str) -> bool | None:
     except Exception:
         logger.warning("App Configuration lookup failed for %s", flag_name, exc_info=True)
         return None
-        return None
+
+
+def _resolve_from_env_override(flag_name: str) -> tuple[bool | None, str]:
+    override_names = (
+        _ENV_FLAG_NAME_BY_FLAG[flag_name],
+        f"FF_{flag_name.upper().replace('-', '_')}",
+    )
+    for override_name in override_names:
+        override_value = _coerce_bool(os.environ.get(override_name))
+        if override_value is not None:
+            return override_value, f"env:{override_name}"
+    return None, f"env:{override_names[0]}"
 
 
 def is_feature_enabled(flag_name: str) -> bool:
@@ -106,9 +120,7 @@ def is_feature_enabled(flag_name: str) -> bool:
         raise ValueError(f"Unknown feature flag: {flag_name}")
 
     # 1. Env var override — highest priority (allows local dev / emergency override)
-    override_name = _ENV_FLAG_NAME_BY_FLAG[flag_name]
-    override_value = _coerce_bool(os.environ.get(override_name))
-    source = f"env:{override_name}"
+    override_value, source = _resolve_from_env_override(flag_name)
 
     # 2. Azure App Configuration
     if override_value is None:

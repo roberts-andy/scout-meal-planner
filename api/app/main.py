@@ -50,8 +50,10 @@ async def lifespan(application: FastAPI):
             )
             init_app_config(provider)
         else:
+            init_app_config(None)
             logger.info("APPCONFIG_ENDPOINT not set — using env var / default feature flags")
     except Exception as exc:
+        init_app_config(None)
         logger.warning("App Configuration unavailable — falling back to env var / defaults: %s", exc)
         track_exception(exc, properties={"phase": "startup", "component": "appconfig"})
 

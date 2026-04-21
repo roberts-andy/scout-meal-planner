@@ -229,6 +229,22 @@ def test_env_var_overrides_app_config(monkeypatch: pytest.MonkeyPatch):
     assert is_feature_enabled("enable-feedback") is False
 
 
+def test_ff_prefixed_env_var_overrides_app_config(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("FEATURE_FLAG_ENABLE_FEEDBACK", raising=False)
+    monkeypatch.setenv("FF_ENABLE_FEEDBACK", "false")
+
+    provider = _FakeAppConfigProvider({
+        "feature_management": {
+            "feature_flags": {
+                "enable-feedback": {"enabled": True},
+            }
+        }
+    })
+    init_app_config(provider)
+
+    assert is_feature_enabled("enable-feedback") is False
+
+
 def test_defaults_used_when_app_config_missing_flag(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("FEATURE_FLAG_ENABLE_PRINT_RECIPES", raising=False)
     monkeypatch.setenv("FEATURE_FLAGS_ENV", "dev")
