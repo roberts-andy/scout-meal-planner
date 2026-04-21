@@ -7,10 +7,9 @@ import { TroopAdmin } from '@/components/TroopAdmin'
 import { EventList } from '@/components/EventList'
 import { RecipeLibrary } from '@/components/RecipeLibrary'
 import { EventDetail } from '@/components/EventDetail'
-import { VersioningTest } from '@/components/VersioningTest'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Calendar, CookingPot, Flask, GearSix, SignOut } from '@phosphor-icons/react'
+import { Calendar, CookingPot, GearSix, SignOut } from '@phosphor-icons/react'
 import { useAppData } from '@/hooks/useAppData'
 import { isFeatureEnabled } from '@/lib/featureFlags'
 
@@ -111,7 +110,7 @@ function AppContent() {
     handleDeleteFeedback,
   } = useAppData({ feedbackEnabled: feedbackFeatureEnabled })
 
-  const [activeTab, setActiveTab] = useState<'events' | 'recipes' | 'test' | 'admin'>('events')
+  const [activeTab, setActiveTab] = useState<'events' | 'recipes' | 'admin'>('events')
 
   if (queryError) {
     return (
@@ -168,7 +167,7 @@ function AppContent() {
 
       <main className="container mx-auto px-6 py-8">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="w-full">
-          <TabsList className={`grid w-full max-w-2xl mb-8 ${role === 'troopAdmin' ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          <TabsList className={`grid w-full max-w-2xl mb-8 ${role === 'troopAdmin' ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <TabsTrigger value="events" className="flex items-center gap-2">
               <Calendar size={18} />
               Events
@@ -176,10 +175,6 @@ function AppContent() {
             <TabsTrigger value="recipes" className="flex items-center gap-2">
               <CookingPot size={18} />
               Recipes
-            </TabsTrigger>
-            <TabsTrigger value="test" className="flex items-center gap-2">
-              <Flask size={18} />
-              Test Versioning
             </TabsTrigger>
             {role === 'troopAdmin' && (
               <TabsTrigger value="admin" className="flex items-center gap-2">
@@ -205,14 +200,6 @@ function AppContent() {
               onCreateRecipe={handleCreateRecipe}
               onUpdateRecipe={handleUpdateRecipe}
               onDeleteRecipe={handleDeleteRecipe}
-            />
-          </TabsContent>
-
-          <TabsContent value="test" className="mt-0">
-            <VersioningTest
-              events={events}
-              recipes={recipes}
-              onUpdateRecipe={handleUpdateRecipe}
             />
           </TabsContent>
 
