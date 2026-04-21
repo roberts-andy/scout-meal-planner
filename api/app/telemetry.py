@@ -105,6 +105,27 @@ def track_exception(exc: Exception, properties: dict[str, str] | None = None) ->
         logger.warning("Failed to emit exception telemetry", exc_info=True)
 
 
+def track_trace(
+    message: str,
+    *,
+    severity_level: int = 1,
+    properties: dict[str, str] | None = None,
+) -> None:
+    """Send a trace (log) message to Application Insights.
+
+    ``severity_level`` follows the AI convention:
+    0 = Verbose, 1 = Information, 2 = Warning, 3 = Error, 4 = Critical.
+    """
+    client = get_telemetry_client()
+    if not client:
+        return
+    try:
+        client.track_trace(message, severity=severity_level, properties=properties)
+        _flush(client)
+    except Exception:
+        logger.debug("Failed to emit trace telemetry", exc_info=True)
+
+
 def track_custom_event(name: str, properties: dict[str, str] | None = None) -> None:
     client = get_telemetry_client()
     if not client:

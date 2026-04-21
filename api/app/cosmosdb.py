@@ -10,6 +10,10 @@ from azure.cosmos.aio import CosmosClient, DatabaseProxy, ContainerProxy
 from azure.identity.aio import DefaultAzureCredential
 
 
+class DatabaseUnavailableError(RuntimeError):
+    """Raised when a database operation is attempted but Cosmos DB is not initialized."""
+
+
 class _SafeAioHttpTransport(AioHttpTransport):
     """Strips non-HTTP kwargs that azure-cosmos leaks through the pipeline."""
 
@@ -183,7 +187,9 @@ async def close_database_clients() -> None:
 def _get_container(name: str) -> ContainerProxy:
     container = _containers.get(name)
     if not container:
-        raise RuntimeError(f'Container "{name}" not initialized. Call init_database() first.')
+        raise DatabaseUnavailableError(
+            f'Container "{name}" not initialized — Cosmos DB may have failed at startup.'
+        )
     return container
 
 
