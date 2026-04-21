@@ -8,9 +8,9 @@ from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.feature_flags import init_app_config, _resolve_from_app_config, is_feature_enabled
 from app.middleware import moderation
 from app.middleware.auth import TroopContext
+from app.feature_flags import init_app_config, _resolve_from_app_config, is_feature_enabled
 from app.routers import email_shopping_list, feedback, share
 from app.schemas import CreateFeedback, EmailShoppingList
 

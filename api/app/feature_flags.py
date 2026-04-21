@@ -53,7 +53,8 @@ _ENV_FLAG_NAME_BY_FLAG = {
 
 _logged_evaluations: set[tuple[str, bool, str]] = set()
 
-# Azure App Configuration provider — set by init_app_config() at startup
+# Optional Azure App Configuration provider.
+# In this codebase it is typically injected by tests via init_app_config().
 _app_config_provider = None
 
 
