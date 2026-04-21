@@ -74,7 +74,6 @@ async def test_get_feature_flags_returns_defaults_without_overrides(client, monk
 
 
 def test_feature_flag_uses_app_config_list_when_no_env_override(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("FEATURE_FLAGS_ENV", "dev")
     monkeypatch.delenv("FEATURE_FLAG_ENABLE_SHARED_LINKS", raising=False)
     monkeypatch.setattr(
         feature_flags,
