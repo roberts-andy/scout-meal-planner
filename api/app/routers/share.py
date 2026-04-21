@@ -207,6 +207,10 @@ async def get_shared_event(token: str):
             "highAltitude": event.get("highAltitude"),
             "tentCamping": event.get("tentCamping"),
             "cabinCamping": event.get("cabinCamping"),
+            "powerAvailable": event.get("powerAvailable"),
+            "runningWater": event.get("runningWater"),
+            "trailerAccess": event.get("trailerAccess"),
+            "expectedWeather": event.get("expectedWeather"),
             "days": [
                 {
                     "date": day.get("date"),
