@@ -35,6 +35,9 @@ jobs:
       - name: Run frontend tests
         run: npm test
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -47,3 +50,21 @@ jobs:
 
       - name: Run API tests
         run: cd api && python -m pytest
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          E2E_TEST_MODE: 'true'
+          VITE_ENTRA_CLIENT_ID: '42871bb7-a693-4d97-9cb9-69bbf9a50ff4'
+          CI: 'true'
+        continue-on-error: true  # E2E needs Cosmos DB — skip gracefully until CI emulator is configured
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
