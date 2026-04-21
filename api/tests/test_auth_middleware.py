@@ -4,6 +4,9 @@ from starlette.requests import Request
 
 from app.middleware import auth
 
+# Keep a reference to the real implementation (before autouse fixture replaces it).
+_real_get_jwks = auth._get_jwks
+
 
 def _make_request(auth_header: str | None = None) -> Request:
     headers = []
@@ -78,6 +81,7 @@ async def test_get_jwks_cache_expires_after_ttl(monkeypatch):
             requested_urls.append(url)
             return FakeResponse({"keys": [f"key-{fetch_count}"]})
 
+    monkeypatch.setattr(auth, "_get_jwks", _real_get_jwks)  # restore real impl (httpx is faked above)
     monkeypatch.setattr(auth, "_jwks", None)
     monkeypatch.setattr(auth, "_jwks_fetched_at", 0.0)
     monkeypatch.setattr("app.middleware.auth._time.monotonic", lambda: next(monotonic_values, 3700.0))
