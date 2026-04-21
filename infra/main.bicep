@@ -39,6 +39,9 @@ param logAnalyticsName string = 'log-scout-meal-planner'
 @description('Name of the Application Insights resource')
 param appInsightsName string = 'ai-scout-meal-planner'
 
+@description('Name of the Azure App Configuration store')
+param appConfigName string = 'appconfig-scout-meal-planner'
+
 @description('Client ID of the pre-created Entra app registration for MSAL sign-in')
 param entraClientId string = '42871bb7-a693-4d97-9cb9-69bbf9a50ff4'
 
@@ -64,6 +67,7 @@ module resources 'resources.bicep' = {
     communicationServiceName: communicationServiceName
     logAnalyticsName: logAnalyticsName
     appInsightsName: appInsightsName
+    appConfigName: appConfigName
   }
 }
 
@@ -76,3 +80,4 @@ output contentSafetyEndpoint string = resources.outputs.contentSafetyEndpoint
 output acsEndpoint string = resources.outputs.acsEndpoint
 output acsFromEmail string = resources.outputs.acsFromEmail
 output appInsightsConnectionString string = resources.outputs.appInsightsConnectionString
+output appConfigEndpoint string = resources.outputs.appConfigEndpoint
