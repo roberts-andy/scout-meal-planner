@@ -160,7 +160,7 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
           description: description || undefined,
           servings,
           ingredients: filteredIngredients,
-            variations: submittedVariations,
+          variations: submittedVariations,
           createdAt: Date.now(),
           changeNote: changeNote || `Modified for ${eventName}`,
         }
@@ -254,7 +254,7 @@ export function CreateRecipeDialog({ open, onOpenChange, onCreateRecipe, initial
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Recipe' : 'Create New Recipe'}</DialogTitle>
           <DialogDescription>
-             {isEditing 
+            {isEditing
               ? 'Update your recipe details and ingredients' 
               : 'Add a new recipe to your library with ingredients, cooking instructions, and equipment needs'}
           </DialogDescription>

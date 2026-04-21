@@ -5,7 +5,11 @@ import { CreateRecipeDialog } from './CreateRecipeDialog'
 import { Recipe } from '@/lib/types'
 
 vi.mock('@/components/AuthProvider', () => ({
-  useAuthContext: () => ({ troopId: 'troop-1' }),
+  useAuthContext: () => ({
+    troopId: 'troop-1',
+    user: { userId: 'user-1', email: 'user@example.com', displayName: 'User One' },
+    isAuthenticated: true,
+  }),
 }))
 
 describe('CreateRecipeDialog', () => {
@@ -42,7 +46,7 @@ describe('CreateRecipeDialog', () => {
     expect(screen.getByRole('button', { name: 'Save Changes' })).toBeInTheDocument()
   })
 
-  it('preserves existing variations unchanged when saving edits', async () => {
+  it('preserves existing variations when saving edits', async () => {
     const onCreateRecipe = vi.fn()
     const user = userEvent.setup()
 
