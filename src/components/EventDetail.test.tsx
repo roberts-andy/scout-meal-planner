@@ -188,6 +188,7 @@ describe('EventDetail feedback tab date gate', () => {
     render(
       <EventDetail
         event={baseEvent}
+        allEvents={[baseEvent]}
         recipes={[]}
         feedback={[]}
         onUpdateEvent={vi.fn()}
