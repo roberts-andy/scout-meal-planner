@@ -57,11 +57,24 @@ function toFeatureFlags(value: unknown): Partial<FeatureFlags> {
   }, {} as Partial<FeatureFlags>)
 }
 
+async function parseJsonWithLogging(response: Response, source: 'api' | 'runtime') {
+  try {
+    return await response.json()
+  } catch (error) {
+    if (source === 'api') {
+      logFeatureFlagWarn('Failed to parse API feature flags response; falling back to runtime config', error)
+    } else {
+      logFeatureFlagWarn('Failed to parse runtime feature flags response', error)
+    }
+    return {}
+  }
+}
+
 export async function loadFeatureFlags() {
   try {
     const response = await fetch('/api/feature-flags', { cache: 'no-store' })
     if (response.ok) {
-      const apiFlags = toFeatureFlags(await response.json().catch(() => ({})))
+      const apiFlags = toFeatureFlags(await parseJsonWithLogging(response, 'api'))
       flags = { ...DEFAULT_FEATURE_FLAGS, ...apiFlags }
       logFeatureFlagDebug('Loaded API feature flags', flags)
       return
@@ -78,7 +91,7 @@ export async function loadFeatureFlags() {
       return
     }
 
-    const runtimeConfig = await response.json().catch(() => ({}))
+    const runtimeConfig = await parseJsonWithLogging(response, 'runtime')
     const runtimeFlags = toFeatureFlags((runtimeConfig as { featureFlags?: unknown }).featureFlags)
     flags = { ...DEFAULT_FEATURE_FLAGS, ...runtimeFlags }
     logFeatureFlagDebug('Loaded runtime feature flags', flags)

@@ -17,6 +17,12 @@ interface SharedEventPageProps {
 // Shared view reuses existing Event/Recipe display components that expect these fields.
 const SHARED_EVENT_PLACEHOLDER_TROOP_ID = 'shared'
 const SHARED_EVENT_PLACEHOLDER_RECIPE_VERSION = 1
+const SHARED_LINKS_DISABLED_MESSAGE = 'Shared links are currently disabled.'
+
+function getErrorStatus(error: unknown): number | undefined {
+  if (typeof error !== 'object' || !error || !('status' in error)) return undefined
+  return typeof error.status === 'number' ? error.status : undefined
+}
 
 export function SharedEventPage({ token }: SharedEventPageProps) {
   const sharedLinksEnabled = isFeatureEnabled('enable-shared-links')
@@ -67,22 +73,20 @@ export function SharedEventPage({ token }: SharedEventPageProps) {
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="max-w-md text-center space-y-2">
           <p className="text-destructive font-semibold">Shared event is unavailable</p>
-          <p className="text-muted-foreground text-sm">Shared links are currently disabled.</p>
+          <p className="text-muted-foreground text-sm">{SHARED_LINKS_DISABLED_MESSAGE}</p>
         </div>
       </div>
     )
   }
 
-  const statusCode = typeof error === 'object' && error && 'status' in error
-    ? error.status
-    : undefined
+  const statusCode = getErrorStatus(error)
 
   if (statusCode === 503) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="max-w-md text-center space-y-2">
           <p className="text-destructive font-semibold">Shared event is unavailable</p>
-          <p className="text-muted-foreground text-sm">Shared links are currently disabled.</p>
+          <p className="text-muted-foreground text-sm">{SHARED_LINKS_DISABLED_MESSAGE}</p>
         </div>
       </div>
     )

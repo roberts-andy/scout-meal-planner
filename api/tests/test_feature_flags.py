@@ -52,6 +52,27 @@ async def test_get_feature_flags_returns_evaluated_backend_flags(client, monkeyp
 
 
 @pytest.mark.asyncio
+async def test_get_feature_flags_returns_defaults_without_overrides(client, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("FEATURE_FLAGS_ENV", "dev")
+    monkeypatch.delenv("FEATURE_FLAG_ENABLE_CONTENT_MODERATION", raising=False)
+    monkeypatch.delenv("FEATURE_FLAG_ENABLE_EMAIL_SHOPPING_LIST", raising=False)
+    monkeypatch.delenv("FEATURE_FLAG_ENABLE_SHARED_LINKS", raising=False)
+    monkeypatch.delenv("FEATURE_FLAG_ENABLE_FEEDBACK", raising=False)
+    monkeypatch.delenv("FEATURE_FLAG_ENABLE_PRINT_RECIPES", raising=False)
+
+    response = await client.get("/api/feature-flags")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "enable-content-moderation": False,
+        "enable-email-shopping-list": False,
+        "enable-shared-links": False,
+        "enable-feedback": False,
+        "enable-print-recipes": True,
+    }
+
+
+@pytest.mark.asyncio
 async def test_moderation_returns_approved_when_flag_disabled(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("FEATURE_FLAG_ENABLE_CONTENT_MODERATION", "false")
 
