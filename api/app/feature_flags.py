@@ -53,20 +53,12 @@ _ENV_FLAG_NAME_BY_FLAG = {
 }
 
 _logged_evaluations: set[tuple[str, bool, str]] = set()
-_app_config_provider: Any = None
+# Azure App Configuration provider — set by init_app_config() at startup
+_state: dict[str, Any] = {"app_config_provider": None}
 
 
 def init_app_config(provider: Any) -> None:
-    global _app_config_provider
-    _app_config_provider = provider
-
-# Azure App Configuration provider — set by init_app_config() at startup
-_app_config_provider = None
-
-
-def init_app_config(provider) -> None:
-    global _app_config_provider
-    _app_config_provider = provider
+    _state["app_config_provider"] = provider
     if provider is None:
         logger.info("Azure App Configuration provider disabled")
     else:
@@ -98,11 +90,15 @@ def _coerce_bool(value: str | None) -> bool | None:
 
 
 def _resolve_from_app_config(flag_name: str) -> bool | None:
-    if _app_config_provider is None:
+    provider = _state["app_config_provider"]
+    if provider is None:
         return None
     try:
-        ff = _app_config_provider["feature_management"]["feature_flags"][flag_name]
-        return bool(ff.get("enabled", False))
+        feature_flags = provider["feature_management"]["feature_flags"]
+        for feature_flag in feature_flags:
+            if feature_flag.get("id") == flag_name:
+                return bool(feature_flag.get("enabled", False))
+        return None
     except (KeyError, TypeError):
         return None
     except Exception:
