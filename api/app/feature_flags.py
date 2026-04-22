@@ -53,16 +53,7 @@ _ENV_FLAG_NAME_BY_FLAG = {
 }
 
 _logged_evaluations: set[tuple[str, bool, str]] = set()
-_app_config_provider = None
-
-
-def init_app_config(provider) -> None:
-    global _app_config_provider
-    _app_config_provider = provider
-    if provider is None:
-        logger.info("Azure App Configuration provider disabled")
-    else:
-        logger.info("Azure App Configuration provider initialized")
+_logged_app_config_lookup_issues: set[tuple[str, str]] = set()
 
 # Azure App Configuration provider — set by init_app_config() at startup
 _state: dict[str, Any] = {"app_config_provider": None}
@@ -110,7 +101,15 @@ def _resolve_from_app_config(flag_name: str) -> bool | None:
             if feature_flag.get("id") == flag_name:
                 return bool(feature_flag.get("enabled", False))
         return None
-    except (KeyError, TypeError):
+    except (KeyError, TypeError) as exc:
+        issue = (flag_name, type(exc).__name__)
+        if issue not in _logged_app_config_lookup_issues:
+            logger.warning(
+                "App Configuration data missing/invalid for %s (%s); falling back",
+                flag_name,
+                type(exc).__name__,
+            )
+            _logged_app_config_lookup_issues.add(issue)
         return None
     except Exception:
         logger.warning("App Configuration lookup failed for %s", flag_name, exc_info=True)
