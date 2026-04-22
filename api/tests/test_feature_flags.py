@@ -204,9 +204,9 @@ def test_app_config_flag_is_used_when_provider_set(monkeypatch: pytest.MonkeyPat
 
     provider = _FakeAppConfigProvider({
         "feature_management": {
-            "feature_flags": {
-                "enable-feedback": {"enabled": True},
-            }
+            "feature_flags": [
+                {"id": "enable-feedback", "enabled": True},
+            ]
         }
     })
     init_app_config(provider)
@@ -219,9 +219,9 @@ def test_env_var_overrides_app_config(monkeypatch: pytest.MonkeyPatch):
 
     provider = _FakeAppConfigProvider({
         "feature_management": {
-            "feature_flags": {
-                "enable-feedback": {"enabled": True},
-            }
+            "feature_flags": [
+                {"id": "enable-feedback", "enabled": True},
+            ]
         }
     })
     init_app_config(provider)
@@ -235,9 +235,9 @@ def test_ff_prefixed_env_var_overrides_app_config(monkeypatch: pytest.MonkeyPatc
 
     provider = _FakeAppConfigProvider({
         "feature_management": {
-            "feature_flags": {
-                "enable-feedback": {"enabled": True},
-            }
+            "feature_flags": [
+                {"id": "enable-feedback", "enabled": True},
+            ]
         }
     })
     init_app_config(provider)

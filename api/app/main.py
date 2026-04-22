@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
+    provider = None
     # ── Azure App Configuration (feature flags) ──
     try:
         endpoint = os.environ.get("APPCONFIG_ENDPOINT")
@@ -50,7 +51,6 @@ async def lifespan(application: FastAPI):
                 credential=DefaultAzureCredential(),
                 feature_flag_enabled=True,
                 feature_flag_selectors=[SettingSelector(key_filter="*")],
-                feature_flag_refresh_enabled=True,
             )
             init_app_config(provider)
         else:
@@ -86,6 +86,11 @@ async def lifespan(application: FastAPI):
     try:
         yield
     finally:
+        if provider is not None:
+            try:
+                provider.close()
+            except Exception as exc:
+                logger.warning("Failed to close App Config provider: %s", exc)
         try:
             await close_database_clients()
         except Exception as exc:
