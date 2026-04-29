@@ -60,7 +60,7 @@ export function RecipeVersionHistory({ recipe, open, onOpenChange, onRevertVersi
     changeNote: 'Current version',
   }
   
-  const allVersions = [currentVersionData, ...recipe.versions].sort(
+  const allVersions = [currentVersionData, ...(recipe.versions ?? [])].sort(
     (a, b) => b.versionNumber - a.versionNumber
   )
 
